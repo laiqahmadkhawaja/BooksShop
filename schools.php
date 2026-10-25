@@ -215,9 +215,9 @@ $allProducts = dbFetchAll("SELECT id, title, product_code, product_type, retail_
                         <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addItemModal">
                             <i class="fa-solid fa-plus me-1"></i> Add Book / Stationery Item
                         </button>
-                        <button type="button" class="btn btn-outline-dark btn-sm" onclick="window.print()">
-                            <i class="fa-solid fa-print me-1"></i> Print Syllabus Booklist
-                        </button>
+                        <a href="print_report.php?report=school_syllabus&class_id=<?= $selectedClassId ?>" target="_blank" class="btn btn-outline-dark btn-sm">
+                            <i class="fa-solid fa-print me-1"></i> Print Syllabus Booklist (New Page)
+                        </a>
                     </div>
                 </div>
 

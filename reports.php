@@ -193,9 +193,9 @@ if ($reportType === 'cash_closing') {
         <small class="text-muted">Generate Profit & Loss, Trial Balance, Bank Statements, Expense Analytics, and Daily Cash Closing</small>
     </div>
     <div class="d-flex gap-2">
-        <button type="button" class="btn btn-outline-dark btn-sm shadow-sm" onclick="window.print()">
-            <i class="fa-solid fa-print me-1"></i> Print Report
-        </button>
+        <a href="print_report.php?report=<?= urlencode($reportType) ?>&start_date=<?= urlencode($startDate) ?>&end_date=<?= urlencode($endDate) ?>&date=<?= urlencode($selectedDate) ?>&account_id=<?= $selectedAccountId ?>" target="_blank" class="btn btn-outline-dark btn-sm shadow-sm">
+            <i class="fa-solid fa-print me-1"></i> Print Report (New Page)
+        </a>
     </div>
 </div>
 
@@ -930,9 +930,9 @@ if ($reportType === 'cash_closing') {
                 </div>
 
                 <div class="mt-3">
-                    <button type="button" class="btn btn-outline-dark btn-sm w-100" onclick="window.print()">
-                        <i class="fa-solid fa-print me-1"></i> Print Daily Closing Slip
-                    </button>
+                    <a href="print_report.php?report=cash_closing&date=<?= urlencode($selectedDate) ?>" target="_blank" class="btn btn-outline-dark btn-sm w-100">
+                        <i class="fa-solid fa-print me-1"></i> Print Daily Closing Slip (New Page)
+                    </a>
                 </div>
             </div>
         </div>

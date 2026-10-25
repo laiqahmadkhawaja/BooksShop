@@ -222,9 +222,9 @@ $shopName = getSetting('shop_name', 'Kitab Ghar');
                         <button type="button" class="btn btn-outline-secondary btn-sm" onclick='openEditCustomerModal(<?= json_encode($currentCustomer) ?>)'>
                             <i class="fa-solid fa-pen-to-square me-1"></i> Edit Profile
                         </button>
-                        <button type="button" class="btn btn-outline-dark btn-sm" onclick="window.print()">
-                            <i class="fa-solid fa-print me-1"></i> Print Khata Statement
-                        </button>
+                        <a href="print_report.php?report=customer_statement&customer_id=<?= $selectedCustomerId ?>" target="_blank" class="btn btn-outline-dark btn-sm">
+                            <i class="fa-solid fa-print me-1"></i> Print Khata Statement (New Page)
+                        </a>
                     </div>
                 </div>
 

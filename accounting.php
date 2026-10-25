@@ -238,9 +238,9 @@ $drawerOutflows = dbFetchOne("SELECT SUM(amount) as tot FROM cash_transactions W
                     <a href="reports.php?report=cash_closing&date=<?= $selectedDate ?>" class="btn btn-outline-primary btn-sm">
                         <i class="fa-solid fa-calculator me-1"></i> Full Cash Closing & Denominations
                     </a>
-                    <button type="button" class="btn btn-outline-dark btn-sm" onclick="window.print()">
-                        <i class="fa-solid fa-print me-1"></i> Print Daily Closing Slip
-                    </button>
+                    <a href="print_report.php?report=cash_closing&date=<?= urlencode($selectedDate) ?>" target="_blank" class="btn btn-outline-dark btn-sm">
+                        <i class="fa-solid fa-print me-1"></i> Print Daily Closing Slip (New Page)
+                    </a>
                 </div>
             </div>
         </div>

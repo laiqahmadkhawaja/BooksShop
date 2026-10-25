@@ -205,9 +205,9 @@ $accounts = dbFetchAll("SELECT id, account_name, balance FROM accounts WHERE sta
                         <button type="button" class="btn btn-outline-secondary btn-sm" onclick='openEditSupplierModal(<?= json_encode($currentSupplier) ?>)'>
                             <i class="fa-solid fa-pen-to-square me-1"></i> Edit Supplier
                         </button>
-                        <button type="button" class="btn btn-outline-dark btn-sm" onclick="window.print()">
-                            <i class="fa-solid fa-print me-1"></i> Print Supplier Ledger
-                        </button>
+                        <a href="print_report.php?report=supplier_statement&supplier_id=<?= $selectedSupplierId ?>" target="_blank" class="btn btn-outline-dark btn-sm">
+                            <i class="fa-solid fa-print me-1"></i> Print Supplier Ledger (New Page)
+                        </a>
                     </div>
                 </div>
 
