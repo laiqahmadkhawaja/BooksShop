@@ -88,7 +88,7 @@ $lowStockCount = dbFetchOne("SELECT COUNT(*) as cnt FROM products WHERE current_
                     <span class="badge bg-primary text-uppercase" style="font-size: 0.65rem;"><?= htmlspecialchars($user['role'] ?? '') ?></span>
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end shadow-sm">
-                    <li><h6 class="dropdown-header"><?= htmlspecialchars($user['full_name']) ?> (<?= htmlspecialchars($user['username']) ?>)</h6></li>
+                    <li><h6 class="dropdown-header"><?= htmlspecialchars($user['full_name'] ?? 'User') ?> (<?= htmlspecialchars($user['username'] ?? '') ?>)</h6></li>
                     <li><a class="dropdown-item" href="settings.php"><i class="fa-solid fa-gear me-2 text-secondary"></i> System Settings</a></li>
                     <li><hr class="dropdown-divider"></li>
                     <li><a class="dropdown-item text-danger" href="logout.php"><i class="fa-solid fa-right-from-bracket me-2"></i> <?= __t('logout') ?></a></li>

@@ -62,14 +62,16 @@ $schoolClasses = dbFetchAll("SELECT sc.id, sc.class_name, sc.academic_session, s
     <div class="col-lg-7">
         <div class="card shadow-sm h-100 d-flex flex-column">
             <!-- Fast Barcode / Search Input -->
-            <div class="p-3 bg-light border-bottom">
+            <div class="p-3 bg-light border-bottom position-relative">
                 <div class="input-group">
                     <span class="input-group-text bg-primary text-white"><i class="fa-solid fa-barcode"></i></span>
-                    <input type="text" id="barcodeSearchInput" class="form-control form-control-lg" placeholder="Scan Barcode or Search Book Title, ISBN, Author (Press Enter)..." autofocus>
+                    <input type="text" id="barcodeSearchInput" class="form-control form-control-lg" placeholder="Scan Barcode or Search Book Title, ISBN, Author (Press Enter)..." autofocus autocomplete="off">
                     <button class="btn btn-primary px-3" type="button" onclick="triggerSearchOrScan()">
                         <i class="fa-solid fa-plus-circle me-1"></i> Add
                     </button>
                 </div>
+                <!-- Live Search Suggestions Dropdown List -->
+                <div id="liveSearchResults" class="list-group shadow position-absolute w-100 start-0 mt-1 d-none" style="z-index: 1050; max-height: 380px; overflow-y: auto; padding: 0 15px;"></div>
             </div>
 
             <!-- Cart Table Items -->
@@ -321,21 +323,77 @@ $schoolClasses = dbFetchAll("SELECT sc.id, sc.class_name, sc.academic_session, s
 // POS State
 let cartItems = [];
 let allCatalogProducts = [];
+let productsMap = {};
+let searchDebounceTimer = null;
+let activeDropdownIndex = -1;
+
+// Synthesize pleasant checkout / add beep using Web Audio API
+function playBeep() {
+    try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.frequency.setValueAtTime(880, audioCtx.currentTime); // A5 note
+        gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.12);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.12);
+    } catch(e) {}
+}
 
 // Initialize
 document.addEventListener('DOMContentLoaded', function() {
     loadCatalog();
     checkHeldBills();
 
-    // Barcode scanner Enter key
-    document.getElementById('barcodeSearchInput').addEventListener('keydown', function(e) {
-        if (e.key === 'Enter') {
+    const searchInput = document.getElementById('barcodeSearchInput');
+
+    // Live search on typing
+    searchInput.addEventListener('input', function(e) {
+        const term = this.value.trim();
+        handleLiveSearch(term);
+    });
+
+    // Keyboard navigation in search (Enter, Arrows, Escape)
+    searchInput.addEventListener('keydown', function(e) {
+        const dropdown = document.getElementById('liveSearchResults');
+        const items = dropdown.querySelectorAll('.live-search-item');
+
+        if (e.key === 'ArrowDown') {
             e.preventDefault();
-            triggerSearchOrScan();
+            if (items.length > 0) {
+                activeDropdownIndex = (activeDropdownIndex + 1) % items.length;
+                updateDropdownSelection(items);
+            }
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            if (items.length > 0) {
+                activeDropdownIndex = (activeDropdownIndex - 1 + items.length) % items.length;
+                updateDropdownSelection(items);
+            }
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            if (activeDropdownIndex >= 0 && items[activeDropdownIndex]) {
+                items[activeDropdownIndex].click();
+            } else {
+                triggerSearchOrScan();
+            }
+        } else if (e.key === 'Escape') {
+            hideLiveSearchDropdown();
         }
     });
 
-    // POS Hotkeys (F4, F8, F9, Esc)
+    // Close dropdown on outside click
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('#barcodeSearchInput') && !e.target.closest('#liveSearchResults')) {
+            hideLiveSearchDropdown();
+        }
+    });
+
+    // POS Hotkeys (F4, F8, F7, Esc)
     document.addEventListener('keydown', function(e) {
         if (e.key === 'F4') {
             e.preventDefault();
@@ -355,37 +413,150 @@ function loadCatalog() {
     fetch('pos_ajax.php?action=search_products')
         .then(res => res.json())
         .then(data => {
-            if (data.success) {
+            if (data.success && data.products) {
                 allCatalogProducts = data.products;
+                productsMap = {};
+                allCatalogProducts.forEach(p => {
+                    productsMap[p.id] = p;
+                });
                 renderCatalog(allCatalogProducts);
             }
+        })
+        .catch(err => {
+            console.error('Error loading catalog:', err);
         });
+}
+
+// Live Search logic
+function handleLiveSearch(term) {
+    clearTimeout(searchDebounceTimer);
+    activeDropdownIndex = -1;
+
+    // Simultaneously filter right-side visual catalog
+    filterCatalogItemsWithQuery(term);
+
+    const dropdown = document.getElementById('liveSearchResults');
+    if (!term || term.length < 1) {
+        hideLiveSearchDropdown();
+        return;
+    }
+
+    // First: Instant filter against in-memory catalog (0ms latency!)
+    const localMatches = allCatalogProducts.filter(p => {
+        const q = term.toLowerCase();
+        return (p.title && p.title.toLowerCase().includes(q)) ||
+               (p.urdu_title && p.urdu_title.toLowerCase().includes(q)) ||
+               (p.barcode && p.barcode.toLowerCase().includes(q)) ||
+               (p.isbn && p.isbn.toLowerCase().includes(q)) ||
+               (p.product_code && p.product_code.toLowerCase().includes(q)) ||
+               (p.author && p.author.toLowerCase().includes(q));
+    });
+
+    if (localMatches.length > 0) {
+        renderLiveSearchDropdown(localMatches.slice(0, 8), term);
+    } else {
+        dropdown.innerHTML = `<div class="list-group-item text-center py-3 text-muted"><i class="fa-solid fa-spinner fa-spin me-2"></i>Searching database for "${term}"...</div>`;
+        dropdown.classList.remove('d-none');
+    }
+
+    // Debounced AJAX search for fresh results
+    searchDebounceTimer = setTimeout(() => {
+        fetch(`pos_ajax.php?action=search_products&q=${encodeURIComponent(term)}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.success && data.products && data.products.length > 0) {
+                    data.products.forEach(p => { productsMap[p.id] = p; });
+                    renderLiveSearchDropdown(data.products.slice(0, 10), term);
+                } else if (localMatches.length === 0) {
+                    dropdown.innerHTML = `<div class="list-group-item text-center py-3 text-muted">No products found matching "<strong>${term}</strong>". Press Enter to scan.</div>`;
+                    dropdown.classList.remove('d-none');
+                }
+            })
+            .catch(() => {});
+    }, 180);
+}
+
+function renderLiveSearchDropdown(products, term) {
+    const dropdown = document.getElementById('liveSearchResults');
+    if (!products.length) {
+        dropdown.innerHTML = `<div class="list-group-item text-center py-3 text-muted">No products found for "${term}".</div>`;
+        dropdown.classList.remove('d-none');
+        return;
+    }
+
+    let html = '';
+    products.forEach((p, idx) => {
+        const isLow = parseFloat(p.current_stock) <= parseFloat(p.min_stock_alert);
+        const isOut = parseFloat(p.current_stock) <= 0;
+        const stockBadge = isOut ? '<span class="badge bg-danger">Out of Stock</span>' : 
+                          (isLow ? `<span class="badge bg-warning text-dark">Stock: ${p.current_stock}</span>` : 
+                                   `<span class="badge bg-success">In Stock (${p.current_stock})</span>`);
+
+        html += `
+            <a href="javascript:void(0)" class="list-group-item list-group-item-action live-search-item py-2 px-3 border-bottom d-flex justify-content-between align-items-center" data-id="${p.id}" onclick="addProductToCartById(${p.id})">
+                <div style="max-width: 65%;">
+                    <div class="fw-bold text-dark text-truncate">${p.title}</div>
+                    <div class="small text-muted">
+                        <span class="badge bg-light text-secondary border font-monospace">${p.barcode || p.product_code}</span>
+                        ${p.author ? `&bull; <span>${p.author}</span>` : ''}
+                        ${p.class_grade ? `&bull; <span class="text-primary">${p.class_grade}</span>` : ''}
+                    </div>
+                </div>
+                <div class="text-end">
+                    <div class="fw-bold text-primary fs-6">Rs. ${parseFloat(p.retail_price).toFixed(2)}</div>
+                    <div>${stockBadge}</div>
+                </div>
+            </a>
+        `;
+    });
+    dropdown.innerHTML = html;
+    dropdown.classList.remove('d-none');
+    activeDropdownIndex = -1;
+}
+
+function updateDropdownSelection(items) {
+    items.forEach((it, idx) => {
+        if (idx === activeDropdownIndex) {
+            it.classList.add('active');
+            it.scrollIntoView({ block: 'nearest' });
+        } else {
+            it.classList.remove('active');
+        }
+    });
+}
+
+function hideLiveSearchDropdown() {
+    const dropdown = document.getElementById('liveSearchResults');
+    dropdown.classList.add('d-none');
+    dropdown.innerHTML = '';
+    activeDropdownIndex = -1;
 }
 
 function renderCatalog(products) {
     const container = document.getElementById('catalogCardsContainer');
-    if (!products.length) {
-        container.innerHTML = '<div class="col-12 text-center text-muted py-4">No matching products found.</div>';
+    if (!products || !products.length) {
+        container.innerHTML = '<div class="col-12 text-center text-muted py-5"><i class="fa-solid fa-box-open fa-2x mb-2 text-secondary opacity-50"></i><br>No matching products found.</div>';
         return;
     }
     let html = '';
     products.forEach(p => {
+        productsMap[p.id] = p;
         const isLow = parseFloat(p.current_stock) <= parseFloat(p.min_stock_alert);
         const isOut = parseFloat(p.current_stock) <= 0;
         html += `
             <div class="col-sm-6 col-12">
-                <div class="pos-product-item p-2 h-100 d-flex flex-column justify-content-between" onclick='addProductToCart(${JSON.stringify(p)})'>
+                <div class="pos-product-item p-2 h-100 d-flex flex-column justify-content-between shadow-xs" onclick="addProductToCartById(${p.id})">
                     <div>
                         <div class="d-flex justify-content-between align-items-start gap-1">
                             <span class="badge ${p.product_type === 'book' ? 'bg-primary-subtle text-primary' : 'bg-warning-subtle text-dark'}" style="font-size: 0.68rem;">
-                                ${p.product_type.toUpperCase()}
+                                ${(p.product_type || 'BOOK').toUpperCase()}
                             </span>
                             <span class="badge ${isOut ? 'bg-danger' : (isLow ? 'bg-warning text-dark' : 'bg-light text-secondary border')}" style="font-size: 0.68rem;">
                                 Stock: ${p.current_stock}
                             </span>
                         </div>
                         <div class="fw-bold small text-truncate mt-1" title="${p.title}">${p.title}</div>
-                        ${p.author ? `<div class="text-muted" style="font-size: 0.7rem;">${p.author}</div>` : ''}
+                        ${p.author ? `<div class="text-muted text-truncate" style="font-size: 0.7rem;">${p.author}</div>` : ''}
                         <div class="text-secondary font-monospace" style="font-size: 0.68rem;">${p.barcode || p.product_code}</div>
                     </div>
                     <div class="d-flex justify-content-between align-items-center mt-2 pt-1 border-top">
@@ -399,23 +570,53 @@ function renderCatalog(products) {
     container.innerHTML = html;
 }
 
-function filterCatalogItems() {
-    const q = document.getElementById('catalogSearchInput').value.toLowerCase().trim();
-    const cat = document.getElementById('catalogCategorySelect').value;
+function filterCatalogItemsWithQuery(q) {
+    q = (q || '').toLowerCase().trim();
+    const cat = document.getElementById('catalogCategorySelect')?.value || '';
 
     const filtered = allCatalogProducts.filter(p => {
-        const matchQ = !q || p.title.toLowerCase().includes(q) || 
+        const matchQ = !q || (p.title && p.title.toLowerCase().includes(q)) || 
+                       (p.urdu_title && p.urdu_title.toLowerCase().includes(q)) || 
                        (p.barcode && p.barcode.toLowerCase().includes(q)) || 
                        (p.isbn && p.isbn.toLowerCase().includes(q)) || 
-                       (p.product_code && p.product_code.toLowerCase().includes(q));
+                       (p.product_code && p.product_code.toLowerCase().includes(q)) ||
+                       (p.author && p.author.toLowerCase().includes(q));
         const matchCat = !cat || p.category_id == cat;
         return matchQ && matchCat;
     });
     renderCatalog(filtered);
 }
 
+function filterCatalogItems() {
+    const q = document.getElementById('catalogSearchInput')?.value || '';
+    filterCatalogItemsWithQuery(q);
+}
+
+// Add Product to Cart by ID (Safe against string quotes/escapes)
+function addProductToCartById(productId, qty = 1) {
+    let product = productsMap[productId];
+    if (!product) {
+        product = allCatalogProducts.find(x => x.id == productId);
+    }
+    if (product) {
+        addProductToCart(product, qty);
+    } else {
+        // Fetch from server if not found locally
+        fetch(`pos_ajax.php?action=search_products&q=${productId}`)
+            .then(r => r.json())
+            .then(d => {
+                if (d.success && d.products && d.products.length > 0) {
+                    addProductToCart(d.products[0], qty);
+                }
+            });
+    }
+}
+
 // Add Product to Cart
 function addProductToCart(product, qty = 1) {
+    playBeep();
+    hideLiveSearchDropdown();
+
     const existingIndex = cartItems.findIndex(item => item.product_id == product.id);
     if (existingIndex > -1) {
         cartItems[existingIndex].qty += qty;
@@ -436,9 +637,10 @@ function addProductToCart(product, qty = 1) {
         });
     }
     renderCart();
-    // Beep or visual flash
-    document.getElementById('barcodeSearchInput').value = '';
-    document.getElementById('barcodeSearchInput').focus();
+
+    const input = document.getElementById('barcodeSearchInput');
+    input.value = '';
+    input.focus();
 }
 
 // Barcode Lookup / Enter trigger
@@ -447,24 +649,43 @@ function triggerSearchOrScan() {
     const term = input.value.trim();
     if (!term) return;
 
+    // 1. Try local exact or best match first
+    const exactLocal = allCatalogProducts.find(p => 
+        (p.barcode && p.barcode.toLowerCase() === term.toLowerCase()) || 
+        (p.product_code && p.product_code.toLowerCase() === term.toLowerCase()) ||
+        (p.isbn && p.isbn.toLowerCase() === term.toLowerCase())
+    );
+    if (exactLocal) {
+        addProductToCart(exactLocal, 1);
+        return;
+    }
+
+    // 2. Try server barcode lookup
     fetch(`pos_ajax.php?action=barcode_lookup&barcode=${encodeURIComponent(term)}`)
         .then(res => res.json())
         .then(data => {
             if (data.success && data.product) {
                 addProductToCart(data.product, 1);
             } else {
-                // If not found by exact barcode, try search
+                // If not found by exact barcode, try search endpoint
                 fetch(`pos_ajax.php?action=search_products&q=${encodeURIComponent(term)}`)
                     .then(r => r.json())
                     .then(sData => {
-                        if (sData.success && sData.products.length > 0) {
+                        if (sData.success && sData.products && sData.products.length > 0) {
                             addProductToCart(sData.products[0], 1);
                         } else {
-                            alert('No book or item found for: ' + term);
-                            input.select();
+                            // Show floating tooltip or highlight input
+                            input.classList.add('is-invalid');
+                            setTimeout(() => input.classList.remove('is-invalid'), 1500);
+                            const dropdown = document.getElementById('liveSearchResults');
+                            dropdown.innerHTML = `<div class="list-group-item list-group-item-danger py-2 px-3 small"><i class="fa-solid fa-triangle-exclamation me-1"></i> No product found for "<strong>${term}</strong>"</div>`;
+                            dropdown.classList.remove('d-none');
                         }
                     });
             }
+        })
+        .catch(err => {
+            console.error('POS Scan Error:', err);
         });
 }
 

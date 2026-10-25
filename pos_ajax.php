@@ -9,13 +9,13 @@ if (!isLoggedIn()) {
     exit;
 }
 
-$action = $_REQUEST['action'] ?? '';
+$action = $_REQUEST['action'] ?? $_GET['action'] ?? $_POST['action'] ?? '';
 
 // 1. Search Products
 if ($action === 'search_products') {
-    $q = trim($_GET['q'] ?? '');
-    $category = (int)($_GET['category'] ?? 0);
-    $type = trim($_GET['type'] ?? '');
+    $q = trim($_REQUEST['q'] ?? $_GET['q'] ?? $_POST['q'] ?? '');
+    $category = (int)($_REQUEST['category'] ?? $_GET['category'] ?? 0);
+    $type = trim($_REQUEST['type'] ?? $_GET['type'] ?? '');
 
     $where = ["status = 1"];
     $params = [];
@@ -29,9 +29,9 @@ if ($action === 'search_products') {
         $params[] = $type;
     }
     if ($q !== '') {
-        $where[] = "(title LIKE ? OR urdu_title LIKE ? OR barcode LIKE ? OR product_code LIKE ? OR isbn LIKE ? OR author LIKE ?)";
+        $where[] = "(title LIKE ? OR urdu_title LIKE ? OR barcode LIKE ? OR product_code LIKE ? OR isbn LIKE ? OR author LIKE ? OR publisher LIKE ?)";
         $wild = "%$q%";
-        $params = array_merge($params, [$wild, $wild, $wild, $wild, $wild, $wild]);
+        $params = array_merge($params, [$wild, $wild, $wild, $wild, $wild, $wild, $wild]);
     }
 
     $whereSql = implode(" AND ", $where);
@@ -40,20 +40,29 @@ if ($action === 'search_products') {
                                    current_stock, min_stock_alert, rack_location, class_grade, author, publisher
                             FROM products 
                             WHERE $whereSql 
-                            ORDER BY title ASC LIMIT 30", $params);
+                            ORDER BY (barcode = '$q' OR product_code = '$q') DESC, title ASC LIMIT 30", $params);
 
     echo json_encode(['success' => true, 'products' => $products]);
     exit;
 }
 
-// 2. Barcode exact lookup
+// 2. Barcode lookup (Exact match first, then prefix/like match)
 if ($action === 'barcode_lookup') {
-    $barcode = trim($_POST['barcode'] ?? $_GET['barcode'] ?? '');
+    $barcode = trim($_REQUEST['barcode'] ?? $_POST['barcode'] ?? $_GET['barcode'] ?? '');
     if (!$barcode) {
         echo json_encode(['success' => false, 'message' => 'Barcode required']);
         exit;
     }
+    
+    // 1. Try exact match
     $product = dbFetchOne("SELECT * FROM products WHERE (barcode = ? OR product_code = ? OR isbn = ?) AND status = 1 LIMIT 1", [$barcode, $barcode, $barcode]);
+    
+    // 2. Fallback to prefix / contains match
+    if (!$product) {
+        $wild = "%$barcode%";
+        $product = dbFetchOne("SELECT * FROM products WHERE (barcode LIKE ? OR product_code LIKE ? OR isbn LIKE ? OR title LIKE ?) AND status = 1 LIMIT 1", [$wild, $wild, $wild, $wild]);
+    }
+
     if ($product) {
         echo json_encode(['success' => true, 'product' => $product]);
     } else {
