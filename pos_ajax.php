@@ -9,13 +9,13 @@ if (!isLoggedIn()) {
     exit;
 }
 
-$action = $_REQUEST['action'] ?? $_GET['action'] ?? $_POST['action'] ?? '';
+$action = $_REQUEST['action'] ?? '';
 
 // 1. Search Products
 if ($action === 'search_products') {
-    $q = trim($_REQUEST['q'] ?? $_GET['q'] ?? $_POST['q'] ?? '');
-    $category = (int)($_REQUEST['category'] ?? $_GET['category'] ?? 0);
-    $type = trim($_REQUEST['type'] ?? $_GET['type'] ?? '');
+    $q = trim($_REQUEST['q'] ?? '');
+    $category = (int)($_REQUEST['category'] ?? 0);
+    $type = trim($_REQUEST['type'] ?? '');
 
     $where = ["status = 1"];
     $params = [];
@@ -261,6 +261,21 @@ if ($action === 'resume_bill') {
     } else {
         echo json_encode(['success' => false, 'message' => 'Held bill not found']);
     }
+    exit;
+}
+
+// 7. Get Sale Items for Return / Inspection
+if ($action === 'get_sale_items') {
+    $saleId = (int)($_REQUEST['sale_id'] ?? 0);
+    if (!$saleId) {
+        echo json_encode(['success' => false, 'message' => 'Invalid sale ID']);
+        exit;
+    }
+    $items = dbFetchAll("SELECT si.*, p.title, p.product_code, p.unit
+                         FROM sale_items si
+                         JOIN products p ON p.id = si.product_id
+                         WHERE si.sale_id = ?", [$saleId]);
+    echo json_encode(['success' => true, 'items' => $items]);
     exit;
 }
 

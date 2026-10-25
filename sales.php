@@ -347,7 +347,7 @@ function openReturnModal(saleId, invoiceNo) {
     const container = document.getElementById('returnItemsContainer');
     container.innerHTML = '<div class="text-center py-3"><i class="fa-solid fa-spinner fa-spin"></i> Loading invoice items...</div>';
     
-    fetch(`get_sale_items.php?sale_id=${saleId}`)
+    fetch(`pos_ajax.php?action=get_sale_items&sale_id=${saleId}`)
         .then(res => res.json())
         .then(data => {
             if (data.success && data.items.length > 0) {

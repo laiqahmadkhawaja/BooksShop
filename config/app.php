@@ -7,14 +7,6 @@ if (session_status() === PHP_SESSION_NONE) {
 
 require_once __DIR__ . '/db.php';
 
-// Base URL helper
-function getBaseUrl() {
-    $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
-    $hostName = $_SERVER['HTTP_HOST'] ?? 'localhost';
-    $scriptDir = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? ''));
-    return rtrim($protocol . $hostName . $scriptDir, '/');
-}
-
 // Language / Localization
 function getLanguage() {
     return $_SESSION['app_lang'] ?? 'en';
@@ -26,7 +18,7 @@ function setLanguage($lang) {
     }
 }
 
-// Translations Dictionary
+// Translations Dictionary (Active Navigation & KPI Terms)
 $TRANSLATIONS = [
     'en' => [
         'app_name' => 'Book Shop Management System',
@@ -44,30 +36,10 @@ $TRANSLATIONS = [
         'users' => 'Users & Roles',
         'settings' => 'Settings',
         'logout' => 'Logout',
-        'total_books' => 'Total Books',
-        'total_stationery' => 'Stationery Items',
         'today_sales' => "Today's Sales",
         'today_profit' => "Today's Profit",
         'customer_receivables' => 'Customer Receivables',
         'supplier_payables' => 'Supplier Payables',
-        'cash_in_hand' => 'Cash in Hand',
-        'low_stock_alerts' => 'Low Stock Alerts',
-        'search_placeholder' => 'Scan Barcode or Search Title, ISBN, Author (F2)...',
-        'walkin_customer' => 'Walk-in Customer (Cash)',
-        'grand_total' => 'Grand Total',
-        'subtotal' => 'Subtotal',
-        'discount' => 'Discount',
-        'tax' => 'Tax',
-        'paid' => 'Paid',
-        'due' => 'Due',
-        'change' => 'Change',
-        'checkout' => 'Checkout (F8)',
-        'hold_bill' => 'Hold Bill (F4)',
-        'print_receipt' => 'Print Receipt (F9)',
-        'qty' => 'Qty',
-        'price' => 'Price',
-        'action' => 'Action',
-        'currency' => 'Rs.',
     ],
     'ur' => [
         'app_name' => 'بک شاپ مینجمنٹ سسٹم',
@@ -85,30 +57,10 @@ $TRANSLATIONS = [
         'users' => 'صارفین اور اختیارات',
         'settings' => 'ترتیبات',
         'logout' => 'لاگ آؤٹ',
-        'total_books' => 'کل کتب',
-        'total_stationery' => 'اسٹیشنری آئٹمز',
         'today_sales' => 'آج کی کل فروخت',
         'today_profit' => 'آج کا خالص منافع',
         'customer_receivables' => 'گاہکوں کے واجبات (کھاتہ)',
         'supplier_payables' => 'سپلائرز کی ادائیگیاں',
-        'cash_in_hand' => 'موجودہ کیش (ہاتھ میں)',
-        'low_stock_alerts' => 'کم اسٹاک الرٹس',
-        'search_placeholder' => 'بارکوڈ اسکین کریں یا نام، آئی ایس بی این تلاش کریں...',
-        'walkin_customer' => 'عام گاہک (نقد)',
-        'grand_total' => 'کل رقم',
-        'subtotal' => 'سب ٹوٹل',
-        'discount' => 'رعایت',
-        'tax' => 'ٹیکس',
-        'paid' => 'وصول شدہ',
-        'due' => 'باقی رقم',
-        'change' => 'بقایا رقم',
-        'checkout' => 'بل مکمل کریں (F8)',
-        'hold_bill' => 'بل ہولڈ کریں (F4)',
-        'print_receipt' => 'رسید پرنٹ کریں (F9)',
-        'qty' => 'تعداد',
-        'price' => 'قیمت',
-        'action' => 'عمل',
-        'currency' => 'روپے',
     ]
 ];
 

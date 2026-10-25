@@ -673,6 +673,9 @@ $products = dbFetchAll("SELECT p.*, c.name as category_name
     </div>
 </div>
 
+<!-- JsBarcode for Barcode Label Generation -->
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+
 <script>
 function toggleProductTypeFields() {
     const type = document.getElementById('prod_type').value;

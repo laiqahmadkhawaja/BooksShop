@@ -407,6 +407,9 @@ for ($i = 5; $i >= 0; $i--) {
     </div>
 </div>
 
+<!-- Chart.js for Dashboard Visualizations -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Render Chart.js
