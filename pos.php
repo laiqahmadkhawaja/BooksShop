@@ -66,6 +66,9 @@ $schoolClasses = dbFetchAll("SELECT sc.id, sc.class_name, sc.academic_session, s
                 <div class="input-group">
                     <span class="input-group-text bg-primary text-white"><i class="fa-solid fa-barcode"></i></span>
                     <input type="text" id="barcodeSearchInput" class="form-control form-control-lg" placeholder="Scan Barcode or Search Book Title, ISBN, Author (Press Enter)..." autofocus autocomplete="off">
+                    <button class="btn btn-warning text-dark fw-bold px-3 d-flex align-items-center gap-1" type="button" onclick="openCameraScannerModal()" title="Scan Barcode via Camera (Alt+S or F3)">
+                        <i class="fa-solid fa-camera"></i> <span class="d-none d-sm-inline">Scan</span>
+                    </button>
                     <button class="btn btn-primary px-3" type="button" onclick="triggerSearchOrScan()">
                         <i class="fa-solid fa-plus-circle me-1"></i> Add
                     </button>
@@ -91,7 +94,10 @@ $schoolClasses = dbFetchAll("SELECT sc.id, sc.class_name, sc.academic_session, s
                             <td colspan="5" class="text-center py-5 text-muted">
                                 <i class="fa-solid fa-cart-shopping fa-3x mb-2 text-secondary opacity-25"></i>
                                 <div>Your POS Cart is empty.</div>
-                                <small class="text-muted">Scan a barcode or click any product from the catalog below.</small>
+                                <small class="text-muted d-block">Scan a barcode, use your camera scanner, or click any product from the catalog.</small>
+                                <button type="button" class="btn btn-sm btn-outline-warning mt-2 fw-semibold" onclick="openCameraScannerModal()">
+                                    <i class="fa-solid fa-camera me-1"></i> Scan with Camera
+                                </button>
                             </td>
                         </tr>
                     </tbody>
@@ -316,6 +322,113 @@ $schoolClasses = dbFetchAll("SELECT sc.id, sc.class_name, sc.academic_session, s
     </div>
 </div>
 
+<!-- Modal: Interactive Camera Barcode Scanner with Auto-Alignment & Zoom -->
+<div class="modal fade" id="cameraScannerModal" tabindex="-1" data-bs-backdrop="static" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+        <div class="modal-content bg-dark text-white border-secondary shadow-lg">
+            <div class="modal-header border-secondary py-2 px-3">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge bg-warning text-dark"><i class="fa-solid fa-camera"></i> LIVE SCAN</span>
+                    <h5 class="modal-title fw-bold mb-0 text-white fs-6">
+                        <i class="fa-solid fa-barcode text-primary me-1"></i> Barcode & Book Scanner
+                    </h5>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <!-- Torch Button (if supported by mobile device) -->
+                    <button type="button" class="btn btn-sm btn-outline-light d-none" id="scannerTorchBtn" onclick="toggleScannerTorch()" title="Toggle Flashlight">
+                        <i class="fa-solid fa-bolt"></i>
+                    </button>
+                    <!-- Close button -->
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close" onclick="stopCameraScanner()"></button>
+                </div>
+            </div>
+            
+            <div class="modal-body p-0 position-relative bg-black" style="min-height: 380px;">
+                <!-- Video Viewport Container -->
+                <div class="scanner-viewport-wrapper" id="cameraScannerViewport">
+                    <div id="interactiveScannerReader"></div>
+                    
+                    <!-- HUD Alignment Overlay Layer -->
+                    <div class="scanner-hud-overlay" id="scannerHudOverlay">
+                        <!-- Targeting reticle frame for 1D/2D Barcodes -->
+                        <div class="scanner-target-box" id="scannerTargetBox">
+                            <!-- Corner HUD brackets -->
+                            <div class="corner corner-tl"></div>
+                            <div class="corner corner-tr"></div>
+                            <div class="corner corner-bl"></div>
+                            <div class="corner corner-br"></div>
+                            
+                            <!-- Sweeping Red Laser Bar -->
+                            <div class="scanner-laser-line"></div>
+                            
+                            <!-- Status Label -->
+                            <div class="scanner-target-label" id="scannerTargetLabel">
+                                <i class="fa-solid fa-arrows-to-dot me-1 text-info"></i> Center Barcode Inside Box
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Floating Feedback Toast (appears on scan) -->
+                    <div id="scannerFeedbackToast" class="scanner-feedback-toast d-none">
+                        <i class="fa-solid fa-circle-check text-success fs-5"></i>
+                        <div class="text-truncate">
+                            <strong id="toastScannedTitle" class="text-white d-block small"></strong>
+                            <span id="toastScannedDetails" class="text-warning" style="font-size: 11px;"></span>
+                        </div>
+                    </div>
+
+                    <!-- Floating Error Toast (if code not found) -->
+                    <div id="scannerErrorToast" class="scanner-error-toast d-none">
+                        <i class="fa-solid fa-triangle-exclamation text-danger fs-5"></i>
+                        <div class="text-truncate">
+                            <strong id="toastErrorTitle" class="text-white d-block small">Barcode Not Found</strong>
+                            <span id="toastErrorDetails" class="text-white-50" style="font-size: 11px;"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Camera Error / Permission Notice if needed -->
+                <div id="scannerErrorNotice" class="alert alert-danger m-3 d-none"></div>
+            </div>
+
+            <!-- Controls Footer -->
+            <div class="modal-footer border-secondary py-2 px-3 justify-content-between flex-wrap bg-dark">
+                <!-- Zoom Controls -->
+                <div class="d-flex align-items-center gap-2 my-1">
+                    <span class="small text-white-50"><i class="fa-solid fa-magnifying-glass-plus me-1"></i> Zoom:</span>
+                    <div class="btn-group btn-group-sm" role="group">
+                        <button type="button" class="btn btn-outline-secondary text-white zoom-btn" data-zoom="1.0" onclick="applyScannerZoom(1.0)">1x</button>
+                        <button type="button" class="btn btn-primary text-white zoom-btn active" data-zoom="1.5" onclick="applyScannerZoom(1.5)">1.5x</button>
+                        <button type="button" class="btn btn-outline-secondary text-white zoom-btn" data-zoom="2.0" onclick="applyScannerZoom(2.0)">2x</button>
+                        <button type="button" class="btn btn-outline-secondary text-white zoom-btn" data-zoom="3.0" onclick="applyScannerZoom(3.0)">3x</button>
+                    </div>
+                    <input type="range" class="form-range d-none d-md-inline-block" id="scannerZoomSlider" min="1.0" max="3.5" step="0.1" value="1.5" style="width: 80px;" oninput="applyScannerZoom(parseFloat(this.value))">
+                </div>
+
+                <!-- Camera Selector & Continuous Scan Toggle -->
+                <div class="d-flex align-items-center gap-3 flex-wrap my-1">
+                    <div class="form-check form-switch mb-0">
+                        <input class="form-check-input" type="checkbox" id="continuousScanToggle" checked>
+                        <label class="form-check-label small text-white" for="continuousScanToggle">Continuous Scan</label>
+                    </div>
+
+                    <!-- Camera Select Dropdown (if multiple cameras exist) -->
+                    <select id="cameraSourceSelect" class="form-select form-select-sm bg-dark text-white border-secondary" style="max-width: 140px;" onchange="switchCameraSource(this.value)">
+                        <option value="">Detecting...</option>
+                    </select>
+
+                    <button type="button" class="btn btn-sm btn-light fw-bold px-3" data-bs-dismiss="modal" onclick="stopCameraScanner()">
+                        <i class="fa-solid fa-check me-1"></i> Done
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Local Html5Qrcode Barcode Scanning Library -->
+<script src="assets/js/html5-qrcode.min.js"></script>
+
 <script>
 // POS State
 let cartItems = [];
@@ -390,9 +503,20 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // POS Hotkeys (F4, F8, F7, Esc)
+    // Ensure camera stops if user dismisses scanner modal
+    const scannerModalEl = document.getElementById('cameraScannerModal');
+    if (scannerModalEl) {
+        scannerModalEl.addEventListener('hidden.bs.modal', function () {
+            stopCameraScanner();
+        });
+    }
+
+    // POS Hotkeys (F3 = Camera Scan, F4 = Hold, F8 = Checkout, F7 = Held Bills)
     document.addEventListener('keydown', function(e) {
-        if (e.key === 'F4') {
+        if (e.key === 'F3' || (e.altKey && (e.key === 's' || e.key === 'S'))) {
+            e.preventDefault();
+            openCameraScannerModal();
+        } else if (e.key === 'F4') {
             e.preventDefault();
             holdCurrentBill();
         } else if (e.key === 'F8') {
@@ -1198,6 +1322,415 @@ function resumeHeldBill(ref) {
                 alert('Could not resume held bill.');
             }
         });
+}
+
+// ========================================================
+// CAMERA BARCODE SCANNER WITH AUTO-ALIGNMENT & AUTO-ZOOM
+// ========================================================
+let html5QrScanner = null;
+let activeCameraTrack = null;
+let currentScannerZoom = 1.5;
+let scannerTorchActive = false;
+let lastScannedText = '';
+let lastScannedTime = 0;
+let scannerTargetFieldId = null;
+let scannerToastTimer = null;
+let availableCameras = [];
+let currentCameraDeviceId = null;
+
+function openCameraScannerModal(targetFieldId = null) {
+    scannerTargetFieldId = targetFieldId;
+    
+    // Clear feedback notifications & reset target frame
+    hideScannerToasts();
+    const errorNotice = document.getElementById('scannerErrorNotice');
+    if (errorNotice) {
+        errorNotice.classList.add('d-none');
+        errorNotice.innerHTML = '';
+    }
+    const targetBox = document.getElementById('scannerTargetBox');
+    if (targetBox) targetBox.classList.remove('detected');
+
+    // Show modal
+    const modalEl = document.getElementById('cameraScannerModal');
+    const modalInstance = bootstrap.Modal.getOrCreateInstance(modalEl);
+    modalInstance.show();
+
+    // Start camera stream after modal is visible
+    setTimeout(() => {
+        initCameraScanner();
+    }, 350);
+}
+
+function initCameraScanner() {
+    if (typeof Html5Qrcode === 'undefined') {
+        showScannerErrorNotice('Scanner library not ready. Please ensure assets/js/html5-qrcode.min.js is present.');
+        return;
+    }
+
+    if (html5QrScanner) {
+        try {
+            if (html5QrScanner.isScanning) {
+                html5QrScanner.stop().then(() => startScannerWithCamera()).catch(() => startScannerWithCamera());
+                return;
+            }
+        } catch(e) {}
+    }
+
+    startScannerWithCamera();
+}
+
+function startScannerWithCamera() {
+    html5QrScanner = new Html5Qrcode("interactiveScannerReader");
+
+    // Barcode scanning configuration optimized for 1D ISBN, EAN-13, and Code128
+    const config = {
+        fps: 24,
+        qrbox: function(viewfinderWidth, viewfinderHeight) {
+            // Precise rectangular alignment viewport
+            const boxWidth = Math.min(Math.floor(viewfinderWidth * 0.84), 340);
+            const boxHeight = Math.min(Math.floor(boxWidth * 0.48), 155);
+            return { width: boxWidth, height: boxHeight };
+        },
+        aspectRatio: 1.777778,
+        formatsToSupport: [
+            Html5QrcodeSupportedFormats.EAN_13,
+            Html5QrcodeSupportedFormats.EAN_8,
+            Html5QrcodeSupportedFormats.CODE_128,
+            Html5QrcodeSupportedFormats.CODE_39,
+            Html5QrcodeSupportedFormats.UPC_A,
+            Html5QrcodeSupportedFormats.UPC_E,
+            Html5QrcodeSupportedFormats.QR_CODE
+        ],
+        experimentalFeatures: {
+            useBarCodeDetectorIfSupported: true
+        }
+    };
+
+    Html5Qrcode.getCameras().then(devices => {
+        availableCameras = devices || [];
+        populateCameraSelect(availableCameras);
+
+        let cameraIdOrConfig = { facingMode: "environment" };
+        if (currentCameraDeviceId) {
+            cameraIdOrConfig = currentCameraDeviceId;
+        } else if (availableCameras.length > 0) {
+            // Auto-prefer rear/environment/back camera for physical book barcode scanning
+            const backCam = availableCameras.find(c => /back|rear|environment/i.test(c.label));
+            if (backCam) {
+                cameraIdOrConfig = backCam.id;
+                currentCameraDeviceId = backCam.id;
+            } else {
+                cameraIdOrConfig = availableCameras[availableCameras.length - 1].id;
+                currentCameraDeviceId = cameraIdOrConfig;
+            }
+            const camSelect = document.getElementById('cameraSourceSelect');
+            if (camSelect) camSelect.value = currentCameraDeviceId;
+        }
+
+        html5QrScanner.start(
+            cameraIdOrConfig,
+            config,
+            onBarcodeSuccess,
+            (errorMessage) => {
+                // Ignore transient frame decode misses
+            }
+        ).then(() => {
+            // Camera stream active
+            attachCameraCapabilities();
+            // Automatically align & zoom (1.5x preset) for high-accuracy barcode detection
+            applyScannerZoom(1.5);
+        }).catch(err => {
+            console.error("Camera start error:", err);
+            showScannerErrorNotice('Could not start camera stream: ' + (err.message || err) + '. Please allow camera access in browser permissions.');
+        });
+    }).catch(err => {
+        console.error("GetCameras error:", err);
+        showScannerErrorNotice('No cameras detected: ' + (err.message || err));
+    });
+}
+
+function populateCameraSelect(cameras) {
+    const select = document.getElementById('cameraSourceSelect');
+    if (!select) return;
+    select.innerHTML = '';
+
+    if (!cameras || cameras.length === 0) {
+        select.innerHTML = '<option value="">No Camera Found</option>';
+        return;
+    }
+
+    cameras.forEach((cam, idx) => {
+        const opt = document.createElement('option');
+        opt.value = cam.id;
+        opt.text = cam.label || `Camera ${idx + 1}`;
+        select.appendChild(opt);
+    });
+}
+
+function switchCameraSource(newDeviceId) {
+    if (!newDeviceId || newDeviceId === currentCameraDeviceId) return;
+    currentCameraDeviceId = newDeviceId;
+    if (html5QrScanner && html5QrScanner.isScanning) {
+        html5QrScanner.stop().then(() => {
+            startScannerWithCamera();
+        }).catch(err => {
+            console.error('Switch camera stop error:', err);
+            startScannerWithCamera();
+        });
+    } else {
+        startScannerWithCamera();
+    }
+}
+
+function attachCameraCapabilities() {
+    activeCameraTrack = null;
+    const videoEl = document.querySelector('#interactiveScannerReader video');
+    if (videoEl && videoEl.srcObject) {
+        const tracks = videoEl.srcObject.getVideoTracks();
+        if (tracks && tracks.length > 0) {
+            activeCameraTrack = tracks[0];
+            
+            if (typeof activeCameraTrack.getCapabilities === 'function') {
+                const caps = activeCameraTrack.getCapabilities();
+                
+                // Hardware Torch / Flashlight support
+                const torchBtn = document.getElementById('scannerTorchBtn');
+                if (torchBtn) {
+                    if (caps.torch) {
+                        torchBtn.classList.remove('d-none');
+                    } else {
+                        torchBtn.classList.add('d-none');
+                    }
+                }
+
+                // Hardware Zoom slider calibration
+                const slider = document.getElementById('scannerZoomSlider');
+                if (slider && caps.zoom) {
+                    slider.min = caps.zoom.min || 1.0;
+                    slider.max = caps.zoom.max || 4.0;
+                    slider.step = caps.zoom.step || 0.1;
+                }
+            }
+        }
+    }
+}
+
+function applyScannerZoom(zoomVal) {
+    currentScannerZoom = parseFloat(zoomVal) || 1.0;
+
+    // 1. Hardware Optical / Digital Track Zoom (Phones & HD webcams)
+    if (activeCameraTrack && typeof activeCameraTrack.getCapabilities === 'function') {
+        try {
+            const caps = activeCameraTrack.getCapabilities();
+            if (caps.zoom) {
+                const targetZ = Math.min(caps.zoom.max || 4.0, Math.max(caps.zoom.min || 1.0, currentScannerZoom));
+                activeCameraTrack.applyConstraints({
+                    advanced: [{ zoom: targetZ }]
+                }).catch(() => {});
+            }
+        } catch(e) {}
+    }
+
+    // 2. CSS Centered Viewport Zoom (Guarantees crisp zoom and alignment on ALL browsers & laptops)
+    const videoEl = document.querySelector('#interactiveScannerReader video');
+    if (videoEl) {
+        videoEl.style.transform = `scale(${currentScannerZoom})`;
+        videoEl.style.transformOrigin = 'center center';
+    }
+
+    // 3. Update Zoom UI buttons and slider
+    document.querySelectorAll('.zoom-btn').forEach(btn => {
+        const btnZ = parseFloat(btn.dataset.zoom);
+        if (Math.abs(btnZ - currentScannerZoom) < 0.1) {
+            btn.classList.add('btn-primary', 'active');
+            btn.classList.remove('btn-outline-secondary');
+        } else {
+            btn.classList.remove('btn-primary', 'active');
+            btn.classList.add('btn-outline-secondary');
+        }
+    });
+
+    const slider = document.getElementById('scannerZoomSlider');
+    if (slider) slider.value = currentScannerZoom;
+}
+
+function toggleScannerTorch() {
+    if (!activeCameraTrack || typeof activeCameraTrack.applyConstraints !== 'function') return;
+    scannerTorchActive = !scannerTorchActive;
+    activeCameraTrack.applyConstraints({
+        advanced: [{ torch: scannerTorchActive }]
+    }).then(() => {
+        const btn = document.getElementById('scannerTorchBtn');
+        if (btn) {
+            if (scannerTorchActive) {
+                btn.classList.add('btn-warning', 'text-dark');
+                btn.classList.remove('btn-outline-light');
+            } else {
+                btn.classList.remove('btn-warning', 'text-dark');
+                btn.classList.add('btn-outline-light');
+            }
+        }
+    }).catch(err => {
+        console.warn('Torch constraint error:', err);
+    });
+}
+
+function stopCameraScanner() {
+    if (html5QrScanner) {
+        try {
+            if (html5QrScanner.isScanning) {
+                html5QrScanner.stop().then(() => {
+                    html5QrScanner.clear();
+                }).catch(() => {});
+            }
+        } catch(e) {}
+    }
+    activeCameraTrack = null;
+    scannerTorchActive = false;
+    const torchBtn = document.getElementById('scannerTorchBtn');
+    if (torchBtn) {
+        torchBtn.classList.remove('btn-warning', 'text-dark');
+        torchBtn.classList.add('btn-outline-light');
+    }
+    const input = document.getElementById('barcodeSearchInput');
+    if (input) input.focus();
+}
+
+function onBarcodeSuccess(decodedText, decodedResult) {
+    if (!decodedText) return;
+    const code = decodedText.trim();
+    const now = Date.now();
+
+    // Prevent immediate duplicate scans of the exact same code within 1.8s
+    if (code === lastScannedText && (now - lastScannedTime) < 1800) {
+        return;
+    }
+    lastScannedText = code;
+    lastScannedTime = now;
+
+    // Positive audio & haptic feedback
+    playBeep();
+    if (navigator.vibrate) navigator.vibrate([70]);
+
+    // Visual HUD pulse
+    const targetBox = document.getElementById('scannerTargetBox');
+    if (targetBox) {
+        targetBox.classList.add('detected');
+        setTimeout(() => targetBox.classList.remove('detected'), 650);
+    }
+
+    // If filling a specific form field (e.g. from product catalog)
+    if (scannerTargetFieldId) {
+        const targetInput = document.getElementById(scannerTargetFieldId);
+        if (targetInput) {
+            targetInput.value = code;
+            targetInput.dispatchEvent(new Event('input', { bubbles: true }));
+            targetInput.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+        bootstrap.Modal.getInstance(document.getElementById('cameraScannerModal')).hide();
+        stopCameraScanner();
+        return;
+    }
+
+    // Default: Add item directly to POS Cart
+    handleCameraScannedCode(code);
+
+    // If Continuous Scan is toggled OFF, close modal
+    const isContinuous = document.getElementById('continuousScanToggle')?.checked ?? true;
+    if (!isContinuous) {
+        bootstrap.Modal.getInstance(document.getElementById('cameraScannerModal')).hide();
+        stopCameraScanner();
+    }
+}
+
+function handleCameraScannedCode(code) {
+    // 1. Check local catalog
+    const exactLocal = allCatalogProducts.find(p => 
+        (p.barcode && p.barcode.toLowerCase() === code.toLowerCase()) || 
+        (p.product_code && p.product_code.toLowerCase() === code.toLowerCase()) ||
+        (p.isbn && p.isbn.toLowerCase() === code.toLowerCase())
+    );
+
+    if (exactLocal) {
+        addProductToCart(exactLocal, 1);
+        showScannerFeedbackToast(exactLocal);
+        return;
+    }
+
+    // 2. Query server for barcode / ISBN
+    fetch(`pos_ajax.php?action=barcode_lookup&barcode=${encodeURIComponent(code)}`)
+        .then(res => res.json())
+        .then(data => {
+            if (data.success && data.product) {
+                addProductToCart(data.product, 1);
+                showScannerFeedbackToast(data.product);
+            } else {
+                fetch(`pos_ajax.php?action=search_products&q=${encodeURIComponent(code)}`)
+                    .then(r => r.json())
+                    .then(sData => {
+                        if (sData.success && sData.products && sData.products.length > 0) {
+                            addProductToCart(sData.products[0], 1);
+                            showScannerFeedbackToast(sData.products[0]);
+                        } else {
+                            showScannerErrorToast(`Code "${code}" is not in catalog`);
+                        }
+                    });
+            }
+        })
+        .catch(err => {
+            console.error('Camera scan fetch error:', err);
+            showScannerErrorToast(`Lookup error for: ${code}`);
+        });
+}
+
+function showScannerFeedbackToast(product) {
+    hideScannerToasts();
+    const toast = document.getElementById('scannerFeedbackToast');
+    const titleEl = document.getElementById('toastScannedTitle');
+    const detailsEl = document.getElementById('toastScannedDetails');
+
+    if (toast && titleEl && detailsEl) {
+        titleEl.textContent = product.title;
+        const totalItems = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+        detailsEl.innerHTML = `Rs. ${parseFloat(product.retail_price).toFixed(2)} &bull; Added! Cart: ${totalItems} items`;
+        toast.classList.remove('d-none');
+
+        clearTimeout(scannerToastTimer);
+        scannerToastTimer = setTimeout(() => {
+            toast.classList.add('d-none');
+        }, 2400);
+    }
+}
+
+function showScannerErrorToast(msg) {
+    hideScannerToasts();
+    const toast = document.getElementById('scannerErrorToast');
+    const detailsEl = document.getElementById('toastErrorDetails');
+
+    if (toast && detailsEl) {
+        detailsEl.textContent = msg;
+        toast.classList.remove('d-none');
+
+        clearTimeout(scannerToastTimer);
+        scannerToastTimer = setTimeout(() => {
+            toast.classList.add('d-none');
+        }, 2600);
+    }
+}
+
+function hideScannerToasts() {
+    clearTimeout(scannerToastTimer);
+    document.getElementById('scannerFeedbackToast')?.classList.add('d-none');
+    document.getElementById('scannerErrorToast')?.classList.add('d-none');
+}
+
+function showScannerErrorNotice(msg) {
+    const notice = document.getElementById('scannerErrorNotice');
+    if (notice) {
+        notice.innerHTML = `<i class="fa-solid fa-triangle-exclamation me-1"></i> ${msg}`;
+        notice.classList.remove('d-none');
+    }
 }
 </script>
 
