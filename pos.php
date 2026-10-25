@@ -1,0 +1,873 @@
+<?php
+// pos.php - High-Speed POS Billing Terminal
+$pageTitle = 'POS Billing Terminal';
+require_once __DIR__ . '/includes/header.php';
+
+$customers = dbFetchAll("SELECT id, name, phone, current_balance, credit_limit, customer_type FROM customers WHERE status = 1 ORDER BY id ASC");
+$accounts = dbFetchAll("SELECT id, account_name, account_type, balance FROM accounts WHERE status = 1 ORDER BY id ASC");
+$categories = dbFetchAll("SELECT id, name, type FROM categories ORDER BY name ASC");
+$schoolClasses = dbFetchAll("SELECT sc.id, sc.class_name, sc.academic_session, s.name as school_name 
+                             FROM school_classes sc 
+                             JOIN schools s ON s.id = sc.school_id 
+                             ORDER BY s.name ASC, sc.class_name ASC");
+?>
+
+<div class="row g-2 mb-2">
+    <!-- Top POS Controls Bar -->
+    <div class="col-12">
+        <div class="card p-2 bg-white shadow-sm border-0">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                <!-- Customer Selection -->
+                <div class="d-flex align-items-center gap-2" style="min-width: 320px;">
+                    <span class="text-secondary small fw-bold"><i class="fa-solid fa-user me-1 text-primary"></i> Customer:</span>
+                    <select id="posCustomerSelect" class="form-select form-select-sm" onchange="onCustomerChange()">
+                        <?php foreach ($customers as $c): ?>
+                            <option value="<?= $c['id'] ?>" 
+                                    data-balance="<?= (float)$c['current_balance'] ?>" 
+                                    data-limit="<?= (float)$c['credit_limit'] ?>"
+                                    data-name="<?= htmlspecialchars($c['name']) ?>"
+                                    data-phone="<?= htmlspecialchars($c['phone'] ?? '') ?>">
+                                <?= htmlspecialchars($c['name']) ?> 
+                                <?= $c['current_balance'] > 0 ? '(Due: ' . formatCurrency($c['current_balance']) . ')' : '' ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+
+                <!-- Customer Balance Info Pill -->
+                <div id="customerBalPill" class="d-none small badge bg-light text-dark border p-2">
+                    <span id="custBalLabel">Balance: </span> <strong id="custBalVal" class="text-danger ms-1">Rs. 0.00</strong>
+                </div>
+
+                <!-- School Package 1-Click Bundle Loader -->
+                <div class="d-flex align-items-center gap-2">
+                    <button type="button" class="btn btn-outline-info btn-sm" data-bs-toggle="modal" data-bs-target="#schoolPackageModal">
+                        <i class="fa-solid fa-graduation-cap me-1"></i> <strong>Load School Book Bundle</strong>
+                    </button>
+                    <button type="button" class="btn btn-outline-warning btn-sm" onclick="openHeldBillsModal()">
+                        <i class="fa-solid fa-pause me-1"></i> Held Bills <span id="heldBillsBadge" class="badge bg-warning text-dark ms-1">0</span>
+                    </button>
+                    <button type="button" class="btn btn-outline-danger btn-sm" onclick="clearCart()">
+                        <i class="fa-solid fa-trash-can me-1"></i> Clear Cart
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Main POS Split View -->
+<div class="row g-3">
+    <!-- LEFT PANEL: Cart & Billing Table (60%) -->
+    <div class="col-lg-7">
+        <div class="card shadow-sm h-100 d-flex flex-column">
+            <!-- Fast Barcode / Search Input -->
+            <div class="p-3 bg-light border-bottom">
+                <div class="input-group">
+                    <span class="input-group-text bg-primary text-white"><i class="fa-solid fa-barcode"></i></span>
+                    <input type="text" id="barcodeSearchInput" class="form-control form-control-lg" placeholder="Scan Barcode or Search Book Title, ISBN, Author (Press Enter)..." autofocus>
+                    <button class="btn btn-primary px-3" type="button" onclick="triggerSearchOrScan()">
+                        <i class="fa-solid fa-plus-circle me-1"></i> Add
+                    </button>
+                </div>
+            </div>
+
+            <!-- Cart Table Items -->
+            <div class="card-body p-0 flex-grow-1" style="min-height: 380px; max-height: calc(100vh - 420px); overflow-y: auto;">
+                <table class="table table-hover align-middle mb-0" id="cartTable">
+                    <thead class="table-light sticky-top small text-uppercase">
+                        <tr>
+                            <th style="width: 42%;">Item / Book Description</th>
+                            <th style="width: 18%;">Price (Rs.)</th>
+                            <th style="width: 16%;" class="text-center">Qty</th>
+                            <th style="width: 16%;" class="text-end">Total (Rs.)</th>
+                            <th style="width: 8%;" class="text-center"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="cartTableBody">
+                        <tr id="emptyCartRow">
+                            <td colspan="5" class="text-center py-5 text-muted">
+                                <i class="fa-solid fa-cart-shopping fa-3x mb-2 text-secondary opacity-25"></i>
+                                <div>Your POS Cart is empty.</div>
+                                <small class="text-muted">Scan a barcode or click any product from the catalog on the right.</small>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Cart Totals & Checkout Actions Footer -->
+            <div class="card-footer bg-white border-top p-3">
+                <div class="row g-2 mb-3">
+                    <div class="col-md-4">
+                        <span class="small text-muted">Subtotal:</span>
+                        <div class="fs-6 fw-bold text-dark" id="displaySubtotal">Rs. 0.00</div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <span class="small text-muted">Discount (Rs.):</span>
+                        </div>
+                        <input type="number" step="0.01" id="orderDiscountInput" class="form-control form-control-sm" value="0.00" oninput="recalculateTotals()">
+                    </div>
+                    <div class="col-md-4 text-end">
+                        <span class="small text-muted">Grand Total:</span>
+                        <div class="fs-4 fw-bold text-primary" id="displayGrandTotal">Rs. 0.00</div>
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-outline-secondary flex-grow-1" onclick="holdCurrentBill()">
+                        <i class="fa-solid fa-pause me-1"></i> Hold Bill (F4)
+                    </button>
+                    <button type="button" class="btn btn-pos btn-lg flex-grow-2 shadow-sm px-4 fw-bold" onclick="openCheckoutModal()">
+                        <i class="fa-solid fa-credit-card me-2"></i> PAY & CHECKOUT (F8)
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- RIGHT PANEL: Visual Catalog & Quick Selection (40%) -->
+    <div class="col-lg-5">
+        <div class="card shadow-sm h-100 d-flex flex-column">
+            <!-- Filter Bar -->
+            <div class="p-3 border-bottom bg-light">
+                <div class="row g-2">
+                    <div class="col-7">
+                        <input type="text" id="catalogSearchInput" class="form-control form-control-sm" placeholder="Filter items..." oninput="filterCatalogItems()">
+                    </div>
+                    <div class="col-5">
+                        <select id="catalogCategorySelect" class="form-select form-select-sm" onchange="filterCatalogItems()">
+                            <option value="">All Categories</option>
+                            <?php foreach ($categories as $cat): ?>
+                                <option value="<?= $cat['id'] ?>"><?= htmlspecialchars($cat['name']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Product Cards Grid -->
+            <div class="card-body p-2 flex-grow-1" id="productGrid" style="min-height: 480px; max-height: calc(100vh - 280px); overflow-y: auto;">
+                <div class="row g-2" id="catalogCardsContainer">
+                    <!-- Loaded dynamically via AJAX -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: School Book Package / Syllabus Bundle -->
+<div class="modal fade" id="schoolPackageModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-info-subtle">
+                <h5 class="modal-title fw-bold text-info-emphasis">
+                    <i class="fa-solid fa-graduation-cap me-2"></i> Select Class Syllabus Book Package
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <p class="text-muted small">Choose an educational institution and class level to load the entire approved textbook & stationery set directly into this POS cart.</p>
+                <div class="row g-3">
+                    <?php foreach ($schoolClasses as $sc): ?>
+                        <div class="col-md-6">
+                            <div class="card border p-3 h-100 shadow-sm hover-shadow">
+                                <div class="badge bg-primary mb-2 align-self-start"><?= htmlspecialchars($sc['school_name']) ?></div>
+                                <h6 class="fw-bold mb-1"><?= htmlspecialchars($sc['class_name']) ?></h6>
+                                <div class="small text-muted mb-3">Academic Session: <?= htmlspecialchars($sc['academic_session']) ?></div>
+                                <button type="button" class="btn btn-outline-primary btn-sm mt-auto" onclick="loadSchoolPackage(<?= $sc['id'] ?>)">
+                                    <i class="fa-solid fa-cart-arrow-down me-1"></i> Load Complete Package into Cart
+                                </button>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Checkout & Payment Settlement -->
+<div class="modal fade" id="checkoutModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title fw-bold"><i class="fa-solid fa-cash-register me-2"></i> Bill Payment & Checkout</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <!-- Bill Amount Summary -->
+                <div class="bg-light p-3 rounded mb-3 text-center border">
+                    <div class="small text-muted text-uppercase fw-semibold">Net Payable Amount</div>
+                    <div class="display-6 fw-bold text-primary" id="modalPayableAmount">Rs. 0.00</div>
+                </div>
+
+                <!-- Payment Method Selection -->
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Payment Method</label>
+                    <div class="btn-group w-100" role="group">
+                        <input type="radio" class="btn-check" name="payMethod" id="pay_cash" value="cash" checked onchange="onPaymentMethodChange()">
+                        <label class="btn btn-outline-primary" for="pay_cash"><i class="fa-solid fa-money-bill-wave me-1"></i> Cash</label>
+
+                        <input type="radio" class="btn-check" name="payMethod" id="pay_bank" value="bank" onchange="onPaymentMethodChange()">
+                        <label class="btn btn-outline-primary" for="pay_bank"><i class="fa-solid fa-building-columns me-1"></i> Bank</label>
+
+                        <input type="radio" class="btn-check" name="payMethod" id="pay_wallet" value="wallet" onchange="onPaymentMethodChange()">
+                        <label class="btn btn-outline-primary" for="pay_wallet"><i class="fa-solid fa-mobile-screen-button me-1"></i> Wallet</label>
+
+                        <input type="radio" class="btn-check" name="payMethod" id="pay_credit" value="credit" onchange="onPaymentMethodChange()">
+                        <label class="btn btn-outline-primary" for="pay_credit"><i class="fa-solid fa-hand-holding-dollar me-1"></i> Khata (Credit)</label>
+                    </div>
+                </div>
+
+                <!-- Receiving Account -->
+                <div class="mb-3" id="depositAccountDiv">
+                    <label class="form-label small fw-bold">Deposit Into Account</label>
+                    <select id="paymentAccountId" class="form-select">
+                        <?php foreach ($accounts as $acc): ?>
+                            <option value="<?= $acc['id'] ?>"><?= htmlspecialchars($acc['account_name']) ?> (<?= formatCurrency($acc['balance']) ?>)</option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+
+                <!-- Cash Tendered & Quick Fill Buttons -->
+                <div id="cashTenderedDiv">
+                    <label class="form-label small fw-bold">Cash Received (Tendered)</label>
+                    <input type="number" step="1" id="tenderedAmountInput" class="form-control form-control-lg fw-bold text-success" oninput="calculateChange()">
+                    <div class="btn-group btn-group-sm w-100 mt-2">
+                        <button type="button" class="btn btn-outline-secondary" onclick="addTendered(100)">+100</button>
+                        <button type="button" class="btn btn-outline-secondary" onclick="addTendered(500)">+500</button>
+                        <button type="button" class="btn btn-outline-secondary" onclick="addTendered(1000)">+1000</button>
+                        <button type="button" class="btn btn-outline-secondary" onclick="addTendered(5000)">+5000</button>
+                        <button type="button" class="btn btn-outline-primary fw-bold" onclick="exactCashTendered()">Exact</button>
+                    </div>
+                </div>
+
+                <!-- Return Change Display -->
+                <div class="mt-3 p-3 bg-light rounded border d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="small text-muted">Change to Return:</div>
+                        <h4 class="fw-bold mb-0 text-success" id="displayChangeAmount">Rs. 0.00</h4>
+                    </div>
+                    <div>
+                        <div class="small text-muted text-end">Remaining Due:</div>
+                        <h5 class="fw-bold mb-0 text-danger text-end" id="displayDueAmount">Rs. 0.00</h5>
+                    </div>
+                </div>
+
+                <div class="mt-3">
+                    <input type="text" id="saleNotesInput" class="form-control form-control-sm" placeholder="Order notes or customer reference (optional)">
+                </div>
+            </div>
+
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success btn-lg px-4 fw-bold" id="confirmCheckoutBtn" onclick="processCheckout()">
+                    <i class="fa-solid fa-check-circle me-1"></i> Complete & Print
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Held Bills Management -->
+<div class="modal fade" id="heldBillsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning-subtle">
+                <h5 class="modal-title fw-bold text-warning-emphasis"><i class="fa-solid fa-pause me-2"></i> Held Bills</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-3">
+                <div id="heldBillsList" class="list-group">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Post-Checkout Success & Receipt Printing -->
+<div class="modal fade" id="receiptSuccessModal" tabindex="-1" data-bs-backdrop="static" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title fw-bold"><i class="fa-solid fa-circle-check me-2"></i> Sale Completed Successfully!</h5>
+            </div>
+            <div class="modal-body text-center p-4">
+                <div class="text-success mb-2"><i class="fa-solid fa-check-double fa-3x"></i></div>
+                <h4 class="fw-bold mb-1" id="successInvoiceNo">INV-2026-0001</h4>
+                <p class="text-muted small mb-3">Total: <strong id="successTotal">Rs. 0.00</strong> &bull; Change: <strong id="successChange" class="text-success">Rs. 0.00</strong></p>
+
+                <!-- Receipt Preview Frame / Action Buttons -->
+                <div class="d-grid gap-2">
+                    <a href="#" id="thermalPrintLink" target="_blank" class="btn btn-dark btn-lg">
+                        <i class="fa-solid fa-receipt me-2"></i> Print 80mm Thermal Receipt (F9)
+                    </a>
+                    <a href="#" id="a4PrintLink" target="_blank" class="btn btn-outline-primary">
+                        <i class="fa-solid fa-file-invoice me-2"></i> Print Standard A4 Invoice
+                    </a>
+                    <button type="button" class="btn btn-outline-secondary" onclick="startNewSale()">
+                        <i class="fa-solid fa-plus-circle me-1"></i> New Bill / Next Customer (Enter)
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// POS State
+let cartItems = [];
+let allCatalogProducts = [];
+
+// Initialize
+document.addEventListener('DOMContentLoaded', function() {
+    loadCatalog();
+    checkHeldBills();
+
+    // Barcode scanner Enter key
+    document.getElementById('barcodeSearchInput').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            triggerSearchOrScan();
+        }
+    });
+
+    // POS Hotkeys (F4, F8, F9, Esc)
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'F4') {
+            e.preventDefault();
+            holdCurrentBill();
+        } else if (e.key === 'F8') {
+            e.preventDefault();
+            openCheckoutModal();
+        } else if (e.key === 'F7') {
+            e.preventDefault();
+            openHeldBillsModal();
+        }
+    });
+});
+
+// Load products for the visual catalog
+function loadCatalog() {
+    fetch('pos_ajax.php?action=search_products')
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                allCatalogProducts = data.products;
+                renderCatalog(allCatalogProducts);
+            }
+        });
+}
+
+function renderCatalog(products) {
+    const container = document.getElementById('catalogCardsContainer');
+    if (!products.length) {
+        container.innerHTML = '<div class="col-12 text-center text-muted py-4">No matching products found.</div>';
+        return;
+    }
+    let html = '';
+    products.forEach(p => {
+        const isLow = parseFloat(p.current_stock) <= parseFloat(p.min_stock_alert);
+        const isOut = parseFloat(p.current_stock) <= 0;
+        html += `
+            <div class="col-sm-6 col-12">
+                <div class="pos-product-item p-2 h-100 d-flex flex-column justify-content-between" onclick='addProductToCart(${JSON.stringify(p)})'>
+                    <div>
+                        <div class="d-flex justify-content-between align-items-start gap-1">
+                            <span class="badge ${p.product_type === 'book' ? 'bg-primary-subtle text-primary' : 'bg-warning-subtle text-dark'}" style="font-size: 0.68rem;">
+                                ${p.product_type.toUpperCase()}
+                            </span>
+                            <span class="badge ${isOut ? 'bg-danger' : (isLow ? 'bg-warning text-dark' : 'bg-light text-secondary border')}" style="font-size: 0.68rem;">
+                                Stock: ${p.current_stock}
+                            </span>
+                        </div>
+                        <div class="fw-bold small text-truncate mt-1" title="${p.title}">${p.title}</div>
+                        ${p.author ? `<div class="text-muted" style="font-size: 0.7rem;">${p.author}</div>` : ''}
+                        <div class="text-secondary font-monospace" style="font-size: 0.68rem;">${p.barcode || p.product_code}</div>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mt-2 pt-1 border-top">
+                        <span class="fw-bold text-success small">Rs. ${parseFloat(p.retail_price).toFixed(2)}</span>
+                        <span class="btn btn-sm btn-outline-primary py-0 px-2" style="font-size: 0.72rem;"><i class="fa-solid fa-plus"></i></span>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    container.innerHTML = html;
+}
+
+function filterCatalogItems() {
+    const q = document.getElementById('catalogSearchInput').value.toLowerCase().trim();
+    const cat = document.getElementById('catalogCategorySelect').value;
+
+    const filtered = allCatalogProducts.filter(p => {
+        const matchQ = !q || p.title.toLowerCase().includes(q) || 
+                       (p.barcode && p.barcode.toLowerCase().includes(q)) || 
+                       (p.isbn && p.isbn.toLowerCase().includes(q)) || 
+                       (p.product_code && p.product_code.toLowerCase().includes(q));
+        const matchCat = !cat || p.category_id == cat;
+        return matchQ && matchCat;
+    });
+    renderCatalog(filtered);
+}
+
+// Add Product to Cart
+function addProductToCart(product, qty = 1) {
+    const existingIndex = cartItems.findIndex(item => item.product_id == product.id);
+    if (existingIndex > -1) {
+        cartItems[existingIndex].qty += qty;
+        cartItems[existingIndex].line_total = (cartItems[existingIndex].qty * cartItems[existingIndex].price) - cartItems[existingIndex].discount;
+    } else {
+        const price = parseFloat(product.retail_price) || 0;
+        cartItems.push({
+            product_id: product.id,
+            product_code: product.product_code,
+            barcode: product.barcode,
+            title: product.title,
+            urdu_title: product.urdu_title,
+            unit: product.unit || 'Piece',
+            price: price,
+            qty: qty,
+            discount: 0,
+            line_total: price * qty
+        });
+    }
+    renderCart();
+    // Beep or visual flash
+    document.getElementById('barcodeSearchInput').value = '';
+    document.getElementById('barcodeSearchInput').focus();
+}
+
+// Barcode Lookup / Enter trigger
+function triggerSearchOrScan() {
+    const input = document.getElementById('barcodeSearchInput');
+    const term = input.value.trim();
+    if (!term) return;
+
+    fetch(`pos_ajax.php?action=barcode_lookup&barcode=${encodeURIComponent(term)}`)
+        .then(res => res.json())
+        .then(data => {
+            if (data.success && data.product) {
+                addProductToCart(data.product, 1);
+            } else {
+                // If not found by exact barcode, try search
+                fetch(`pos_ajax.php?action=search_products&q=${encodeURIComponent(term)}`)
+                    .then(r => r.json())
+                    .then(sData => {
+                        if (sData.success && sData.products.length > 0) {
+                            addProductToCart(sData.products[0], 1);
+                        } else {
+                            alert('No book or item found for: ' + term);
+                            input.select();
+                        }
+                    });
+            }
+        });
+}
+
+// Render Cart Table
+function renderCart() {
+    const tbody = document.getElementById('cartTableBody');
+    if (cartItems.length === 0) {
+        tbody.innerHTML = `
+            <tr id="emptyCartRow">
+                <td colspan="5" class="text-center py-5 text-muted">
+                    <i class="fa-solid fa-cart-shopping fa-3x mb-2 text-secondary opacity-25"></i>
+                    <div>Your POS Cart is empty.</div>
+                    <small class="text-muted">Scan a barcode or click any product from the catalog on the right.</small>
+                </td>
+            </tr>
+        `;
+        recalculateTotals();
+        return;
+    }
+
+    let html = '';
+    cartItems.forEach((item, index) => {
+        html += `
+            <tr>
+                <td>
+                    <div class="fw-bold small text-dark">${item.title}</div>
+                    <div class="text-muted" style="font-size: 0.7rem;">${item.product_code} &bull; ${item.unit}</div>
+                </td>
+                <td>
+                    <input type="number" step="0.01" class="form-control form-control-sm" value="${item.price.toFixed(2)}" onchange="updateItemPrice(${index}, this.value)">
+                </td>
+                <td class="text-center">
+                    <div class="input-group input-group-sm justify-content-center" style="width: 100px; margin: 0 auto;">
+                        <button class="btn btn-outline-secondary" type="button" onclick="changeQty(${index}, -1)">-</button>
+                        <input type="number" step="1" class="form-control text-center p-0" value="${item.qty}" min="1" onchange="updateItemQty(${index}, this.value)">
+                        <button class="btn btn-outline-secondary" type="button" onclick="changeQty(${index}, 1)">+</button>
+                    </div>
+                </td>
+                <td class="text-end fw-bold text-dark">
+                    Rs. ${item.line_total.toFixed(2)}
+                </td>
+                <td class="text-center">
+                    <button type="button" class="btn btn-outline-danger btn-sm py-0 px-2" onclick="removeCartItem(${index})" title="Remove">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+    });
+    tbody.innerHTML = html;
+    recalculateTotals();
+}
+
+function changeQty(index, delta) {
+    if (cartItems[index]) {
+        const newQty = cartItems[index].qty + delta;
+        if (newQty > 0) {
+            cartItems[index].qty = newQty;
+            cartItems[index].line_total = (cartItems[index].qty * cartItems[index].price) - cartItems[index].discount;
+            renderCart();
+        } else {
+            removeCartItem(index);
+        }
+    }
+}
+
+function updateItemQty(index, val) {
+    const q = parseFloat(val) || 1;
+    if (cartItems[index]) {
+        cartItems[index].qty = Math.max(1, q);
+        cartItems[index].line_total = (cartItems[index].qty * cartItems[index].price) - cartItems[index].discount;
+        renderCart();
+    }
+}
+
+function updateItemPrice(index, val) {
+    const p = parseFloat(val) || 0;
+    if (cartItems[index]) {
+        cartItems[index].price = p;
+        cartItems[index].line_total = (cartItems[index].qty * p) - cartItems[index].discount;
+        renderCart();
+    }
+}
+
+function removeCartItem(index) {
+    cartItems.splice(index, 1);
+    renderCart();
+}
+
+function clearCart() {
+    if (cartItems.length > 0 && confirm('Are you sure you want to clear the entire cart?')) {
+        cartItems = [];
+        renderCart();
+    }
+}
+
+function recalculateTotals() {
+    let subtotal = 0;
+    cartItems.forEach(item => {
+        subtotal += item.line_total;
+    });
+
+    const discount = parseFloat(document.getElementById('orderDiscountInput').value) || 0;
+    const grandTotal = Math.max(0, subtotal - discount);
+
+    document.getElementById('displaySubtotal').innerText = 'Rs. ' + subtotal.toFixed(2);
+    document.getElementById('displayGrandTotal').innerText = 'Rs. ' + grandTotal.toFixed(2);
+}
+
+// Customer change handler
+function onCustomerChange() {
+    const sel = document.getElementById('posCustomerSelect');
+    const opt = sel.options[sel.selectedIndex];
+    const bal = parseFloat(opt.getAttribute('data-balance')) || 0;
+    const pill = document.getElementById('customerBalPill');
+    const val = document.getElementById('custBalVal');
+
+    if (bal > 0) {
+        pill.classList.remove('d-none');
+        val.innerText = 'Rs. ' + bal.toFixed(2);
+    } else {
+        pill.classList.add('d-none');
+    }
+}
+
+// Load complete school package into cart
+function loadSchoolPackage(classId) {
+    fetch(`pos_ajax.php?action=load_school_package&class_id=${classId}`)
+        .then(res => res.json())
+        .then(data => {
+            if (data.success && data.items.length > 0) {
+                data.items.forEach(item => {
+                    addProductToCart({
+                        id: item.product_id,
+                        product_code: item.product_code,
+                        barcode: item.barcode,
+                        title: item.title,
+                        unit: item.unit,
+                        retail_price: item.custom_price || item.retail_price
+                    }, parseFloat(item.quantity_needed));
+                });
+                bootstrap.Modal.getInstance(document.getElementById('schoolPackageModal')).hide();
+                alert(`Loaded ${data.items.length} items from ${data.class_info.class_name}!`);
+            } else {
+                alert('No items found in this school package.');
+            }
+        });
+}
+
+// Checkout Modal
+function openCheckoutModal() {
+    if (cartItems.length === 0) {
+        alert('Please add at least one book or product to the cart before checkout.');
+        return;
+    }
+    let subtotal = 0;
+    cartItems.forEach(item => subtotal += item.line_total);
+    const discount = parseFloat(document.getElementById('orderDiscountInput').value) || 0;
+    const grandTotal = Math.max(0, subtotal - discount);
+
+    document.getElementById('modalPayableAmount').innerText = 'Rs. ' + grandTotal.toFixed(2);
+    document.getElementById('tenderedAmountInput').value = grandTotal;
+    calculateChange();
+
+    new bootstrap.Modal(document.getElementById('checkoutModal')).show();
+}
+
+function onPaymentMethodChange() {
+    const method = document.querySelector('input[name="payMethod"]:checked').value;
+    const cashDiv = document.getElementById('cashTenderedDiv');
+    const depositDiv = document.getElementById('depositAccountDiv');
+
+    if (method === 'credit') {
+        cashDiv.style.display = 'none';
+        depositDiv.style.display = 'none';
+        document.getElementById('tenderedAmountInput').value = 0;
+        calculateChange();
+    } else {
+        cashDiv.style.display = 'block';
+        depositDiv.style.display = 'block';
+        if (parseFloat(document.getElementById('tenderedAmountInput').value) <= 0) {
+            exactCashTendered();
+        }
+    }
+}
+
+function exactCashTendered() {
+    let subtotal = 0;
+    cartItems.forEach(item => subtotal += item.line_total);
+    const discount = parseFloat(document.getElementById('orderDiscountInput').value) || 0;
+    const grandTotal = Math.max(0, subtotal - discount);
+    document.getElementById('tenderedAmountInput').value = grandTotal;
+    calculateChange();
+}
+
+function addTendered(amt) {
+    const cur = parseFloat(document.getElementById('tenderedAmountInput').value) || 0;
+    document.getElementById('tenderedAmountInput').value = cur + amt;
+    calculateChange();
+}
+
+function calculateChange() {
+    let subtotal = 0;
+    cartItems.forEach(item => subtotal += item.line_total);
+    const discount = parseFloat(document.getElementById('orderDiscountInput').value) || 0;
+    const grandTotal = Math.max(0, subtotal - discount);
+
+    const tendered = parseFloat(document.getElementById('tenderedAmountInput').value) || 0;
+    const method = document.querySelector('input[name="payMethod"]:checked').value;
+
+    let change = 0;
+    let due = 0;
+
+    if (method === 'credit') {
+        due = grandTotal;
+        change = 0;
+    } else {
+        if (tendered >= grandTotal) {
+            change = tendered - grandTotal;
+            due = 0;
+        } else {
+            change = 0;
+            due = grandTotal - tendered;
+        }
+    }
+
+    document.getElementById('displayChangeAmount').innerText = 'Rs. ' + change.toFixed(2);
+    document.getElementById('displayDueAmount').innerText = 'Rs. ' + due.toFixed(2);
+}
+
+// Process Sale Checkout
+function processCheckout() {
+    const btn = document.getElementById('confirmCheckoutBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> Processing...';
+
+    let subtotal = 0;
+    cartItems.forEach(item => subtotal += item.line_total);
+    const discount = parseFloat(document.getElementById('orderDiscountInput').value) || 0;
+    const grandTotal = Math.max(0, subtotal - discount);
+
+    const method = document.querySelector('input[name="payMethod"]:checked').value;
+    const tendered = parseFloat(document.getElementById('tenderedAmountInput').value) || 0;
+    const accountId = document.getElementById('paymentAccountId').value;
+    const customerId = document.getElementById('posCustomerSelect').value;
+    const notes = document.getElementById('saleNotesInput').value;
+
+    const paidAmount = (method === 'credit') ? 0 : Math.min(grandTotal, tendered);
+
+    const payload = {
+        customer_id: customerId,
+        items: cartItems,
+        subtotal: subtotal,
+        discount_amount: discount,
+        tax_amount: 0,
+        grand_total: grandTotal,
+        paid_amount: paidAmount,
+        tendered_amount: tendered,
+        payment_method: method,
+        account_id: accountId,
+        notes: notes,
+        sale_type: 'pos'
+    };
+
+    fetch('pos_ajax.php?action=checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    })
+    .then(res => res.json())
+    .then(data => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-check-circle me-1"></i> Complete & Print';
+
+        if (data.success) {
+            bootstrap.Modal.getInstance(document.getElementById('checkoutModal')).hide();
+
+            // Populate success modal
+            document.getElementById('successInvoiceNo').innerText = data.invoice_no;
+            document.getElementById('successTotal').innerText = 'Rs. ' + data.grand_total.toFixed(2);
+            document.getElementById('successChange').innerText = 'Rs. ' + data.change.toFixed(2);
+            document.getElementById('thermalPrintLink').href = 'print_invoice.php?id=' + data.sale_id + '&type=thermal';
+            document.getElementById('a4PrintLink').href = 'print_invoice.php?id=' + data.sale_id + '&type=a4';
+
+            new bootstrap.Modal(document.getElementById('receiptSuccessModal')).show();
+
+            // Auto-trigger thermal receipt in background or new window
+            // window.open('print_invoice.php?id=' + data.sale_id + '&type=thermal', '_blank');
+        } else {
+            alert('Error processing checkout: ' + (data.message || 'Unknown error'));
+        }
+    })
+    .catch(err => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-check-circle me-1"></i> Complete & Print';
+        alert('Network / Server Error: ' + err);
+    });
+}
+
+function startNewSale() {
+    cartItems = [];
+    document.getElementById('orderDiscountInput').value = '0.00';
+    document.getElementById('posCustomerSelect').value = '1';
+    renderCart();
+    bootstrap.Modal.getInstance(document.getElementById('receiptSuccessModal')).hide();
+    document.getElementById('barcodeSearchInput').focus();
+    loadCatalog(); // Refresh stock counts in background
+}
+
+// Hold & Resume
+function holdCurrentBill() {
+    if (cartItems.length === 0) {
+        alert('Cart is empty.');
+        return;
+    }
+    let subtotal = 0;
+    cartItems.forEach(item => subtotal += item.line_total);
+    const discount = parseFloat(document.getElementById('orderDiscountInput').value) || 0;
+    const grandTotal = Math.max(0, subtotal - discount);
+
+    const sel = document.getElementById('posCustomerSelect');
+    const custName = sel.options[sel.selectedIndex].text;
+
+    fetch('pos_ajax.php?action=hold_bill', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            customer_id: sel.value,
+            customer_name: custName,
+            items: cartItems,
+            subtotal: subtotal,
+            discount_amount: discount,
+            grand_total: grandTotal
+        })
+    })
+    .then(r => r.json())
+    .then(d => {
+        if (d.success) {
+            alert('Bill held successfully with reference: ' + d.hold_ref);
+            cartItems = [];
+            renderCart();
+            checkHeldBills();
+        }
+    });
+}
+
+function checkHeldBills() {
+    fetch('pos_ajax.php?action=get_held_bills')
+        .then(r => r.json())
+        .then(d => {
+            if (d.success) {
+                const count = d.held_bills.length;
+                document.getElementById('heldBillsBadge').innerText = count;
+            }
+        });
+}
+
+function openHeldBillsModal() {
+    fetch('pos_ajax.php?action=get_held_bills')
+        .then(r => r.json())
+        .then(d => {
+            const list = document.getElementById('heldBillsList');
+            if (d.success && d.held_bills.length > 0) {
+                let html = '';
+                d.held_bills.forEach(b => {
+                    html += `
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-0 fw-bold">${b.hold_ref} &bull; ${b.customer_name}</h6>
+                                <small class="text-muted">Held at ${b.time} &bull; ${b.items.length} items &bull; <strong>Rs. ${parseFloat(b.grand_total).toFixed(2)}</strong></small>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-success" onclick="resumeHeldBill('${b.hold_ref}')">
+                                <i class="fa-solid fa-play me-1"></i> Resume Bill
+                            </button>
+                        </div>
+                    `;
+                });
+                list.innerHTML = html;
+            } else {
+                list.innerHTML = '<div class="text-center py-4 text-muted">No held bills found.</div>';
+            }
+            new bootstrap.Modal(document.getElementById('heldBillsModal')).show();
+        });
+}
+
+function resumeHeldBill(ref) {
+    fetch(`pos_ajax.php?action=resume_bill&hold_ref=${encodeURIComponent(ref)}`)
+        .then(r => r.json())
+        .then(d => {
+            if (d.success && d.bill) {
+                cartItems = d.bill.items;
+                document.getElementById('orderDiscountInput').value = d.bill.discount || 0;
+                if (d.bill.customer_id) {
+                    document.getElementById('posCustomerSelect').value = d.bill.customer_id;
+                }
+                renderCart();
+                bootstrap.Modal.getInstance(document.getElementById('heldBillsModal')).hide();
+                checkHeldBills();
+            } else {
+                alert('Could not resume held bill.');
+            }
+        });
+}
+</script>
+
+<?php require_once __DIR__ . '/includes/footer.php'; ?>
