@@ -1,7 +1,7 @@
 <?php
 // books.php - Book & Stationery Product Catalog Management
-$pageTitle = 'Books & Products';
-require_once __DIR__ . '/includes/header.php';
+require_once __DIR__ . '/config/app.php';
+requireAuth();
 
 $action = $_GET['action'] ?? '';
 $tab = $_GET['tab'] ?? 'all';
@@ -172,6 +172,9 @@ $products = dbFetchAll("SELECT p.*, c.name as category_name
     LEFT JOIN categories c ON c.id = p.category_id 
     WHERE $whereClause 
     ORDER BY p.id DESC");
+
+$pageTitle = 'Books & Products';
+require_once __DIR__ . '/includes/header.php';
 ?>
 
 <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">

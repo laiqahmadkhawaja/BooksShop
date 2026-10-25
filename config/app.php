@@ -1,6 +1,11 @@
 <?php
 // config/app.php - Application core configurations, helpers, auth and localization
 
+// Enable output buffering so headers can always be sent without 'headers already sent' errors
+if (!ob_get_level()) {
+    ob_start();
+}
+
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
