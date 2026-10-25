@@ -233,15 +233,14 @@ $schoolClasses = dbFetchAll("SELECT sc.id, sc.class_name, sc.academic_session, s
 
                 <!-- Cash Tendered & Quick Fill Buttons -->
                 <div id="cashTenderedDiv">
-                    <label class="form-label small fw-bold">Cash Received (Tendered)</label>
-                    <input type="number" step="1" id="tenderedAmountInput" class="form-control form-control-lg fw-bold text-success" oninput="calculateChange()">
-                    <div class="btn-group btn-group-sm w-100 mt-2">
-                        <button type="button" class="btn btn-outline-secondary" onclick="addTendered(100)">+100</button>
-                        <button type="button" class="btn btn-outline-secondary" onclick="addTendered(500)">+500</button>
-                        <button type="button" class="btn btn-outline-secondary" onclick="addTendered(1000)">+1000</button>
-                        <button type="button" class="btn btn-outline-secondary" onclick="addTendered(5000)">+5000</button>
-                        <button type="button" class="btn btn-outline-primary fw-bold" onclick="exactCashTendered()">Exact</button>
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <label class="form-label small fw-bold mb-0">Cash Received (Tendered) *</label>
+                        <small class="text-muted">Smart note shortcuts:</small>
                     </div>
+                    <input type="number" step="1" id="tenderedAmountInput" class="form-control form-control-lg fw-bold text-success font-monospace" oninput="calculateChange()">
+                    <!-- Dynamic Closer Currency Shortcuts Container -->
+                    <div class="d-flex flex-wrap gap-1 mt-2" id="smartShortcutsContainer"></div>
+                    <div id="checkoutWarningBox"></div>
                 </div>
 
                 <!-- Return Change Display -->
@@ -846,9 +845,76 @@ function openCheckoutModal() {
 
     document.getElementById('modalPayableAmount').innerText = 'Rs. ' + grandTotal.toFixed(2);
     document.getElementById('tenderedAmountInput').value = grandTotal;
+    document.getElementById('tenderedAmountInput').classList.remove('is-invalid');
+
+    // Generate and render dynamic closer currency shortcuts for this specific bill
+    renderSmartCashShortcuts(grandTotal);
     calculateChange();
 
     new bootstrap.Modal(document.getElementById('checkoutModal')).show();
+}
+
+// Generate smart cash shortcuts tailored closely to the actual bill
+function generateSmartCashShortcuts(grandTotal) {
+    if (grandTotal <= 0) return [];
+    const suggestions = new Set();
+
+    // 1. Exact amount
+    suggestions.add(grandTotal);
+
+    // 2. Next nearest 10, 50, 100, 500, 1000 multiples
+    const next10 = Math.ceil(grandTotal / 10) * 10;
+    if (next10 > grandTotal) suggestions.add(next10);
+
+    const next50 = Math.ceil(grandTotal / 50) * 50;
+    if (next50 > grandTotal) suggestions.add(next50);
+
+    const next100 = Math.ceil(grandTotal / 100) * 100;
+    if (next100 > grandTotal) suggestions.add(next100);
+
+    const next500 = Math.ceil(grandTotal / 500) * 500;
+    if (next500 > grandTotal) suggestions.add(next500);
+
+    const next1000 = Math.ceil(grandTotal / 1000) * 1000;
+    if (next1000 > grandTotal) suggestions.add(next1000);
+
+    // 3. Circulating Pakistani currency notes (500, 1000, 2000, 5000) greater than total
+    [500, 1000, 2000, 5000].forEach(denom => {
+        if (denom > grandTotal) {
+            suggestions.add(denom);
+        }
+    });
+
+    if (grandTotal >= 5000) {
+        const next5000 = Math.ceil(grandTotal / 5000) * 5000;
+        if (next5000 > grandTotal) suggestions.add(next5000);
+        suggestions.add(next5000 + 1000);
+    }
+
+    const sorted = Array.from(suggestions).sort((a, b) => a - b);
+    return sorted.slice(0, 6);
+}
+
+function renderSmartCashShortcuts(grandTotal) {
+    const container = document.getElementById('smartShortcutsContainer');
+    if (!container) return;
+    const shortcuts = generateSmartCashShortcuts(grandTotal);
+    let html = '';
+    shortcuts.forEach(amt => {
+        const isExact = (Math.abs(amt - grandTotal) < 0.01);
+        if (isExact) {
+            html += `<button type="button" class="btn btn-sm btn-primary fw-bold px-2 py-1 flex-grow-1" onclick="setTenderedAmount(${amt})"><i class="fa-solid fa-check me-1"></i> Exact (${amt.toLocaleString()})</button>`;
+        } else {
+            html += `<button type="button" class="btn btn-sm btn-outline-secondary px-2 py-1 flex-grow-1" onclick="setTenderedAmount(${amt})">${amt.toLocaleString()}</button>`;
+        }
+    });
+    container.innerHTML = html;
+}
+
+function setTenderedAmount(amt) {
+    document.getElementById('tenderedAmountInput').value = amt;
+    document.getElementById('tenderedAmountInput').classList.remove('is-invalid');
+    calculateChange();
 }
 
 function onPaymentMethodChange() {
@@ -876,12 +942,7 @@ function exactCashTendered() {
     const discount = parseFloat(document.getElementById('orderDiscountInput').value) || 0;
     const grandTotal = Math.max(0, subtotal - discount);
     document.getElementById('tenderedAmountInput').value = grandTotal;
-    calculateChange();
-}
-
-function addTendered(amt) {
-    const cur = parseFloat(document.getElementById('tenderedAmountInput').value) || 0;
-    document.getElementById('tenderedAmountInput').value = cur + amt;
+    document.getElementById('tenderedAmountInput').classList.remove('is-invalid');
     calculateChange();
 }
 
@@ -891,8 +952,11 @@ function calculateChange() {
     const discount = parseFloat(document.getElementById('orderDiscountInput').value) || 0;
     const grandTotal = Math.max(0, subtotal - discount);
 
-    const tendered = parseFloat(document.getElementById('tenderedAmountInput').value) || 0;
+    const tenderedInput = document.getElementById('tenderedAmountInput');
+    const tendered = parseFloat(tenderedInput.value) || 0;
     const method = document.querySelector('input[name="payMethod"]:checked').value;
+    const customerId = document.getElementById('posCustomerSelect').value;
+    const warningBox = document.getElementById('checkoutWarningBox');
 
     let change = 0;
     let due = 0;
@@ -900,13 +964,33 @@ function calculateChange() {
     if (method === 'credit') {
         due = grandTotal;
         change = 0;
+        if (warningBox) {
+            if (customerId == 1) {
+                warningBox.innerHTML = '<div class="alert alert-danger py-1 px-2 small mb-0 mt-2"><i class="fa-solid fa-triangle-exclamation me-1"></i> Walk-in cash customer cannot purchase on credit. Select a customer for Khata.</div>';
+            } else {
+                warningBox.innerHTML = '<div class="alert alert-info py-1 px-2 small mb-0 mt-2"><i class="fa-solid fa-circle-info me-1"></i> Full bill of Rs. ' + grandTotal.toFixed(2) + ' will be charged to customer Khata.</div>';
+            }
+        }
     } else {
-        if (tendered >= grandTotal) {
-            change = tendered - grandTotal;
+        if (tendered >= (grandTotal - 0.01)) {
+            change = Math.max(0, tendered - grandTotal);
             due = 0;
+            tenderedInput.classList.remove('is-invalid');
+            if (warningBox) warningBox.innerHTML = '';
         } else {
             change = 0;
             due = grandTotal - tendered;
+            if (customerId == 1) {
+                tenderedInput.classList.add('is-invalid');
+                if (warningBox) {
+                    warningBox.innerHTML = '<div class="alert alert-danger py-1 px-2 small mb-0 mt-2"><i class="fa-solid fa-circle-xmark me-1"></i> <strong>Underpaid:</strong> Received amount (Rs. ' + tendered.toFixed(2) + ') is less than total bill (Rs. ' + grandTotal.toFixed(2) + '). Walk-in customers cannot have an unpaid balance.</div>';
+                }
+            } else {
+                tenderedInput.classList.remove('is-invalid');
+                if (warningBox) {
+                    warningBox.innerHTML = '<div class="alert alert-warning py-1 px-2 small mb-0 mt-2"><i class="fa-solid fa-triangle-exclamation me-1"></i> Remaining balance of <strong>Rs. ' + due.toFixed(2) + '</strong> will be debited to customer Khata.</div>';
+                }
+            }
         }
     }
 
@@ -914,11 +998,9 @@ function calculateChange() {
     document.getElementById('displayDueAmount').innerText = 'Rs. ' + due.toFixed(2);
 }
 
-// Process Sale Checkout
+// Process Sale Checkout with strict validation
 function processCheckout() {
     const btn = document.getElementById('confirmCheckoutBtn');
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> Processing...';
 
     let subtotal = 0;
     cartItems.forEach(item => subtotal += item.line_total);
@@ -926,10 +1008,40 @@ function processCheckout() {
     const grandTotal = Math.max(0, subtotal - discount);
 
     const method = document.querySelector('input[name="payMethod"]:checked').value;
-    const tendered = parseFloat(document.getElementById('tenderedAmountInput').value) || 0;
+    const tenderedInput = document.getElementById('tenderedAmountInput');
+    const tendered = parseFloat(tenderedInput.value) || 0;
     const accountId = document.getElementById('paymentAccountId').value;
-    const customerId = document.getElementById('posCustomerSelect').value;
+    const customerSelect = document.getElementById('posCustomerSelect');
+    const customerId = customerSelect.value;
+    const customerName = customerSelect.options[customerSelect.selectedIndex]?.text || 'Walk-in Customer';
     const notes = document.getElementById('saleNotesInput').value;
+
+    // VALIDATION 1: Walk-in customers cannot purchase on Khata/Credit
+    if (method === 'credit' && customerId == 1) {
+        alert("Validation Error: Walk-in customers cannot purchase on Credit / Khata.\n\nPlease select a registered customer profile from the customer list, or switch to Cash / Bank / Wallet payment.");
+        customerSelect.focus();
+        return;
+    }
+
+    // VALIDATION 2: Checking paid amount is not less than total bill
+    if (method !== 'credit' && tendered < (grandTotal - 0.01)) {
+        if (customerId == 1) {
+            alert("Validation Error: Received amount (Rs. " + tendered.toFixed(2) + ") is less than the total bill (Rs. " + grandTotal.toFixed(2) + ").\n\nWalk-in customers cannot have an unpaid balance.\nPlease receive the full bill amount or select a registered customer to record in Khata.");
+            tenderedInput.focus();
+            tenderedInput.classList.add('is-invalid');
+            return;
+        } else {
+            const shortAmt = (grandTotal - tendered).toFixed(2);
+            const confirmed = confirm("Partial Payment Notice:\n\nTotal Bill: Rs. " + grandTotal.toFixed(2) + "\nReceived: Rs. " + tendered.toFixed(2) + "\nRemaining Due: Rs. " + shortAmt + "\n\nThis remaining balance of Rs. " + shortAmt + " will be added to " + customerName + "'s Khata.\n\nDo you want to proceed?");
+            if (!confirmed) {
+                tenderedInput.focus();
+                return;
+            }
+        }
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> Processing...';
 
     const paidAmount = (method === 'credit') ? 0 : Math.min(grandTotal, tendered);
 

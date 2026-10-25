@@ -254,6 +254,8 @@ elseif ($reportType === 'supplier_statement') {
         }
         .font-urdu {
             font-family: 'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', serif;
+            line-height: 2.2 !important;
+            direction: rtl;
         }
         .report-header {
             border-bottom: 2px solid #0f172a;

@@ -53,6 +53,14 @@ $receiptFooterUrdu = getSetting('receipt_footer_urdu', 'خریداری کا شک
         }
         .font-urdu {
             font-family: 'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', serif;
+            line-height: 2.2 !important;
+            direction: rtl;
+        }
+        #receiptBarcodeSvg {
+            max-width: 100% !important;
+            height: auto !important;
+            margin: 0 auto;
+            display: inline-block;
         }
 
         /* 80mm Thermal Receipt Styling */
@@ -250,10 +258,12 @@ $receiptFooterUrdu = getSetting('receipt_footer_urdu', 'خریداری کا شک
 
     <!-- Barcode & Footer -->
     <div class="text-center mt-3 pt-2" style="border-top: 1px dashed #333;">
-        <svg id="receiptBarcodeSvg"></svg>
-        <div class="small mt-1"><?= htmlspecialchars($receiptFooter) ?></div>
-        <div class="font-urdu small mt-1"><?= htmlspecialchars($receiptFooterUrdu) ?></div>
-        <div class="small text-muted mt-2" style="font-size: 10px;">Software by Kitab Ghar POS System</div>
+        <div class="d-flex justify-content-center my-2" style="overflow: hidden;">
+            <svg id="receiptBarcodeSvg"></svg>
+        </div>
+        <div class="small mt-1 text-muted" style="font-size: 11px;"><?= htmlspecialchars($receiptFooter) ?></div>
+        <div class="font-urdu mt-2 text-center" style="font-size: 11px; line-height: 2.3 !important; direction: rtl;"><?= htmlspecialchars($receiptFooterUrdu) ?></div>
+        <div class="small text-muted mt-2" style="font-size: 9px; opacity: 0.7;">Software by Kitab Ghar POS System</div>
     </div>
 </div>
 
@@ -399,8 +409,10 @@ $receiptFooterUrdu = getSetting('receipt_footer_urdu', 'خریداری کا شک
 document.addEventListener('DOMContentLoaded', function() {
     JsBarcode("#receiptBarcodeSvg", "<?= htmlspecialchars($sale['invoice_no']) ?>", {
         format: "CODE128",
-        width: 1.5,
-        height: 35,
+        width: <?= $type === 'thermal' ? '1.15' : '1.5' ?>,
+        height: <?= $type === 'thermal' ? '30' : '40' ?>,
+        fontSize: <?= $type === 'thermal' ? '11' : '13' ?>,
+        margin: 0,
         displayValue: true
     });
 });

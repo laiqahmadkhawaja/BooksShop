@@ -22,6 +22,12 @@ body {
 }
 
 /* Urdu Language RTL Support */
+.font-urdu {
+    font-family: "Noto Nastaliq Urdu", "Jameel Noori Nastaleeq", "Segoe UI", Tahoma, sans-serif;
+    line-height: 2.2 !important;
+    direction: rtl;
+}
+
 body.lang-ur {
     direction: rtl;
     text-align: right;
