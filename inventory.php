@@ -138,14 +138,14 @@ $allProducts = dbFetchAll("SELECT id, title, product_code, current_stock, purcha
 <!-- Tab Navigation -->
 <div class="card shadow-sm mb-4">
     <div class="card-header bg-white p-0">
-        <ul class="nav nav-tabs card-header-tabs m-0">
+        <ul class="nav nav-tabs card-header-tabs m-0 flex-nowrap overflow-auto">
             <li class="nav-item">
-                <a class="nav-link <?= $activeTab === 'stock' ? 'active fw-bold text-primary' : '' ?>" href="inventory.php?tab=stock">
+                <a class="nav-link text-nowrap <?= $activeTab === 'stock' ? 'active fw-bold text-primary' : '' ?>" href="inventory.php?tab=stock">
                     <i class="fa-solid fa-list me-1"></i> Current Stock Balances
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link <?= $activeTab === 'movements' ? 'active fw-bold text-info' : '' ?>" href="inventory.php?tab=movements">
+                <a class="nav-link text-nowrap <?= $activeTab === 'movements' ? 'active fw-bold text-info' : '' ?>" href="inventory.php?tab=movements">
                     <i class="fa-solid fa-clock-rotate-left me-1"></i> Stock Movement Audit Log
                 </a>
             </li>

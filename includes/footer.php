@@ -20,13 +20,57 @@
 <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
 
 <script>
-    // Sidebar Toggle for Mobile
-    document.getElementById('sidebarToggleBtn')?.addEventListener('click', function() {
-        document.getElementById('mainSidebar').classList.toggle('show');
+    // Mobile Sidebar Drawer Management
+    const sidebar = document.getElementById('mainSidebar');
+    const backdrop = document.getElementById('sidebarBackdrop');
+    const toggleBtn = document.getElementById('sidebarToggleBtn');
+    const closeBtn = document.getElementById('sidebarCloseBtn');
+
+    function openSidebar() {
+        if (sidebar) sidebar.classList.add('show');
+        if (backdrop) backdrop.classList.add('show');
+    }
+
+    function closeSidebar() {
+        if (sidebar) sidebar.classList.remove('show');
+        if (backdrop) backdrop.classList.remove('show');
+    }
+
+    if (toggleBtn) {
+        toggleBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            if (sidebar && sidebar.classList.contains('show')) {
+                closeSidebar();
+            } else {
+                openSidebar();
+            }
+        });
+    }
+
+    if (closeBtn) {
+        closeBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            closeSidebar();
+        });
+    }
+
+    if (backdrop) {
+        backdrop.addEventListener('click', function() {
+            closeSidebar();
+        });
+    }
+
+    // Auto-close sidebar on mobile when resizing up or pressing Esc
+    window.addEventListener('resize', function() {
+        if (window.innerWidth >= 992) {
+            closeSidebar();
+        }
     });
 
-    // Global Hotkeys
     document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeSidebar();
+        }
         // F2 - Jump to POS
         if (e.key === 'F2') {
             e.preventDefault();

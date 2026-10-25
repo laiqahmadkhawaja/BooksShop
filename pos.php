@@ -75,15 +75,15 @@ $schoolClasses = dbFetchAll("SELECT sc.id, sc.class_name, sc.academic_session, s
             </div>
 
             <!-- Cart Table Items -->
-            <div class="card-body p-0 flex-grow-1" style="min-height: 380px; max-height: calc(100vh - 420px); overflow-y: auto;">
+            <div class="card-body p-0 flex-grow-1 table-responsive pos-cart-scroll">
                 <table class="table table-hover align-middle mb-0" id="cartTable">
                     <thead class="table-light sticky-top small text-uppercase">
                         <tr>
-                            <th style="width: 42%;">Item / Book Description</th>
-                            <th style="width: 18%;">Price (Rs.)</th>
-                            <th style="width: 16%;" class="text-center">Qty</th>
-                            <th style="width: 16%;" class="text-end">Total (Rs.)</th>
-                            <th style="width: 8%;" class="text-center"></th>
+                            <th style="min-width: 140px; width: 40%;">Item / Book</th>
+                            <th style="min-width: 85px; width: 20%;">Price</th>
+                            <th style="min-width: 95px; width: 18%;" class="text-center">Qty</th>
+                            <th style="min-width: 85px; width: 15%;" class="text-end">Total</th>
+                            <th style="min-width: 35px; width: 7%;" class="text-center"></th>
                         </tr>
                     </thead>
                     <tbody id="cartTableBody">
@@ -91,7 +91,7 @@ $schoolClasses = dbFetchAll("SELECT sc.id, sc.class_name, sc.academic_session, s
                             <td colspan="5" class="text-center py-5 text-muted">
                                 <i class="fa-solid fa-cart-shopping fa-3x mb-2 text-secondary opacity-25"></i>
                                 <div>Your POS Cart is empty.</div>
-                                <small class="text-muted">Scan a barcode or click any product from the catalog on the right.</small>
+                                <small class="text-muted">Scan a barcode or click any product from the catalog below.</small>
                             </td>
                         </tr>
                     </tbody>
@@ -100,28 +100,26 @@ $schoolClasses = dbFetchAll("SELECT sc.id, sc.class_name, sc.academic_session, s
 
             <!-- Cart Totals & Checkout Actions Footer -->
             <div class="card-footer bg-white border-top p-3">
-                <div class="row g-2 mb-3">
-                    <div class="col-md-4">
+                <div class="row g-2 align-items-center mb-3">
+                    <div class="col-6 col-md-4">
                         <span class="small text-muted">Subtotal:</span>
-                        <div class="fs-6 fw-bold text-dark" id="displaySubtotal">Rs. 0.00</div>
+                        <div class="fs-6 fw-bold text-dark font-monospace" id="displaySubtotal">Rs. 0.00</div>
                     </div>
-                    <div class="col-md-4">
-                        <div class="d-flex align-items-center justify-content-between">
-                            <span class="small text-muted">Discount (Rs.):</span>
-                        </div>
-                        <input type="number" step="0.01" id="orderDiscountInput" class="form-control form-control-sm" value="0.00" oninput="recalculateTotals()">
+                    <div class="col-6 col-md-4">
+                        <span class="small text-muted">Discount (Rs.):</span>
+                        <input type="number" step="0.01" id="orderDiscountInput" class="form-control form-control-sm font-monospace" value="0.00" oninput="recalculateTotals()">
                     </div>
-                    <div class="col-md-4 text-end">
-                        <span class="small text-muted">Grand Total:</span>
-                        <div class="fs-4 fw-bold text-primary" id="displayGrandTotal">Rs. 0.00</div>
+                    <div class="col-12 col-md-4 text-md-end text-center mt-2 mt-md-0 pt-2 pt-md-0 border-top border-md-0">
+                        <span class="small text-muted text-uppercase fw-semibold">Grand Total:</span>
+                        <div class="fs-3 fw-bold text-primary font-monospace" id="displayGrandTotal">Rs. 0.00</div>
                     </div>
                 </div>
 
-                <div class="d-flex gap-2">
-                    <button type="button" class="btn btn-outline-secondary flex-grow-1" onclick="holdCurrentBill()">
+                <div class="d-flex flex-column flex-sm-row gap-2">
+                    <button type="button" class="btn btn-outline-secondary order-2 order-sm-1 py-2 flex-grow-1" onclick="holdCurrentBill()">
                         <i class="fa-solid fa-pause me-1"></i> Hold Bill (F4)
                     </button>
-                    <button type="button" class="btn btn-pos btn-lg flex-grow-2 shadow-sm px-4 fw-bold" onclick="openCheckoutModal()">
+                    <button type="button" class="btn btn-pos btn-lg order-1 order-sm-2 shadow-sm px-4 fw-bold py-2 flex-grow-2" onclick="openCheckoutModal()">
                         <i class="fa-solid fa-credit-card me-2"></i> PAY & CHECKOUT (F8)
                     </button>
                 </div>
@@ -150,7 +148,7 @@ $schoolClasses = dbFetchAll("SELECT sc.id, sc.class_name, sc.academic_session, s
             </div>
 
             <!-- Product Cards Grid -->
-            <div class="card-body p-2 flex-grow-1" id="productGrid" style="min-height: 480px; max-height: calc(100vh - 280px); overflow-y: auto;">
+            <div class="card-body p-2 flex-grow-1 pos-catalog-scroll" id="productGrid">
                 <div class="row g-2" id="catalogCardsContainer">
                     <!-- Loaded dynamically via AJAX -->
                 </div>

@@ -136,18 +136,43 @@ body.lang-ur .sidebar .nav-link.active {
     transition: all 0.3s ease;
 }
 
+/* Sidebar Backdrop Overlay on Mobile */
+.sidebar-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(2px);
+    z-index: 1040;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.sidebar-backdrop.show {
+    opacity: 1;
+    visibility: visible;
+}
+
 @media (max-width: 991.98px) {
     .sidebar {
         transform: translateX(-100%);
+        z-index: 1050;
+        width: 270px;
+        box-shadow: 4px 0 20px rgba(0, 0, 0, 0.25);
     }
     body.lang-ur .sidebar {
         transform: translateX(100%);
+        box-shadow: -4px 0 20px rgba(0, 0, 0, 0.25);
     }
     .sidebar.show {
         transform: translateX(0);
     }
     .main-content {
         margin-left: 0;
+        margin-right: 0;
     }
 }
 
@@ -156,7 +181,7 @@ body.lang-ur .sidebar .nav-link.active {
     height: var(--topbar-height);
     background: #fff;
     border-bottom: 1px solid #e2e8f0;
-    padding: 0 24px;
+    padding: 0 20px;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -164,6 +189,13 @@ body.lang-ur .sidebar .nav-link.active {
     top: 0;
     z-index: 990;
     box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+}
+
+@media (max-width: 768px) {
+    .top-navbar {
+        padding: 0 10px;
+        height: 56px;
+    }
 }
 
 /* Cards & Stats */
@@ -401,4 +433,93 @@ body.lang-ur .stat-card .stat-icon {
         font-size: 0.85rem;
         padding: 8px 10px;
     }
+}
+
+/* Mobile Responsive Enhancements */
+@media (max-width: 576px) {
+    .container-fluid.px-4 {
+        padding-left: 10px !important;
+        padding-right: 10px !important;
+    }
+    .stat-card {
+        padding: 15px;
+    }
+    .stat-card h3 {
+        font-size: 1.45rem;
+    }
+    .stat-card .stat-icon {
+        font-size: 2.5rem;
+    }
+}
+
+/* Horizontal Scrolling for Nav Tabs on Mobile */
+.card-header-tabs {
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    white-space: nowrap !important;
+    scrollbar-width: thin;
+    padding-bottom: 2px;
+}
+.card-header-tabs::-webkit-scrollbar {
+    height: 3px;
+}
+.card-header-tabs::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 3px;
+}
+.card-header-tabs .nav-link {
+    white-space: nowrap !important;
+}
+
+/* POS Cart Responsive Scroll */
+.pos-cart-scroll {
+    min-height: 220px;
+    max-height: calc(100vh - 400px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 991.98px) {
+    .pos-cart-scroll {
+        min-height: 180px;
+        max-height: 280px;
+    }
+}
+
+/* POS Catalog Responsive Scroll */
+.pos-catalog-scroll {
+    min-height: 480px;
+    max-height: calc(100vh - 280px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 991.98px) {
+    .pos-catalog-scroll {
+        min-height: 250px;
+        max-height: 400px;
+    }
+}
+
+/* Directory List Responsive Scroll (Customers, Suppliers, Schools) */
+.directory-list-scroll {
+    max-height: calc(100vh - 350px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 991.98px) {
+    .directory-list-scroll {
+        max-height: 240px;
+    }
+}
+
+/* Prevent unwanted horizontal overflow */
+body, html {
+    overflow-x: hidden;
+}
+
+.table-responsive {
+    -webkit-overflow-scrolling: touch;
 }

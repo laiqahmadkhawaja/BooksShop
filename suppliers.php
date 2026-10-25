@@ -128,7 +128,7 @@ $accounts = dbFetchAll("SELECT id, account_name, balance FROM accounts WHERE sta
                 <h6 class="mb-0 fw-bold text-dark"><i class="fa-solid fa-building text-primary me-2"></i> Suppliers Directory</h6>
                 <span class="badge bg-light text-secondary border"><?= count($suppliers) ?></span>
             </div>
-            <div class="list-group list-group-flush" style="max-height: calc(100vh - 350px); overflow-y: auto;">
+            <div class="list-group list-group-flush directory-list-scroll">
                 <?php if (empty($suppliers)): ?>
                     <div class="p-4 text-center text-muted">No suppliers found.</div>
                 <?php else: ?>

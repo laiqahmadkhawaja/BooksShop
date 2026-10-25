@@ -131,7 +131,7 @@ $shopName = getSetting('shop_name', 'Kitab Ghar');
                 <h6 class="mb-0 fw-bold text-dark"><i class="fa-solid fa-address-book text-primary me-2"></i> Customer Directory</h6>
                 <span class="badge bg-light text-secondary border"><?= count($customers) ?></span>
             </div>
-            <div class="list-group list-group-flush" style="max-height: calc(100vh - 350px); overflow-y: auto;">
+            <div class="list-group list-group-flush directory-list-scroll">
                 <?php if (empty($customers)): ?>
                     <div class="p-4 text-center text-muted">No customers found.</div>
                 <?php else: ?>

@@ -6,12 +6,17 @@ $userRole = $_SESSION['user']['role'] ?? '';
 ?>
 <aside class="sidebar" id="mainSidebar">
     <!-- Brand -->
-    <div class="brand-section">
-        <i class="fa-solid fa-book-bookmark text-warning fs-3"></i>
-        <div>
-            <h5 class="mb-0"><?= $currentLang === 'ur' ? 'کتاب گھر' : 'Kitab Ghar' ?></h5>
-            <small class="text-white-50" style="font-size: 0.72rem;"><?= $currentLang === 'ur' ? 'بک شاپ مینجمنٹ' : 'Bookshop POS & ERP' ?></small>
+    <div class="brand-section justify-content-between">
+        <div class="d-flex align-items-center gap-2">
+            <i class="fa-solid fa-book-bookmark text-warning fs-3"></i>
+            <div>
+                <h5 class="mb-0"><?= $currentLang === 'ur' ? 'کتاب گھر' : 'Kitab Ghar' ?></h5>
+                <small class="text-white-50" style="font-size: 0.72rem;"><?= $currentLang === 'ur' ? 'بک شاپ مینجمنٹ' : 'Bookshop POS & ERP' ?></small>
+            </div>
         </div>
+        <button class="btn btn-sm btn-link text-white-50 d-lg-none p-1 text-decoration-none" id="sidebarCloseBtn" type="button" aria-label="Close Sidebar">
+            <i class="fa-solid fa-xmark fs-4"></i>
+        </button>
     </div>
 
     <!-- Navigation links -->

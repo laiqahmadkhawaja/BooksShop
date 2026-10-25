@@ -151,7 +151,7 @@ $allProducts = dbFetchAll("SELECT id, title, product_code, product_type, retail_
             <div class="card-header bg-white py-3">
                 <h6 class="mb-0 fw-bold text-dark"><i class="fa-solid fa-layer-group text-primary me-2"></i> Syllabus Packages</h6>
             </div>
-            <div class="list-group list-group-flush" style="max-height: calc(100vh - 250px); overflow-y: auto;">
+            <div class="list-group list-group-flush directory-list-scroll">
                 <?php if (empty($classes)): ?>
                     <div class="p-4 text-center text-muted">No classes created yet. Click "Create Class Syllabus Package".</div>
                 <?php else: ?>
@@ -200,7 +200,7 @@ $allProducts = dbFetchAll("SELECT id, title, product_code, product_type, retail_
                         </div>
 
                         <!-- Package Cost & Retail Pill -->
-                        <div class="text-end">
+                        <div class="text-start text-sm-end">
                             <div class="small text-muted">Complete Course Package Price:</div>
                             <h3 class="fw-bold text-success mb-0"><?= formatCurrency($packageTotalPrice) ?></h3>
                             <span class="small text-muted">Estimated Margin: <?= formatCurrency($packageTotalPrice - $packageTotalCost) ?></span>

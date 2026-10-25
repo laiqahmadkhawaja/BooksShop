@@ -195,24 +195,24 @@ $products = dbFetchAll("SELECT p.*, c.name as category_name
 <!-- Tabs & Search Filter -->
 <div class="card shadow-sm mb-4">
     <div class="card-header bg-white p-0">
-        <ul class="nav nav-tabs card-header-tabs m-0">
+        <ul class="nav nav-tabs card-header-tabs m-0 flex-nowrap overflow-auto">
             <li class="nav-item">
-                <a class="nav-link <?= $tab === 'all' ? 'active fw-bold' : '' ?>" href="books.php?tab=all">
+                <a class="nav-link text-nowrap <?= $tab === 'all' ? 'active fw-bold' : '' ?>" href="books.php?tab=all">
                     <i class="fa-solid fa-list me-1"></i> All Products (<?= dbFetchOne("SELECT COUNT(*) as c FROM products WHERE status=1")['c'] ?>)
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link <?= $tab === 'books' ? 'active fw-bold text-primary' : '' ?>" href="books.php?tab=books">
+                <a class="nav-link text-nowrap <?= $tab === 'books' ? 'active fw-bold text-primary' : '' ?>" href="books.php?tab=books">
                     <i class="fa-solid fa-book me-1"></i> Books & Syllabus (<?= dbFetchOne("SELECT COUNT(*) as c FROM products WHERE product_type='book' AND status=1")['c'] ?>)
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link <?= $tab === 'stationery' ? 'active fw-bold text-warning' : '' ?>" href="books.php?tab=stationery">
+                <a class="nav-link text-nowrap <?= $tab === 'stationery' ? 'active fw-bold text-warning' : '' ?>" href="books.php?tab=stationery">
                     <i class="fa-solid fa-pencil me-1"></i> Stationery (<?= dbFetchOne("SELECT COUNT(*) as c FROM products WHERE product_type='stationery' AND status=1")['c'] ?>)
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link <?= $tab === 'low_stock' ? 'active fw-bold text-danger' : '' ?>" href="books.php?tab=low_stock">
+                <a class="nav-link text-nowrap <?= $tab === 'low_stock' ? 'active fw-bold text-danger' : '' ?>" href="books.php?tab=low_stock">
                     <i class="fa-solid fa-triangle-exclamation me-1"></i> Low Stock Alert (<?= dbFetchOne("SELECT COUNT(*) as c FROM products WHERE current_stock <= min_stock_alert AND status=1")['c'] ?>)
                 </a>
             </li>
