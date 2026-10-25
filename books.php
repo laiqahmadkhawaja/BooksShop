@@ -354,16 +354,16 @@ require_once __DIR__ . '/includes/header.php';
 <div class="modal fade" id="productModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-scrollable">
         <div class="modal-content">
-            <form method="POST" action="books.php">
+            <form method="POST" action="books.php" class="d-flex flex-column h-100 overflow-hidden m-0">
                 <input type="hidden" name="save_product" value="1">
                 <input type="hidden" name="product_id" id="prod_id" value="0">
 
-                <div class="modal-header bg-light">
+                <div class="modal-header bg-light flex-shrink-0">
                     <h5 class="modal-title fw-bold" id="productModalTitle"><i class="fa-solid fa-book text-primary me-2"></i> Add New Product</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
 
-                <div class="modal-body p-4">
+                <div class="modal-body p-4 flex-grow-1" style="overflow-y: auto; max-height: calc(100vh - 190px);">
                     <div class="row g-3">
                         <!-- Product Type & Code -->
                         <div class="col-md-4">
@@ -490,7 +490,7 @@ require_once __DIR__ . '/includes/header.php';
                     </div>
                 </div>
 
-                <div class="modal-footer bg-light">
+                <div class="modal-footer bg-light flex-shrink-0">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                     <button type="submit" class="btn btn-primary"><i class="fa-solid fa-save me-1"></i> Save Product</button>
                 </div>
@@ -503,14 +503,14 @@ require_once __DIR__ . '/includes/header.php';
 <div class="modal fade" id="stockAdjustModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-scrollable">
         <div class="modal-content">
-            <form method="POST" action="books.php">
+            <form method="POST" action="books.php" class="d-flex flex-column h-100 overflow-hidden m-0">
                 <input type="hidden" name="adjust_stock_quick" value="1">
                 <input type="hidden" name="product_id" id="adj_prod_id">
-                <div class="modal-header">
+                <div class="modal-header flex-shrink-0">
                     <h5 class="modal-title fw-bold"><i class="fa-solid fa-sliders text-info me-2"></i> Stock Adjustment</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body">
+                <div class="modal-body flex-grow-1" style="overflow-y: auto;">
                     <p class="mb-1 text-muted small">Product:</p>
                     <h6 class="fw-bold mb-3" id="adj_prod_name"></h6>
                     <div class="alert alert-light border py-2 mb-3">
@@ -532,7 +532,7 @@ require_once __DIR__ . '/includes/header.php';
                         <input type="text" name="reason" class="form-control" placeholder="e.g. Damaged during rain, Stock count audit">
                     </div>
                 </div>
-                <div class="modal-footer">
+                <div class="modal-footer flex-shrink-0">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                     <button type="submit" class="btn btn-info text-white"><i class="fa-solid fa-check me-1"></i> Apply Adjustment</button>
                 </div>

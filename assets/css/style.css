@@ -572,7 +572,7 @@ body.lang-ur .stat-card .stat-icon {
     color: #475569;
 }
 
-/* Mobile Modal Scroll & Viewport Fixes */
+/* Universal Modal Scroll & Viewport Fixes */
 .modal {
     overflow-y: auto !important;
     -webkit-overflow-scrolling: touch;
@@ -581,6 +581,40 @@ body.lang-ur .stat-card .stat-icon {
 .modal-dialog {
     max-width: 95%;
     margin: 1.75rem auto;
+}
+
+/* Ensure forms inside Bootstrap 5 scrollable modals flex properly and allow modal-body to scroll */
+.modal-dialog-scrollable .modal-content {
+    max-height: calc(100vh - 3.5rem);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.modal-dialog-scrollable .modal-content > form,
+.modal-content > form {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    height: 100%;
+    max-height: 100%;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.modal-dialog-scrollable .modal-body,
+.modal-content > form > .modal-body {
+    flex: 1 1 auto;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+    max-height: calc(100vh - 190px);
+}
+
+.modal-dialog-scrollable .modal-header,
+.modal-dialog-scrollable .modal-footer,
+.modal-content > form > .modal-header,
+.modal-content > form > .modal-footer {
+    flex-shrink: 0;
 }
 
 @media (max-width: 768px) {
