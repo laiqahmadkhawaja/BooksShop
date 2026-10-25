@@ -312,7 +312,7 @@ $allProducts = dbFetchAll("SELECT id, title, product_code, current_stock, purcha
 
 <!-- Modal: Stock Adjustment Voucher -->
 <div class="modal fade" id="stockAdjustmentModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">
             <form method="POST" action="inventory.php">
                 <input type="hidden" name="save_stock_adjustment" value="1">

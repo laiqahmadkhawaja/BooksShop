@@ -298,7 +298,7 @@ $allProducts = dbFetchAll("SELECT id, title, product_code, product_type, retail_
 
 <!-- Modal: Add Item to Syllabus Package -->
 <div class="modal fade" id="addItemModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">
             <form method="POST" action="schools.php">
                 <input type="hidden" name="add_class_item" value="1">
@@ -352,7 +352,7 @@ $allProducts = dbFetchAll("SELECT id, title, product_code, product_type, retail_
 
 <!-- Modal: New School Profile -->
 <div class="modal fade" id="schoolModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">
             <form method="POST" action="schools.php">
                 <input type="hidden" name="save_school" value="1">
@@ -391,7 +391,7 @@ $allProducts = dbFetchAll("SELECT id, title, product_code, product_type, retail_
 
 <!-- Modal: New Class Package -->
 <div class="modal fade" id="newClassModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">
             <form method="POST" action="schools.php">
                 <input type="hidden" name="save_class" value="1">

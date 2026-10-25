@@ -1,11 +1,16 @@
 <?php
-// reports.php - Financial & Operational Reports & Analytics
+// reports.php - Financial, Accounting & Operational Reports & Analytics
 $pageTitle = 'Reports & Analytics';
 require_once __DIR__ . '/includes/header.php';
 
 $reportType = $_GET['report'] ?? 'pnl';
 $startDate = $_GET['start_date'] ?? date('Y-m-01');
 $endDate = $_GET['end_date'] ?? date('Y-m-d');
+$selectedDate = $_GET['date'] ?? date('Y-m-d');
+$selectedAccountId = (int)($_GET['account_id'] ?? 1);
+
+// All accounts for statement filter
+$allAccounts = dbFetchAll("SELECT * FROM accounts WHERE status = 1 ORDER BY id ASC");
 
 // 1. Profit & Loss Report Data
 if ($reportType === 'pnl') {
@@ -76,65 +81,238 @@ if ($reportType === 'balances') {
     $custReceivables = dbFetchAll("SELECT name, phone, customer_type, current_balance, credit_limit FROM customers WHERE current_balance > 0 ORDER BY current_balance DESC");
     $suppPayables = dbFetchAll("SELECT name, company_name, phone, current_balance FROM suppliers WHERE current_balance > 0 ORDER BY current_balance DESC");
 }
+
+// 5. NEW: Trial Balance Report
+if ($reportType === 'trial_balance') {
+    // Current Inventory Valuation at Cost
+    $stockValRow = dbFetchOne("SELECT SUM(current_stock * purchase_price) as tot_cost, SUM(current_stock * retail_price) as tot_retail FROM products WHERE status = 1");
+    $inventoryValuation = (float)($stockValRow['tot_cost'] ?? 0);
+
+    // Customer Receivables (Total Asset)
+    $totReceivables = (float)(dbFetchOne("SELECT SUM(current_balance) as tot FROM customers WHERE current_balance > 0")['tot'] ?? 0);
+
+    // Supplier Payables (Total Liability)
+    $totPayables = (float)(dbFetchOne("SELECT SUM(current_balance) as tot FROM suppliers WHERE current_balance > 0")['tot'] ?? 0);
+
+    // Liquid Accounts
+    $cashAccounts = dbFetchAll("SELECT * FROM accounts WHERE status = 1 ORDER BY account_type ASC, id ASC");
+
+    // Period Revenue & Expenses
+    $trialSales = (float)(dbFetchOne("SELECT SUM(grand_total) as tot FROM sales WHERE DATE(sale_date) BETWEEN ? AND ? AND hold_status = 0", [$startDate, $endDate])['tot'] ?? 0);
+    $trialCogs = (float)(dbFetchOne("SELECT SUM(si.quantity * si.cost_price) as tot FROM sale_items si JOIN sales s ON s.id = si.sale_id WHERE DATE(s.sale_date) BETWEEN ? AND ? AND s.hold_status = 0", [$startDate, $endDate])['tot'] ?? 0);
+    $trialExpenses = (float)(dbFetchOne("SELECT SUM(amount) as tot FROM cash_transactions WHERE DATE(transaction_date) BETWEEN ? AND ? AND transaction_type = 'expense'", [$startDate, $endDate])['tot'] ?? 0);
+    $trialIncome = (float)(dbFetchOne("SELECT SUM(amount) as tot FROM cash_transactions WHERE DATE(transaction_date) BETWEEN ? AND ? AND transaction_type = 'income'", [$startDate, $endDate])['tot'] ?? 0);
+}
+
+// 6. NEW: Account Statement / Bank & Cash Ledger
+if ($reportType === 'account_statement') {
+    $currentAccount = dbFetchOne("SELECT * FROM accounts WHERE id = ?", [$selectedAccountId]) ?: ($allAccounts[0] ?? null);
+
+    // Calculate opening balance before start date
+    // Account opening balance + prior inflows - prior outflows
+    $priorInflows = (float)(dbFetchOne("SELECT SUM(amount) as tot FROM cash_transactions 
+                                       WHERE account_id = ? AND DATE(transaction_date) < ? 
+                                       AND transaction_type IN ('income', 'customer_payment', 'sale')", [$selectedAccountId, $startDate])['tot'] ?? 0);
+    // Transferred in as recipient
+    $priorTransfersIn = (float)(dbFetchOne("SELECT SUM(amount) as tot FROM cash_transactions 
+                                            WHERE to_account_id = ? AND DATE(transaction_date) < ? 
+                                            AND transaction_type = 'transfer'", [$selectedAccountId, $startDate])['tot'] ?? 0);
+    $priorOutflows = (float)(dbFetchOne("SELECT SUM(amount) as tot FROM cash_transactions 
+                                        WHERE account_id = ? AND DATE(transaction_date) < ? 
+                                        AND transaction_type IN ('expense', 'purchase', 'supplier_payment', 'transfer')", [$selectedAccountId, $startDate])['tot'] ?? 0);
+
+    // Current account base
+    $accountOpeningBal = (float)($currentAccount['balance'] ?? 0);
+    // Period transactions
+    $statementTransactions = dbFetchAll("SELECT ct.*, a.account_name, ta.account_name as to_account_name, u.full_name as user_name
+                                          FROM cash_transactions ct
+                                          JOIN accounts a ON a.id = ct.account_id
+                                          LEFT JOIN accounts ta ON ta.id = ct.to_account_id
+                                          LEFT JOIN users u ON u.id = ct.created_by
+                                          WHERE (ct.account_id = ? OR ct.to_account_id = ?) 
+                                          AND DATE(ct.transaction_date) BETWEEN ? AND ?
+                                          ORDER BY ct.transaction_date ASC, ct.id ASC", [$selectedAccountId, $selectedAccountId, $startDate, $endDate]);
+}
+
+// 7. NEW: Expense Breakdown & Analytics
+if ($reportType === 'expense_report') {
+    // Total expenses & category breakdown
+    $expenseStats = dbFetchOne("SELECT COUNT(*) as vouchers_count, SUM(amount) as total_expenses, MAX(amount) as max_expense, AVG(amount) as avg_expense 
+                                FROM cash_transactions 
+                                WHERE DATE(transaction_date) BETWEEN ? AND ? AND transaction_type = 'expense'", [$startDate, $endDate]);
+    $totalExpAmount = (float)($expenseStats['total_expenses'] ?? 0);
+
+    $expenseCategoriesBreakdown = dbFetchAll("SELECT category_name, COUNT(*) as cnt, SUM(amount) as total_cat 
+                                              FROM cash_transactions 
+                                              WHERE DATE(transaction_date) BETWEEN ? AND ? AND transaction_type = 'expense'
+                                              GROUP BY category_name 
+                                              ORDER BY total_cat DESC", [$startDate, $endDate]);
+
+    // Detailed transactions
+    $expenseListDetailed = dbFetchAll("SELECT ct.*, a.account_name, u.full_name as user_name
+                                       FROM cash_transactions ct
+                                       JOIN accounts a ON a.id = ct.account_id
+                                       LEFT JOIN users u ON u.id = ct.created_by
+                                       WHERE DATE(ct.transaction_date) BETWEEN ? AND ? AND ct.transaction_type = 'expense'
+                                       ORDER BY ct.transaction_date DESC, ct.id DESC", [$startDate, $endDate]);
+}
+
+// 8. NEW: Daily Cash Closing & Denominations
+if ($reportType === 'cash_closing') {
+    // Register Drawer is Account ID 1
+    $drawerAcc = dbFetchOne("SELECT * FROM accounts WHERE id = 1") ?: ($allAccounts[0] ?? null);
+    $drawerId = $drawerAcc['id'] ?? 1;
+
+    // Prior Cash Inflows & Outflows before selectedDate to compute opening of the day
+    $priorIn = (float)(dbFetchOne("SELECT SUM(amount) as tot FROM cash_transactions WHERE account_id = ? AND DATE(transaction_date) < ? AND transaction_type IN ('income', 'sale', 'customer_payment')", [$drawerId, $selectedDate])['tot'] ?? 0);
+    $priorTransIn = (float)(dbFetchOne("SELECT SUM(amount) as tot FROM cash_transactions WHERE to_account_id = ? AND DATE(transaction_date) < ? AND transaction_type = 'transfer'", [$drawerId, $selectedDate])['tot'] ?? 0);
+    $priorOut = (float)(dbFetchOne("SELECT SUM(amount) as tot FROM cash_transactions WHERE account_id = ? AND DATE(transaction_date) < ? AND transaction_type IN ('expense', 'purchase', 'supplier_payment', 'transfer')", [$drawerId, $selectedDate])['tot'] ?? 0);
+    $dayOpeningCash = max(0, ($priorIn + $priorTransIn) - $priorOut);
+
+    // Day Cash Inflows broken down
+    $daySalesCash = (float)(dbFetchOne("SELECT SUM(amount) as tot FROM cash_transactions WHERE account_id = ? AND DATE(transaction_date) = ? AND transaction_type = 'sale'", [$drawerId, $selectedDate])['tot'] ?? 0);
+    $dayCustReceiptsCash = (float)(dbFetchOne("SELECT SUM(amount) as tot FROM cash_transactions WHERE account_id = ? AND DATE(transaction_date) = ? AND transaction_type = 'customer_payment'", [$drawerId, $selectedDate])['tot'] ?? 0);
+    $dayIncomeCash = (float)(dbFetchOne("SELECT SUM(amount) as tot FROM cash_transactions WHERE account_id = ? AND DATE(transaction_date) = ? AND transaction_type = 'income'", [$drawerId, $selectedDate])['tot'] ?? 0);
+    $dayTransferInCash = (float)(dbFetchOne("SELECT SUM(amount) as tot FROM cash_transactions WHERE to_account_id = ? AND DATE(transaction_date) = ? AND transaction_type = 'transfer'", [$drawerId, $selectedDate])['tot'] ?? 0);
+
+    // Day Cash Outflows broken down
+    $dayPurchasesCash = (float)(dbFetchOne("SELECT SUM(amount) as tot FROM cash_transactions WHERE account_id = ? AND DATE(transaction_date) = ? AND transaction_type = 'purchase'", [$drawerId, $selectedDate])['tot'] ?? 0);
+    $daySuppPaymentsCash = (float)(dbFetchOne("SELECT SUM(amount) as tot FROM cash_transactions WHERE account_id = ? AND DATE(transaction_date) = ? AND transaction_type = 'supplier_payment'", [$drawerId, $selectedDate])['tot'] ?? 0);
+    $dayExpensesCash = (float)(dbFetchOne("SELECT SUM(amount) as tot FROM cash_transactions WHERE account_id = ? AND DATE(transaction_date) = ? AND transaction_type = 'expense'", [$drawerId, $selectedDate])['tot'] ?? 0);
+    $dayTransfersOutCash = (float)(dbFetchOne("SELECT SUM(amount) as tot FROM cash_transactions WHERE account_id = ? AND DATE(transaction_date) = ? AND transaction_type = 'transfer'", [$drawerId, $selectedDate])['tot'] ?? 0);
+
+    $totalDayInflows = $daySalesCash + $dayCustReceiptsCash + $dayIncomeCash + $dayTransferInCash;
+    $totalDayOutflows = $dayPurchasesCash + $daySuppPaymentsCash + $dayExpensesCash + $dayTransfersOutCash;
+    $systemClosingCash = ($dayOpeningCash + $totalDayInflows) - $totalDayOutflows;
+}
 ?>
 
 <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
     <div>
-        <h4 class="fw-bold mb-0 text-dark"><i class="fa-solid fa-chart-line text-primary me-2"></i> Financial & Inventory Reports</h4>
-        <small class="text-muted">Generate Profit & Loss statements, product analytics, and customer balances</small>
+        <h4 class="fw-bold mb-0 text-dark"><i class="fa-solid fa-chart-line text-primary me-2"></i> Financial, Accounting & Operational Reports</h4>
+        <small class="text-muted">Generate Profit & Loss, Trial Balance, Bank Statements, Expense Analytics, and Daily Cash Closing</small>
     </div>
     <div class="d-flex gap-2">
-        <button type="button" class="btn btn-outline-dark btn-sm" onclick="window.print()">
+        <button type="button" class="btn btn-outline-dark btn-sm shadow-sm" onclick="window.print()">
             <i class="fa-solid fa-print me-1"></i> Print Report
         </button>
     </div>
 </div>
 
-<!-- Report Navigation Tabs & Date Range -->
+<!-- Report Navigation Tabs -->
 <div class="card shadow-sm mb-4">
     <div class="card-header bg-white p-0">
-        <ul class="nav nav-tabs card-header-tabs m-0">
+        <ul class="nav nav-tabs card-header-tabs m-0 flex-nowrap overflow-auto">
             <li class="nav-item">
-                <a class="nav-link <?= $reportType === 'pnl' ? 'active fw-bold text-success' : '' ?>" href="reports.php?report=pnl&start_date=<?= $startDate ?>&end_date=<?= $endDate ?>">
-                    <i class="fa-solid fa-scale-balanced me-1"></i> Profit & Loss (P&L)
+                <a class="nav-link text-nowrap <?= $reportType === 'pnl' ? 'active fw-bold text-success' : '' ?>" href="reports.php?report=pnl&start_date=<?= $startDate ?>&end_date=<?= $endDate ?>">
+                    <i class="fa-solid fa-scale-balanced me-1"></i> Profit & Loss
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link <?= $reportType === 'product_sales' ? 'active fw-bold text-primary' : '' ?>" href="reports.php?report=product_sales&start_date=<?= $startDate ?>&end_date=<?= $endDate ?>">
-                    <i class="fa-solid fa-book me-1"></i> Product-Wise Sales
+                <a class="nav-link text-nowrap <?= $reportType === 'trial_balance' ? 'active fw-bold text-primary' : '' ?>" href="reports.php?report=trial_balance&start_date=<?= $startDate ?>&end_date=<?= $endDate ?>">
+                    <i class="fa-solid fa-book-bookmark me-1"></i> Trial Balance
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link <?= $reportType === 'category_sales' ? 'active fw-bold text-warning' : '' ?>" href="reports.php?report=category_sales&start_date=<?= $startDate ?>&end_date=<?= $endDate ?>">
-                    <i class="fa-solid fa-chart-pie me-1"></i> Category Breakdown
+                <a class="nav-link text-nowrap <?= $reportType === 'account_statement' ? 'active fw-bold text-info' : '' ?>" href="reports.php?report=account_statement&account_id=<?= $selectedAccountId ?>&start_date=<?= $startDate ?>&end_date=<?= $endDate ?>">
+                    <i class="fa-solid fa-building-columns me-1"></i> Bank/Cash Statement
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link <?= $reportType === 'balances' ? 'active fw-bold text-danger' : '' ?>" href="reports.php?report=balances">
+                <a class="nav-link text-nowrap <?= $reportType === 'expense_report' ? 'active fw-bold text-danger' : '' ?>" href="reports.php?report=expense_report&start_date=<?= $startDate ?>&end_date=<?= $endDate ?>">
+                    <i class="fa-solid fa-receipt me-1"></i> Expense Analytics
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link text-nowrap <?= $reportType === 'cash_closing' ? 'active fw-bold text-dark' : '' ?>" href="reports.php?report=cash_closing&date=<?= $selectedDate ?>">
+                    <i class="fa-solid fa-calculator me-1"></i> Cash Closing Slip
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link text-nowrap <?= $reportType === 'product_sales' ? 'active fw-bold text-primary' : '' ?>" href="reports.php?report=product_sales&start_date=<?= $startDate ?>&end_date=<?= $endDate ?>">
+                    <i class="fa-solid fa-book me-1"></i> Product Sales
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link text-nowrap <?= $reportType === 'category_sales' ? 'active fw-bold text-warning' : '' ?>" href="reports.php?report=category_sales&start_date=<?= $startDate ?>&end_date=<?= $endDate ?>">
+                    <i class="fa-solid fa-chart-pie me-1"></i> Category Sales
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link text-nowrap <?= $reportType === 'balances' ? 'active fw-bold text-danger' : '' ?>" href="reports.php?report=balances">
                     <i class="fa-solid fa-hand-holding-dollar me-1"></i> Receivables & Payables
                 </a>
             </li>
         </ul>
     </div>
-    <div class="card-body bg-light">
-        <form method="GET" class="row g-2 align-items-center">
-            <input type="hidden" name="report" value="<?= htmlspecialchars($reportType) ?>">
-            <div class="col-md-4">
-                <div class="input-group input-group-sm">
-                    <span class="input-group-text">From</span>
-                    <input type="date" name="start_date" class="form-control" value="<?= htmlspecialchars($startDate) ?>">
+    <div class="card-body bg-light py-2">
+        <?php if ($reportType === 'cash_closing'): ?>
+            <!-- Single Date Filter for Cash Closing -->
+            <form method="GET" class="row g-2 align-items-center">
+                <input type="hidden" name="report" value="cash_closing">
+                <div class="col-md-6 col-lg-4">
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text"><i class="fa-solid fa-calendar me-1"></i> Closing Date</span>
+                        <input type="date" name="date" class="form-control" value="<?= htmlspecialchars($selectedDate) ?>">
+                    </div>
                 </div>
-            </div>
-            <div class="col-md-4">
-                <div class="input-group input-group-sm">
-                    <span class="input-group-text">To</span>
-                    <input type="date" name="end_date" class="form-control" value="<?= htmlspecialchars($endDate) ?>">
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-dark btn-sm w-100"><i class="fa-solid fa-check me-1"></i> Load Closing Report</button>
                 </div>
-            </div>
-            <div class="col-md-4">
-                <button type="submit" class="btn btn-primary btn-sm w-100"><i class="fa-solid fa-filter me-1"></i> Apply Date Filter</button>
-            </div>
-        </form>
+            </form>
+        <?php elseif ($reportType === 'account_statement'): ?>
+            <!-- Account & Date Range Filter for Statement -->
+            <form method="GET" class="row g-2 align-items-center">
+                <input type="hidden" name="report" value="account_statement">
+                <div class="col-md-4">
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text"><i class="fa-solid fa-wallet me-1"></i> Account</span>
+                        <select name="account_id" class="form-select">
+                            <?php foreach ($allAccounts as $acc): ?>
+                                <option value="<?= $acc['id'] ?>" <?= $acc['id'] === $selectedAccountId ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($acc['account_name']) ?> (<?= formatCurrency($acc['balance']) ?>)
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text">From</span>
+                        <input type="date" name="start_date" class="form-control" value="<?= htmlspecialchars($startDate) ?>">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text">To</span>
+                        <input type="date" name="end_date" class="form-control" value="<?= htmlspecialchars($endDate) ?>">
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary btn-sm w-100"><i class="fa-solid fa-filter me-1"></i> Filter</button>
+                </div>
+            </form>
+        <?php elseif ($reportType !== 'balances'): ?>
+            <!-- Standard Date Range Filter -->
+            <form method="GET" class="row g-2 align-items-center">
+                <input type="hidden" name="report" value="<?= htmlspecialchars($reportType) ?>">
+                <div class="col-md-4">
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text">From</span>
+                        <input type="date" name="start_date" class="form-control" value="<?= htmlspecialchars($startDate) ?>">
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text">To</span>
+                        <input type="date" name="end_date" class="form-control" value="<?= htmlspecialchars($endDate) ?>">
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <button type="submit" class="btn btn-primary btn-sm w-100"><i class="fa-solid fa-filter me-1"></i> Apply Filter</button>
+                </div>
+            </form>
+        <?php endif; ?>
     </div>
 </div>
 
@@ -233,6 +411,568 @@ if ($reportType === 'balances') {
         </table>
     </div>
 </div>
+
+<?php elseif ($reportType === 'trial_balance'): ?>
+<!-- ================= TRIAL BALANCE REPORT ================= -->
+<?php
+    $totalDebits = 0;
+    $totalCredits = 0;
+?>
+<div class="card shadow-sm">
+    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+        <div>
+            <h5 class="mb-0 fw-bold text-dark"><i class="fa-solid fa-book-bookmark text-primary me-2"></i> Comprehensive Trial Balance</h5>
+            <small class="text-muted">As of <?= date('d M, Y', strtotime($endDate)) ?> (Activity Period: <?= date('d M, Y', strtotime($startDate)) ?> to <?= date('d M, Y', strtotime($endDate)) ?>)</small>
+        </div>
+        <div>
+            <span class="badge bg-success-subtle text-success border border-success px-3 py-2">
+                <i class="fa-solid fa-check-circle me-1"></i> Double-Entry Verification
+            </span>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-bordered align-middle mb-0">
+                <thead class="table-light text-uppercase small">
+                    <tr>
+                        <th style="width: 50%;">Account Title / Head of Account</th>
+                        <th style="width: 25%;" class="text-end text-primary">Debit (Rs.)</th>
+                        <th style="width: 25%;" class="text-end text-success">Credit (Rs.)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- ASSETS (Debits) -->
+                    <tr class="table-light"><td colspan="3" class="fw-bold text-dark"><i class="fa-solid fa-vault me-1"></i> Current Assets & Cash</td></tr>
+                    <?php foreach ($cashAccounts as $ca): ?>
+                        <?php 
+                            $bal = (float)$ca['balance'];
+                            if ($bal >= 0) {
+                                $totalDebits += $bal;
+                            } else {
+                                $totalCredits += abs($bal);
+                            }
+                        ?>
+                        <tr>
+                            <td class="ps-4">
+                                <strong><?= htmlspecialchars($ca['account_name']) ?></strong>
+                                <?php if (!empty($ca['bank_name'])): ?>
+                                    <span class="text-muted small ms-1">(<?= htmlspecialchars($ca['bank_name']) ?> <?= htmlspecialchars($ca['account_number']) ?>)</span>
+                                <?php endif; ?>
+                            </td>
+                            <td class="text-end font-monospace"><?= $bal >= 0 ? formatCurrency($bal) : '-' ?></td>
+                            <td class="text-end font-monospace text-danger"><?= $bal < 0 ? formatCurrency(abs($bal)) : '-' ?></td>
+                        </tr>
+                    <?php endforeach; ?>
+
+                    <!-- Receivables -->
+                    <?php $totalDebits += $totReceivables; ?>
+                    <tr>
+                        <td class="ps-4">
+                            <strong>Accounts Receivable (Customer & School Khata)</strong>
+                            <div class="text-muted small">Total outstanding balance due from credit buyers</div>
+                        </td>
+                        <td class="text-end font-monospace"><?= formatCurrency($totReceivables) ?></td>
+                        <td class="text-end font-monospace">-</td>
+                    </tr>
+
+                    <!-- Inventory Valuation at Cost -->
+                    <?php $totalDebits += $inventoryValuation; ?>
+                    <tr>
+                        <td class="ps-4">
+                            <strong>Merchandise Inventory at Purchase Cost</strong>
+                            <div class="text-muted small">Current physical stock valuation (Books, Notebooks, Stationery)</div>
+                        </td>
+                        <td class="text-end font-monospace"><?= formatCurrency($inventoryValuation) ?></td>
+                        <td class="text-end font-monospace">-</td>
+                    </tr>
+
+                    <!-- LIABILITIES (Credits) -->
+                    <tr class="table-light"><td colspan="3" class="fw-bold text-dark"><i class="fa-solid fa-hand-holding-dollar me-1"></i> Current Liabilities</td></tr>
+                    <?php $totalCredits += $totPayables; ?>
+                    <tr>
+                        <td class="ps-4">
+                            <strong>Accounts Payable (Suppliers & Publishers Khata)</strong>
+                            <div class="text-muted small">Outstanding bills due to publishers and wholesale stationery vendors</div>
+                        </td>
+                        <td class="text-end font-monospace">-</td>
+                        <td class="text-end font-monospace"><?= formatCurrency($totPayables) ?></td>
+                    </tr>
+
+                    <!-- REVENUE & COST OF SALES -->
+                    <tr class="table-light"><td colspan="3" class="fw-bold text-dark"><i class="fa-solid fa-chart-pie me-1"></i> Period Trading & Operations</td></tr>
+                    <?php $totalCredits += $trialSales; ?>
+                    <tr>
+                        <td class="ps-4"><strong>Sales Revenue (Turnover)</strong></td>
+                        <td class="text-end font-monospace">-</td>
+                        <td class="text-end font-monospace"><?= formatCurrency($trialSales) ?></td>
+                    </tr>
+                    <?php $totalDebits += $trialCogs; ?>
+                    <tr>
+                        <td class="ps-4"><strong>Cost of Goods Sold (COGS)</strong></td>
+                        <td class="text-end font-monospace"><?= formatCurrency($trialCogs) ?></td>
+                        <td class="text-end font-monospace">-</td>
+                    </tr>
+                    <?php $totalDebits += $trialExpenses; ?>
+                    <tr>
+                        <td class="ps-4"><strong>Operating Expenses (Rent, Salaries, Utilities, Tea)</strong></td>
+                        <td class="text-end font-monospace"><?= formatCurrency($trialExpenses) ?></td>
+                        <td class="text-end font-monospace">-</td>
+                    </tr>
+                    <?php if ($trialIncome > 0): ?>
+                        <?php $totalCredits += $trialIncome; ?>
+                        <tr>
+                            <td class="ps-4"><strong>Other Direct Incomes & Service Fees</strong></td>
+                            <td class="text-end font-monospace">-</td>
+                            <td class="text-end font-monospace"><?= formatCurrency($trialIncome) ?></td>
+                        </tr>
+                    <?php endif; ?>
+
+                    <!-- Balancing / Equity Line -->
+                    <?php 
+                        $diff = $totalDebits - $totalCredits;
+                        if ($diff > 0) {
+                            $equityCredit = $diff;
+                            $totalCredits += $equityCredit;
+                        } else {
+                            $equityDebit = abs($diff);
+                            $totalDebits += $equityDebit;
+                        }
+                    ?>
+                    <tr class="table-warning">
+                        <td class="ps-4">
+                            <strong>Owner's Equity & Retained Earnings / Balancing Head</strong>
+                            <div class="text-muted small">Balancing proprietor capital and retained store net worth</div>
+                        </td>
+                        <td class="text-end font-monospace"><?= isset($equityDebit) ? formatCurrency($equityDebit) : '-' ?></td>
+                        <td class="text-end font-monospace"><?= isset($equityCredit) ? formatCurrency($equityCredit) : '-' ?></td>
+                    </tr>
+
+                    <!-- Totals Row -->
+                    <tr class="table-dark fs-6 fw-bold">
+                        <td class="text-uppercase ps-3">Total Trial Balance</td>
+                        <td class="text-end text-primary-subtle font-monospace"><?= formatCurrency($totalDebits) ?></td>
+                        <td class="text-end text-success-subtle font-monospace"><?= formatCurrency($totalCredits) ?></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<?php elseif ($reportType === 'account_statement'): ?>
+<!-- ================= ACCOUNT STATEMENT / BANK LEDGER ================= -->
+<div class="card shadow-sm">
+    <div class="card-header bg-white py-3">
+        <div class="row align-items-center">
+            <div class="col-md-7">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge <?= $currentAccount['account_type'] === 'cash' ? 'bg-success' : 'bg-primary' ?> text-uppercase">
+                        <?= htmlspecialchars($currentAccount['account_type']) ?>
+                    </span>
+                    <h5 class="mb-0 fw-bold text-dark"><?= htmlspecialchars($currentAccount['account_name']) ?></h5>
+                </div>
+                <div class="text-muted small mt-1">
+                    <?php if (!empty($currentAccount['bank_name'])): ?>
+                        <span class="fw-semibold text-dark"><?= htmlspecialchars($currentAccount['bank_name']) ?></span> &bull; 
+                    <?php endif; ?>
+                    Account #: <span class="font-monospace fw-semibold"><?= htmlspecialchars($currentAccount['account_number'] ?: 'N/A') ?></span>
+                    <?php if (!empty($currentAccount['branch_name'])): ?>
+                        &bull; Branch: <?= htmlspecialchars($currentAccount['branch_name']) ?>
+                    <?php endif; ?>
+                </div>
+            </div>
+            <div class="col-md-5 text-md-end mt-2 mt-md-0">
+                <small class="text-muted">Current Ledger Balance</small>
+                <h4 class="fw-bold <?= $currentAccount['balance'] >= 0 ? 'text-success' : 'text-danger' ?> mb-0">
+                    <?= formatCurrency($currentAccount['balance']) ?>
+                </h4>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 small">
+                <thead class="table-light text-uppercase">
+                    <tr>
+                        <th>Date & Time</th>
+                        <th>Reference / Voucher #</th>
+                        <th>Type / Category</th>
+                        <th>Description / Payee</th>
+                        <th class="text-end text-success">Deposit / Inflow (+)</th>
+                        <th class="text-end text-danger">Withdrawal / Outflow (-)</th>
+                        <th class="text-end">Running Balance</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php 
+                        $running = $accountOpeningBal;
+                        $totInflowPeriod = 0;
+                        $totOutflowPeriod = 0;
+                    ?>
+                    <tr class="table-light fw-bold">
+                        <td colspan="4" class="ps-3"><i class="fa-solid fa-flag me-1"></i> Opening Balance prior to <?= date('d M, Y', strtotime($startDate)) ?></td>
+                        <td class="text-end">-</td>
+                        <td class="text-end">-</td>
+                        <td class="text-end font-monospace"><?= formatCurrency($running) ?></td>
+                    </tr>
+                    <?php if (empty($statementTransactions)): ?>
+                        <tr><td colspan="7" class="text-center py-5 text-muted">No transactions found for this account in the selected date range.</td></tr>
+                    <?php else: ?>
+                        <?php foreach ($statementTransactions as $st): ?>
+                            <?php
+                                // Check if this account was sender or receiver
+                                $isReceiver = ($st['to_account_id'] == $selectedAccountId);
+                                $isSender = ($st['account_id'] == $selectedAccountId);
+
+                                if ($isReceiver) {
+                                    $inflow = (float)$st['amount'];
+                                    $outflow = 0;
+                                    $running += $inflow;
+                                    $totInflowPeriod += $inflow;
+                                } else {
+                                    $isInflowType = in_array($st['transaction_type'], ['income', 'customer_payment', 'sale']);
+                                    if ($isInflowType) {
+                                        $inflow = (float)$st['amount'];
+                                        $outflow = 0;
+                                        $running += $inflow;
+                                        $totInflowPeriod += $inflow;
+                                    } else {
+                                        $inflow = 0;
+                                        $outflow = (float)$st['amount'];
+                                        $running -= $outflow;
+                                        $totOutflowPeriod += $outflow;
+                                    }
+                                }
+                            ?>
+                            <tr>
+                                <td><?= date('d M Y, h:i A', strtotime($st['transaction_date'])) ?></td>
+                                <td class="font-monospace text-primary fw-semibold"><?= htmlspecialchars($st['reference_no'] ?: '-') ?></td>
+                                <td>
+                                    <span class="badge <?= $inflow > 0 ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger' ?> text-uppercase">
+                                        <?= htmlspecialchars($st['transaction_type']) ?>
+                                    </span>
+                                    <div class="fw-semibold text-dark mt-1"><?= htmlspecialchars($st['category_name'] ?: '-') ?></div>
+                                </td>
+                                <td>
+                                    <?= htmlspecialchars($st['description'] ?: '-') ?>
+                                    <?php if ($st['to_account_name'] && $isSender): ?>
+                                        <div class="text-muted small">&rarr; Transferred to <?= htmlspecialchars($st['to_account_name']) ?></div>
+                                    <?php endif; ?>
+                                </td>
+                                <td class="text-end fw-bold text-success font-monospace">
+                                    <?= $inflow > 0 ? formatCurrency($inflow) : '-' ?>
+                                </td>
+                                <td class="text-end fw-bold text-danger font-monospace">
+                                    <?= $outflow > 0 ? formatCurrency($outflow) : '-' ?>
+                                </td>
+                                <td class="text-end fw-bold font-monospace <?= $running >= 0 ? 'text-dark' : 'text-danger' ?>">
+                                    <?= formatCurrency($running) ?>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </tbody>
+                <tfoot class="table-light fw-bold">
+                    <tr>
+                        <td colspan="4" class="text-end text-uppercase">Period Totals:</td>
+                        <td class="text-end text-success font-monospace">+ <?= formatCurrency($totInflowPeriod) ?></td>
+                        <td class="text-end text-danger font-monospace">- <?= formatCurrency($totOutflowPeriod) ?></td>
+                        <td class="text-end text-primary font-monospace"><?= formatCurrency($running) ?></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+</div>
+
+<?php elseif ($reportType === 'expense_report'): ?>
+<!-- ================= EXPENSE ANALYTICS REPORT ================= -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card p-3 shadow-sm bg-white border-start border-danger border-4">
+            <small class="text-muted text-uppercase fw-semibold">Total Expenses</small>
+            <h4 class="fw-bold text-danger mb-0 mt-1"><?= formatCurrency($totalExpAmount) ?></h4>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card p-3 shadow-sm bg-white border-start border-warning border-4">
+            <small class="text-muted text-uppercase fw-semibold">Expense Vouchers</small>
+            <h4 class="fw-bold text-warning-emphasis mb-0 mt-1"><?= (int)($expenseStats['vouchers_count'] ?? 0) ?></h4>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card p-3 shadow-sm bg-white border-start border-primary border-4">
+            <small class="text-muted text-uppercase fw-semibold">Largest Single Voucher</small>
+            <h4 class="fw-bold text-primary mb-0 mt-1"><?= formatCurrency($expenseStats['max_expense'] ?? 0) ?></h4>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card p-3 shadow-sm bg-white border-start border-info border-4">
+            <small class="text-muted text-uppercase fw-semibold">Average Voucher</small>
+            <h4 class="fw-bold text-info mb-0 mt-1"><?= formatCurrency($expenseStats['avg_expense'] ?? 0) ?></h4>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <!-- Category Breakdown (40%) -->
+    <div class="col-lg-4">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-white py-3">
+                <h6 class="mb-0 fw-bold text-dark"><i class="fa-solid fa-chart-pie text-danger me-2"></i> Expenses by Category</h6>
+            </div>
+            <div class="card-body">
+                <?php if (empty($expenseCategoriesBreakdown)): ?>
+                    <p class="text-muted text-center py-4">No expenses found for this period.</p>
+                <?php else: ?>
+                    <div class="list-group list-group-flush">
+                        <?php foreach ($expenseCategoriesBreakdown as $ecb): ?>
+                            <?php 
+                                $pct = $totalExpAmount > 0 ? (($ecb['total_cat'] / $totalExpAmount) * 100) : 0;
+                            ?>
+                            <div class="list-group-item px-0 py-2">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <strong class="text-dark small"><?= htmlspecialchars($ecb['category_name']) ?></strong>
+                                    <span class="fw-bold text-danger small"><?= formatCurrency($ecb['total_cat']) ?></span>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center small text-muted">
+                                    <span><?= $ecb['cnt'] ?> voucher(s)</span>
+                                    <span><?= number_format($pct, 1) ?>%</span>
+                                </div>
+                                <div class="progress mt-1" style="height: 6px;">
+                                    <div class="progress-bar bg-danger" role="progressbar" style="width: <?= $pct ?>%"></div>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+            </div>
+        </div>
+    </div>
+
+    <!-- Detailed Ledger (60%) -->
+    <div class="col-lg-8">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-white py-3">
+                <h6 class="mb-0 fw-bold text-dark"><i class="fa-solid fa-list-check text-primary me-2"></i> Detailed Expense Vouchers Ledger</h6>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0 small">
+                        <thead class="table-light text-uppercase">
+                            <tr>
+                                <th>Date</th>
+                                <th>Category</th>
+                                <th>Account</th>
+                                <th>Ref #</th>
+                                <th>Description</th>
+                                <th class="text-end">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php if (empty($expenseListDetailed)): ?>
+                                <tr><td colspan="6" class="text-center py-5 text-muted">No expense vouchers in selected date range.</td></tr>
+                            <?php else: ?>
+                                <?php foreach ($expenseListDetailed as $eld): ?>
+                                    <tr>
+                                        <td><?= date('d M, Y', strtotime($eld['transaction_date'])) ?></td>
+                                        <td><span class="badge bg-danger-subtle text-danger"><?= htmlspecialchars($eld['category_name']) ?></span></td>
+                                        <td><?= htmlspecialchars($eld['account_name']) ?></td>
+                                        <td class="font-monospace text-primary"><?= htmlspecialchars($eld['reference_no'] ?: '-') ?></td>
+                                        <td><?= htmlspecialchars($eld['description'] ?: '-') ?></td>
+                                        <td class="text-end fw-bold text-danger"><?= formatCurrency($eld['amount']) ?></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<?php elseif ($reportType === 'cash_closing'): ?>
+<!-- ================= DAILY CASH CLOSING & DENOMINATIONS ================= -->
+<div class="row g-3">
+    <!-- LEFT: System Ledger Cash Flow Reconciliation -->
+    <div class="col-lg-7">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                <h6 class="mb-0 fw-bold text-dark"><i class="fa-solid fa-calculator text-primary me-2"></i> Register Drawer Daily Closing Slip</h6>
+                <span class="badge bg-light text-dark border"><?= date('l, d F Y', strtotime($selectedDate)) ?></span>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-bordered mb-0 align-middle">
+                    <tbody>
+                        <tr class="table-light">
+                            <td class="fw-bold text-dark ps-3">1. OPENING CASH IN DRAWER</td>
+                            <td class="text-end fw-bold font-monospace pe-3"><?= formatCurrency($dayOpeningCash) ?></td>
+                        </tr>
+
+                        <!-- INFLOWS -->
+                        <tr class="table-success-subtle">
+                            <td colspan="2" class="fw-bold text-success ps-3"><i class="fa-solid fa-plus-circle me-1"></i> CASH INFLOWS RECEIVED TODAY</td>
+                        </tr>
+                        <tr>
+                            <td class="ps-4">Cash Sales Collected (Counter POS)</td>
+                            <td class="text-end font-monospace text-success pe-3">+ <?= formatCurrency($daySalesCash) ?></td>
+                        </tr>
+                        <tr>
+                            <td class="ps-4">Customer Khata / Credit Collections in Cash</td>
+                            <td class="text-end font-monospace text-success pe-3">+ <?= formatCurrency($dayCustReceiptsCash) ?></td>
+                        </tr>
+                        <tr>
+                            <td class="ps-4">Other Cash Income / Capital Injections</td>
+                            <td class="text-end font-monospace text-success pe-3">+ <?= formatCurrency($dayIncomeCash) ?></td>
+                        </tr>
+                        <tr>
+                            <td class="ps-4">Cash Transferred into Drawer from Bank</td>
+                            <td class="text-end font-monospace text-success pe-3">+ <?= formatCurrency($dayTransferInCash) ?></td>
+                        </tr>
+                        <tr class="fw-bold table-light">
+                            <td class="ps-3">Total Cash Inflows</td>
+                            <td class="text-end font-monospace text-success pe-3">+ <?= formatCurrency($totalDayInflows) ?></td>
+                        </tr>
+
+                        <!-- OUTFLOWS -->
+                        <tr class="table-danger-subtle">
+                            <td colspan="2" class="fw-bold text-danger ps-3"><i class="fa-solid fa-minus-circle me-1"></i> CASH OUTFLOWS PAID TODAY</td>
+                        </tr>
+                        <tr>
+                            <td class="ps-4">Cash Purchases Paid Directly</td>
+                            <td class="text-end font-monospace text-danger pe-3">- <?= formatCurrency($dayPurchasesCash) ?></td>
+                        </tr>
+                        <tr>
+                            <td class="ps-4">Supplier / Publisher Khata Paid in Cash</td>
+                            <td class="text-end font-monospace text-danger pe-3">- <?= formatCurrency($daySuppPaymentsCash) ?></td>
+                        </tr>
+                        <tr>
+                            <td class="ps-4">Operating Expenses Paid from Drawer</td>
+                            <td class="text-end font-monospace text-danger pe-3">- <?= formatCurrency($dayExpensesCash) ?></td>
+                        </tr>
+                        <tr>
+                            <td class="ps-4">Cash Transferred / Deposited to Bank</td>
+                            <td class="text-end font-monospace text-danger pe-3">- <?= formatCurrency($dayTransfersOutCash) ?></td>
+                        </tr>
+                        <tr class="fw-bold table-light">
+                            <td class="ps-3">Total Cash Outflows</td>
+                            <td class="text-end font-monospace text-danger pe-3">- <?= formatCurrency($totalDayOutflows) ?></td>
+                        </tr>
+
+                        <!-- NET CLOSING -->
+                        <tr class="table-primary fw-bold fs-6">
+                            <td class="ps-3">EXPECTED SYSTEM CLOSING CASH</td>
+                            <td class="text-end font-monospace pe-3" id="expectedClosingDisplay"><?= formatCurrency($systemClosingCash) ?></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- RIGHT: Physical Denomination Counter -->
+    <div class="col-lg-5">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-dark text-white py-3">
+                <h6 class="mb-0 fw-bold"><i class="fa-solid fa-money-bill-wave text-warning me-2"></i> Physical Currency Denominations</h6>
+            </div>
+            <div class="card-body">
+                <p class="text-muted small mb-3">Count physical notes and coins in the cash drawer to verify reconciliation.</p>
+
+                <?php 
+                    $denoms = [5000, 1000, 500, 100, 50, 20, 10];
+                ?>
+                <div class="table-responsive mb-3">
+                    <table class="table table-sm align-middle mb-0">
+                        <thead>
+                            <tr class="text-muted small">
+                                <th>Note</th>
+                                <th style="width: 100px;">Count</th>
+                                <th class="text-end">Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($denoms as $d): ?>
+                                <tr>
+                                    <td class="fw-bold text-dark">Rs. <?= $d ?></td>
+                                    <td>
+                                        <input type="number" min="0" class="form-control form-control-sm text-center denom-input" data-value="<?= $d ?>" value="0" oninput="calculatePhysicalCash()">
+                                    </td>
+                                    <td class="text-end font-monospace text-muted denom-subtotal" id="sub_<?= $d ?>">Rs. 0</td>
+                                </tr>
+                            <?php endforeach; ?>
+                            <tr>
+                                <td class="fw-bold text-dark">Coins & Loose</td>
+                                <td>
+                                    <input type="number" min="0" step="1" id="coinsInput" class="form-control form-control-sm text-center" value="0" oninput="calculatePhysicalCash()">
+                                </td>
+                                <td class="text-end font-monospace text-muted" id="sub_coins">Rs. 0</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Reconciliation Summary Box -->
+                <div class="p-3 bg-light rounded border">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="small text-muted text-uppercase fw-semibold">Physical Counted Cash:</span>
+                        <h5 class="fw-bold text-primary mb-0 font-monospace" id="totalPhysicalCount">Rs. 0.00</h5>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-2 border-top pt-2">
+                        <span class="small text-muted text-uppercase fw-semibold">System Expected:</span>
+                        <span class="fw-bold text-dark font-monospace"><?= formatCurrency($systemClosingCash) ?></span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center border-top pt-2">
+                        <span class="small fw-bold">Difference (Shortage / Excess):</span>
+                        <h6 class="fw-bold mb-0 font-monospace" id="cashDifference">Rs. 0.00</h6>
+                    </div>
+                </div>
+
+                <div class="mt-3">
+                    <button type="button" class="btn btn-outline-dark btn-sm w-100" onclick="window.print()">
+                        <i class="fa-solid fa-print me-1"></i> Print Daily Closing Slip
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const systemExpectedCash = <?= (float)$systemClosingCash ?>;
+
+function calculatePhysicalCash() {
+    let total = 0;
+    document.querySelectorAll('.denom-input').forEach(input => {
+        const noteVal = parseFloat(input.dataset.value) || 0;
+        const count = parseInt(input.value) || 0;
+        const sub = noteVal * count;
+        total += sub;
+        const subEl = document.getElementById('sub_' + noteVal);
+        if (subEl) subEl.textContent = 'Rs. ' + sub.toLocaleString();
+    });
+
+    const coins = parseFloat(document.getElementById('coinsInput').value) || 0;
+    total += coins;
+    document.getElementById('sub_coins').textContent = 'Rs. ' + coins.toLocaleString();
+
+    document.getElementById('totalPhysicalCount').textContent = 'Rs. ' + total.toLocaleString(undefined, {minimumFractionDigits: 2});
+
+    const diff = total - systemExpectedCash;
+    const diffEl = document.getElementById('cashDifference');
+    if (Math.abs(diff) < 0.01) {
+        diffEl.textContent = 'Rs. 0.00 (Balanced)';
+        diffEl.className = 'fw-bold mb-0 font-monospace text-success';
+    } else if (diff > 0) {
+        diffEl.textContent = '+ Rs. ' + diff.toLocaleString(undefined, {minimumFractionDigits: 2}) + ' (Excess)';
+        diffEl.className = 'fw-bold mb-0 font-monospace text-primary';
+    } else {
+        diffEl.textContent = '- Rs. ' + Math.abs(diff).toLocaleString(undefined, {minimumFractionDigits: 2}) + ' (Shortage)';
+        diffEl.className = 'fw-bold mb-0 font-monospace text-danger';
+    }
+}
+</script>
 
 <?php elseif ($reportType === 'product_sales'): ?>
 <!-- ================= PRODUCT-WISE SALES ================= -->

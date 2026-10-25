@@ -194,7 +194,7 @@ $accounts = dbFetchAll("SELECT id, account_name, balance FROM accounts WHERE sta
 
 <!-- Modal: Record New Purchase -->
 <div class="modal fade" id="newPurchaseModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-xl">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">
             <form method="POST" action="purchases.php" id="purchaseForm">
                 <input type="hidden" name="save_purchase" value="1">

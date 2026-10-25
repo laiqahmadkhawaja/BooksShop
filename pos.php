@@ -161,7 +161,7 @@ $schoolClasses = dbFetchAll("SELECT sc.id, sc.class_name, sc.academic_session, s
 
 <!-- Modal: School Book Package / Syllabus Bundle -->
 <div class="modal fade" id="schoolPackageModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header bg-info-subtle">
                 <h5 class="modal-title fw-bold text-info-emphasis">
@@ -192,7 +192,7 @@ $schoolClasses = dbFetchAll("SELECT sc.id, sc.class_name, sc.academic_session, s
 
 <!-- Modal: Checkout & Payment Settlement -->
 <div class="modal fade" id="checkoutModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header bg-primary text-white">
                 <h5 class="modal-title fw-bold"><i class="fa-solid fa-cash-register me-2"></i> Bill Payment & Checkout</h5>
@@ -275,7 +275,7 @@ $schoolClasses = dbFetchAll("SELECT sc.id, sc.class_name, sc.academic_session, s
 
 <!-- Modal: Held Bills Management -->
 <div class="modal fade" id="heldBillsModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header bg-warning-subtle">
                 <h5 class="modal-title fw-bold text-warning-emphasis"><i class="fa-solid fa-pause me-2"></i> Held Bills</h5>
@@ -292,7 +292,7 @@ $schoolClasses = dbFetchAll("SELECT sc.id, sc.class_name, sc.academic_session, s
 
 <!-- Modal: Post-Checkout Success & Receipt Printing -->
 <div class="modal fade" id="receiptSuccessModal" tabindex="-1" data-bs-backdrop="static" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header bg-success text-white">
                 <h5 class="modal-title fw-bold"><i class="fa-solid fa-circle-check me-2"></i> Sale Completed Successfully!</h5>

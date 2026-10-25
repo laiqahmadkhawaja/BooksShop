@@ -89,6 +89,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header("Location: books.php");
         exit;
     }
+
+    // Category Add / Edit POST
+    if (isset($_POST['save_category'])) {
+        $cId = (int)($_POST['category_id'] ?? 0);
+        $cName = trim($_POST['cat_name'] ?? '');
+        $cUrdu = trim($_POST['cat_urdu_name'] ?? '');
+        $cType = $_POST['cat_type'] ?? 'book';
+        $cDesc = trim($_POST['cat_description'] ?? '');
+
+        if ($cName) {
+            if ($cId > 0) {
+                dbQuery("UPDATE categories SET name=?, urdu_name=?, type=?, description=? WHERE id=?", [$cName, $cUrdu, $cType, $cDesc, $cId]);
+                setFlash('success', "Category '$cName' updated successfully.");
+            } else {
+                dbQuery("INSERT INTO categories (name, urdu_name, type, description) VALUES (?, ?, ?, ?)", [$cName, $cUrdu, $cType, $cDesc]);
+                setFlash('success', "Category '$cName' created successfully.");
+            }
+        }
+        header("Location: books.php");
+        exit;
+    }
+
+    // Category Delete POST
+    if (isset($_POST['delete_category'])) {
+        $delId = (int)$_POST['category_id'];
+        $prodCount = dbFetchOne("SELECT COUNT(*) as cnt FROM products WHERE category_id = ?", [$delId])['cnt'] ?? 0;
+        if ($prodCount > 0) {
+            setFlash('danger', "Cannot delete category: $prodCount products are linked to it. Please reassign those products first.");
+        } else {
+            dbQuery("DELETE FROM categories WHERE id = ?", [$delId]);
+            setFlash('success', "Category deleted successfully.");
+        }
+        header("Location: books.php");
+        exit;
+    }
 }
 
 // Handle Export CSV
@@ -145,6 +180,9 @@ $products = dbFetchAll("SELECT p.*, c.name as category_name
         <small class="text-muted">Manage textbook syllabus, general books, barcodes, and stationery items</small>
     </div>
     <div class="d-flex gap-2">
+        <button type="button" class="btn btn-outline-primary btn-sm shadow-sm" data-bs-toggle="modal" data-bs-target="#categoryManageModal">
+            <i class="fa-solid fa-tags me-1"></i> Manage Categories
+        </button>
         <a href="?export_csv=1" class="btn btn-outline-success btn-sm">
             <i class="fa-solid fa-file-excel me-1"></i> Export CSV
         </a>
@@ -353,7 +391,10 @@ $products = dbFetchAll("SELECT p.*, c.name as category_name
 
                         <!-- Category & Unit -->
                         <div class="col-md-6">
-                            <label class="form-label small fw-bold">Category</label>
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <label class="form-label small fw-bold mb-0">Category</label>
+                                <a href="javascript:void(0)" class="small text-decoration-none fw-bold text-primary" data-bs-toggle="modal" data-bs-target="#categoryManageModal">+ Add Category</a>
+                            </div>
                             <select name="category_id" id="prod_category_id" class="form-select">
                                 <option value="">-- Select Category --</option>
                                 <?php foreach ($categories as $cat): ?>
@@ -457,7 +498,7 @@ $products = dbFetchAll("SELECT p.*, c.name as category_name
 
 <!-- Modal: Quick Stock Adjustment -->
 <div class="modal fade" id="stockAdjustModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-dialog-scrollable">
         <div class="modal-content">
             <form method="POST" action="books.php">
                 <input type="hidden" name="adjust_stock_quick" value="1">
@@ -499,7 +540,7 @@ $products = dbFetchAll("SELECT p.*, c.name as category_name
 
 <!-- Modal: Barcode Label Sticker Preview -->
 <div class="modal fade" id="barcodeModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title fw-bold"><i class="fa-solid fa-barcode me-2"></i> Print Barcode Sticker</h5>
@@ -512,6 +553,117 @@ $products = dbFetchAll("SELECT p.*, c.name as category_name
                     <svg id="barcodeCanvas"></svg>
                     <div class="fw-bold fs-6 text-primary mt-1" id="barcodePrice"></div>
                 </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-dark" onclick="window.print()"><i class="fa-solid fa-print me-1"></i> Print Sticker</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Manage & Add Product Categories -->
+<div class="modal fade" id="categoryManageModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title fw-bold"><i class="fa-solid fa-tags me-2"></i> Product Categories Manager</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <!-- Add / Edit Category Form -->
+                <div class="card bg-light border p-3 mb-4">
+                    <h6 class="fw-bold mb-3 text-dark" id="catFormTitle"><i class="fa-solid fa-plus-circle text-primary me-1"></i> Add New Category</h6>
+                    <form method="POST" action="books.php">
+                        <input type="hidden" name="save_category" value="1">
+                        <input type="hidden" name="category_id" id="edit_cat_id" value="0">
+                        <div class="row g-2">
+                            <div class="col-md-4">
+                                <label class="form-label small fw-bold">Category Name *</label>
+                                <input type="text" name="cat_name" id="edit_cat_name" class="form-control form-control-sm" required placeholder="e.g. Oxford Primary Syllabus">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small fw-bold">Urdu Name (اردو نام)</label>
+                                <input type="text" name="cat_urdu_name" id="edit_cat_urdu" class="form-control form-control-sm" placeholder="اردو نام">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small fw-bold">Category Type</label>
+                                <select name="cat_type" id="edit_cat_type" class="form-select form-select-sm">
+                                    <option value="book">Book / Syllabus</option>
+                                    <option value="stationery">Stationery</option>
+                                    <option value="general">General Merchandise</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2 d-flex align-items-end">
+                                <button type="submit" class="btn btn-primary btn-sm w-100 fw-bold">
+                                    <i class="fa-solid fa-save me-1"></i> Save
+                                </button>
+                            </div>
+                            <div class="col-12 mt-2">
+                                <input type="text" name="cat_description" id="edit_cat_desc" class="form-control form-control-sm" placeholder="Optional category description or curriculum board notes">
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Existing Categories Table -->
+                <h6 class="fw-bold text-dark mb-2"><i class="fa-solid fa-list me-1"></i> Existing Product Categories (<?= count($categories) ?>)</h6>
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover align-middle mb-0 small">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Category Name</th>
+                                <th>Type</th>
+                                <th>Description</th>
+                                <th class="text-center">Products Linked</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($categories as $cat): ?>
+                                <?php 
+                                    $pCount = dbFetchOne("SELECT COUNT(*) as cnt FROM products WHERE category_id = ?", [$cat['id']])['cnt'] ?? 0;
+                                ?>
+                                <tr>
+                                    <td>
+                                        <strong><?= htmlspecialchars($cat['name']) ?></strong>
+                                        <?php if ($cat['urdu_name']): ?>
+                                            <div class="text-secondary small font-urdu"><?= htmlspecialchars($cat['urdu_name']) ?></div>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>
+                                        <span class="badge <?= $cat['type'] === 'book' ? 'bg-primary-subtle text-primary' : 'bg-warning-subtle text-dark' ?>">
+                                            <?= ucfirst($cat['type']) ?>
+                                        </span>
+                                    </td>
+                                    <td class="text-muted"><?= htmlspecialchars($cat['description'] ?: '-') ?></td>
+                                    <td class="text-center fw-bold text-primary"><?= $pCount ?> items</td>
+                                    <td class="text-end">
+                                        <div class="btn-group btn-group-sm">
+                                            <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2" onclick='editCategoryRow(<?= json_encode($cat) ?>)' title="Edit Category">
+                                                <i class="fa-solid fa-pen-to-square"></i>
+                                            </button>
+                                            <form method="POST" action="books.php" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete category \'<?= htmlspecialchars(addslashes($cat['name'])) ?>\'?')">
+                                                <input type="hidden" name="delete_category" value="1">
+                                                <input type="hidden" name="category_id" value="<?= $cat['id'] ?>">
+                                                <button type="submit" class="btn btn-outline-danger btn-sm py-0 px-2" title="Delete Category" <?= $pCount > 0 ? 'disabled' : '' ?>>
+                                                    <i class="fa-solid fa-trash-can"></i>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
@@ -605,6 +757,16 @@ function openBarcodeModal(barcodeVal, title, price) {
         displayValue: true
     });
     new bootstrap.Modal(document.getElementById('barcodeModal')).show();
+}
+
+function editCategoryRow(c) {
+    document.getElementById('catFormTitle').innerHTML = '<i class="fa-solid fa-pen-to-square text-secondary me-1"></i> Edit Category: ' + c.name;
+    document.getElementById('edit_cat_id').value = c.id;
+    document.getElementById('edit_cat_name').value = c.name;
+    document.getElementById('edit_cat_urdu').value = c.urdu_name || '';
+    document.getElementById('edit_cat_type').value = c.type || 'book';
+    document.getElementById('edit_cat_desc').value = c.description || '';
+    document.getElementById('edit_cat_name').focus();
 }
 </script>
 

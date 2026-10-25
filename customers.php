@@ -289,7 +289,7 @@ $shopName = getSetting('shop_name', 'Kitab Ghar');
 
 <!-- Modal: Receive Payment Voucher -->
 <div class="modal fade" id="receivePaymentModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">
             <form method="POST" action="customers.php">
                 <input type="hidden" name="receive_payment" value="1">
@@ -348,7 +348,7 @@ $shopName = getSetting('shop_name', 'Kitab Ghar');
 
 <!-- Modal: Add / Edit Customer -->
 <div class="modal fade" id="customerModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">
             <form method="POST" action="customers.php">
                 <input type="hidden" name="save_customer" value="1">

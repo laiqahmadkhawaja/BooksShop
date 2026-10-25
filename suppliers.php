@@ -272,7 +272,7 @@ $accounts = dbFetchAll("SELECT id, account_name, balance FROM accounts WHERE sta
 
 <!-- Modal: Pay Supplier Voucher -->
 <div class="modal fade" id="paySupplierModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">
             <form method="POST" action="suppliers.php">
                 <input type="hidden" name="pay_supplier" value="1">
@@ -327,7 +327,7 @@ $accounts = dbFetchAll("SELECT id, account_name, balance FROM accounts WHERE sta
 
 <!-- Modal: Add / Edit Supplier -->
 <div class="modal fade" id="supplierModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">
             <form method="POST" action="suppliers.php">
                 <input type="hidden" name="save_supplier" value="1">

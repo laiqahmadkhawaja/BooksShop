@@ -288,7 +288,7 @@ $accounts = dbFetchAll("SELECT id, account_name, balance FROM accounts WHERE sta
 
 <!-- Modal: Sales Return -->
 <div class="modal fade" id="returnModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">
             <form method="POST" action="sales.php">
                 <input type="hidden" name="process_sales_return" value="1">

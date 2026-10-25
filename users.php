@@ -115,7 +115,7 @@ $users = dbFetchAll("SELECT * FROM users ORDER BY id ASC");
 
 <!-- Modal: Add / Edit User -->
 <div class="modal fade" id="userModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">
             <form method="POST" action="users.php">
                 <input type="hidden" name="save_user" value="1">
