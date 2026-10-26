@@ -248,21 +248,23 @@ function ensureProductSchema() {
             `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
-        // Ensure default core product types exist
-        $defaults = [
-            ['code' => 'book', 'name' => 'Book / Textbook / Novel', 'description' => 'Curriculum textbooks, literature, general books', 'is_system' => 1],
-            ['code' => 'stationery', 'name' => 'Stationery / Office Supply', 'description' => 'Notebooks, pens, registers, office supplies', 'is_system' => 1],
-            ['code' => 'toys', 'name' => 'Toys & Games', 'description' => 'Educational toys, board games, puzzles and creative play', 'is_system' => 0],
-            ['code' => 'uniform', 'name' => 'Uniform & Apparel', 'description' => 'School uniforms, bags, shoes and attire', 'is_system' => 0],
-            ['code' => 'general', 'name' => 'General Merchandise', 'description' => 'Miscellaneous and general store items', 'is_system' => 0]
-        ];
-        foreach ($defaults as $d) {
-            $exists = dbFetchOne("SELECT id FROM product_types WHERE code = ?", [$d['code']]);
-            if (!$exists) {
-                dbQuery("INSERT INTO product_types (code, name, description, is_system) VALUES (?, ?, ?, ?)", [
-                    $d['code'], $d['name'], $d['description'], $d['is_system']
-                ]);
+        // Initial one-time seed only if not already seeded
+        $isSeeded = getSetting('product_types_seeded', '0');
+        if ($isSeeded === '0') {
+            $cnt = dbFetchOne("SELECT COUNT(*) as c FROM product_types")['c'] ?? 0;
+            if ($cnt == 0) {
+                $defaults = [
+                    ['code' => 'book', 'name' => 'Book / Textbook / Novel', 'description' => 'Curriculum textbooks, literature, general books', 'is_system' => 1],
+                    ['code' => 'stationery', 'name' => 'Stationery / Office Supply', 'description' => 'Notebooks, pens, registers, office supplies', 'is_system' => 1],
+                    ['code' => 'toys', 'name' => 'Toys & Games', 'description' => 'Educational toys, board games, puzzles and creative play', 'is_system' => 0]
+                ];
+                foreach ($defaults as $d) {
+                    dbQuery("INSERT INTO product_types (code, name, description, is_system) VALUES (?, ?, ?, ?)", [
+                        $d['code'], $d['name'], $d['description'], $d['is_system']
+                    ]);
+                }
             }
+            setSetting('product_types_seeded', '1');
         }
 
         // Ensure products and categories tables support arbitrary custom types
