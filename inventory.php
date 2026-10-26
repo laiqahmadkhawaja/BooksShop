@@ -289,7 +289,7 @@ require_once __DIR__ . '/includes/header.php';
                 <table class="table table-hover align-middle mb-0 small">
                     <thead class="table-light text-uppercase">
                         <tr>
-                            <th>Item / Book Title</th>
+                            <th>Product / Item Title</th>
                             <th>Category</th>
                             <th class="text-end">Cost Price</th>
                             <th class="text-end">Retail Price</th>

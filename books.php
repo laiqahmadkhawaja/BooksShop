@@ -223,14 +223,14 @@ $products = dbFetchAll("SELECT p.*, c.name as category_name
     WHERE $whereClause 
     ORDER BY p.id DESC", $params);
 
-$pageTitle = 'Books & Products';
+$pageTitle = 'Products Catalog';
 require_once __DIR__ . '/includes/header.php';
 ?>
 
 <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
     <div>
-        <h4 class="fw-bold mb-0 text-dark"><i class="fa-solid fa-book-open text-primary me-2"></i> Books & Stationery Catalog</h4>
-        <small class="text-muted">Manage textbook syllabus, general books, barcodes, and stationery items</small>
+        <h4 class="fw-bold mb-0 text-dark"><i class="fa-solid fa-boxes-stacked text-primary me-2"></i> Products Catalog</h4>
+        <small class="text-muted">Manage products, barcodes, pricing, and stock inventory</small>
     </div>
     <div class="d-flex gap-2">
         <a href="product_types.php" class="btn btn-outline-secondary btn-sm shadow-sm">
@@ -243,7 +243,7 @@ require_once __DIR__ . '/includes/header.php';
             <i class="fa-solid fa-file-excel me-1"></i> Export CSV
         </a>
         <a href="product_form.php" class="btn btn-primary btn-sm shadow-sm">
-            <i class="fa-solid fa-plus-circle me-1"></i> Add New Product / Book
+            <i class="fa-solid fa-plus-circle me-1"></i> Add New Product
         </a>
     </div>
 </div>

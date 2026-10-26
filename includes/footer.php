@@ -5,7 +5,7 @@
 
     <footer class="bg-white border-top py-3 text-center text-secondary small mt-auto">
         <div class="container-fluid">
-            <span>&copy; <?= date('Y') ?> <strong><?= htmlspecialchars(getSetting('shop_name', 'Kitab Ghar')) ?></strong> &mdash; Book Shop Management System. Designed for Fast Bookstore & Stationery Billing.</span>
+            <span>&copy; <?= date('Y') ?> <strong><?= htmlspecialchars(getSetting('shop_name', 'Kitab Ghar')) ?></strong> &mdash; POS & Inventory Management System. Designed for Fast Retail & Inventory Billing.</span>
         </div>
     </footer>
 </div> <!-- Close main-content -->

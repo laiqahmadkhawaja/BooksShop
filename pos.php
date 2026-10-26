@@ -80,7 +80,7 @@ $schoolClasses = dbFetchAll("SELECT sc.id, sc.class_name, sc.academic_session, s
             <div class="p-3 bg-light border-bottom position-relative">
                 <div class="input-group">
                     <span class="input-group-text bg-primary text-white"><i class="fa-solid fa-barcode"></i></span>
-                    <input type="text" id="barcodeSearchInput" class="form-control form-control-lg" placeholder="Scan Barcode or Search Book Title, ISBN, Author (Press Enter)..." autocomplete="off">
+                    <input type="text" id="barcodeSearchInput" class="form-control form-control-lg" placeholder="Scan Barcode or Search Product Title, SKU, Barcode (Press Enter)..." autocomplete="off">
                     <button class="btn btn-warning text-dark fw-bold px-3 d-flex align-items-center gap-1" type="button" onclick="toggleInlineCameraScanner()" title="Scan Barcode via Camera (Alt+S or F3)">
                         <i class="fa-solid fa-camera"></i> <span class="d-none d-sm-inline">Scan</span>
                     </button>
@@ -146,7 +146,7 @@ $schoolClasses = dbFetchAll("SELECT sc.id, sc.class_name, sc.academic_session, s
 
                     <div class="card-footer bg-black py-1 px-3 border-top border-secondary d-flex justify-content-between align-items-center small text-muted">
                         <div>
-                            <i class="fa-solid fa-info-circle text-info me-1"></i> Point camera at book barcode.
+                            <i class="fa-solid fa-info-circle text-info me-1"></i> Point camera at product barcode.
                         </div>
                         <div class="d-flex align-items-center gap-3">
                             <div class="d-flex align-items-center gap-1">
@@ -169,7 +169,7 @@ $schoolClasses = dbFetchAll("SELECT sc.id, sc.class_name, sc.academic_session, s
                 <table class="table table-hover align-middle mb-0" id="cartTable">
                     <thead class="table-light sticky-top small text-uppercase">
                         <tr>
-                            <th style="min-width: 140px; width: 40%;">Item / Book</th>
+                            <th style="min-width: 140px; width: 40%;">Product / Item</th>
                             <th style="min-width: 85px; width: 20%;">
                                 Price
                                 <span id="rateBadgeInCart" class="badge bg-primary ms-1" style="font-size: 0.65rem;">RETAIL</span>

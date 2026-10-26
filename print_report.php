@@ -422,7 +422,7 @@ elseif ($reportType === 'supplier_statement') {
                 <tr class="fw-bold"><td class="ps-4">Net Sales Turnover</td><td class="text-end text-primary"><?= formatCurrency($netSales) ?></td></tr>
 
                 <tr class="table-light"><td colspan="2" class="fw-bold text-danger">2. COST OF GOODS SOLD (COGS)</td></tr>
-                <tr><td class="ps-4">Cost of Books, Textbooks & Stationery Sold</td><td class="text-end text-danger">- <?= formatCurrency($totalCogs) ?></td></tr>
+                <tr><td class="ps-4">Cost of Goods / Products Sold</td><td class="text-end text-danger">- <?= formatCurrency($totalCogs) ?></td></tr>
                 <tr class="fw-bold table-light"><td>GROSS TRADING PROFIT</td><td class="text-end text-primary"><?= formatCurrency($grossProfit) ?></td></tr>
 
                 <tr class="table-light"><td colspan="2" class="fw-bold text-danger">3. OPERATING EXPENSES</td></tr>

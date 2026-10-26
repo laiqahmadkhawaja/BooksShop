@@ -108,7 +108,7 @@ for ($i = 5; $i >= 0; $i--) {
                         <i class="fa-solid fa-cash-register me-1"></i> New POS Bill (F2)
                     </a>
                     <a href="books.php?action=new" class="btn btn-primary btn-sm">
-                        <i class="fa-solid fa-plus-circle me-1"></i> Add Book / Product
+                        <i class="fa-solid fa-plus-circle me-1"></i> Add Product
                     </a>
                     <a href="purchases.php?action=new" class="btn btn-success btn-sm">
                         <i class="fa-solid fa-cart-arrow-down me-1"></i> Record Purchase

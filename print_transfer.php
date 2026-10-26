@@ -174,7 +174,7 @@ foreach ($items as $it) {
         <thead>
             <tr>
                 <th style="width: 5%;" class="text-center">#</th>
-                <th style="width: 50%;">Item / Book Title</th>
+                <th style="width: 50%;">Product / Item Title</th>
                 <th style="width: 15%;" class="text-center">Code</th>
                 <th style="width: 15%;" class="text-center">Quantity</th>
                 <th style="width: 15%;" class="text-end">Est. Value (Rs.)</th>

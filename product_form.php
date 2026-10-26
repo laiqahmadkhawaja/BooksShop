@@ -16,7 +16,7 @@ if ($isEdit) {
     }
     $pageTitle = 'Edit Product: ' . $product['title'];
 } else {
-    $pageTitle = 'Add New Product / Book';
+    $pageTitle = 'Add New Product';
     $product = [
         'id' => 0,
         'product_code' => 'BK-' . rand(1000, 9999),
@@ -57,7 +57,7 @@ require_once __DIR__ . '/includes/header.php';
     <div class="col-12 col-md-6 mb-2 mb-md-0">
         <h4 class="fw-bold mb-1">
             <i class="fa-solid <?= $isEdit ? 'fa-pen-to-square text-secondary' : 'fa-plus-circle text-primary' ?> me-2"></i>
-            <?= $isEdit ? 'Edit Product' : 'Add New Product / Book' ?>
+            <?= $isEdit ? 'Edit Product' : 'Add New Product' ?>
         </h4>
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb mb-0 small">

@@ -317,7 +317,7 @@ $receiptFooterUrdu = getSetting('receipt_footer_urdu', 'خریداری کا شک
             <thead>
                 <tr>
                     <th style="width: 5%;">#</th>
-                    <th style="width: 50%;">Item / Book Description</th>
+                    <th style="width: 50%;">Product / Item Description</th>
                     <th style="width: 15%;" class="text-center">Rate</th>
                     <th style="width: 12%;" class="text-center">Qty</th>
                     <th style="width: 18%;" class="text-end">Total Amount</th>

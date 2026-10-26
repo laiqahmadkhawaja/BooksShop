@@ -19,21 +19,7 @@ $activeTab = $_GET['tab'] ?? 'stock'; // 'stock' or 'movements'
 $search = trim($_GET['search'] ?? '');
 $filterCategory = (int)($_GET['category'] ?? 0);
 
-// Handle Inline Warehouse Stock Adjustment POST
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['adjust_warehouse_stock'])) {
-    $pId = (int)$_POST['product_id'];
-    $adjType = $_POST['adj_type']; // 'add' or 'subtract'
-    $qty = (float)$_POST['quantity'];
-    $reason = trim($_POST['reason'] ?? 'Warehouse Physical Audit');
 
-    if ($pId > 0 && $qty > 0) {
-        $changeQty = ($adjType === 'add') ? $qty : -$qty;
-        $mType = ($adjType === 'add') ? 'adjustment_add' : 'adjustment_deduct';
-        recordWarehouseStockMovement($warehouseId, $pId, $mType, null, 'AUDIT-' . date('Ymd'), $changeQty, $reason);
-        setFlash('success', "Warehouse stock adjustment recorded successfully.");
-    }
-    redirect("warehouse_view.php?id=$warehouseId&tab=stock");
-}
 
 // 1. Warehouse Stock Query
 $stockWhere = ["p.status = 1"];
@@ -116,6 +102,9 @@ require_once __DIR__ . '/includes/header.php';
         <a href="warehouse_transfer_form.php?from_wh=<?= $warehouse['id'] ?>" class="btn btn-outline-primary">
             <i class="fa-solid fa-truck-ramp-box me-1"></i> Transfer Out
         </a>
+        <a href="stock_adjust.php?warehouse_id=<?= $warehouse['id'] ?>" class="btn btn-warning text-dark fw-bold">
+            <i class="fa-solid fa-sliders me-1"></i> Stock Adjustment
+        </a>
         <a href="warehouse_form.php?id=<?= $warehouse['id'] ?>" class="btn btn-outline-secondary">
             <i class="fa-solid fa-pen me-1"></i> Edit Facility
         </a>
@@ -133,7 +122,7 @@ require_once __DIR__ . '/includes/header.php';
                 <div>
                     <div class="text-muted small fw-semibold">Total Stored Units</div>
                     <h4 class="fw-bold mb-0 text-dark"><?= number_format($totalUnits, 0) ?></h4>
-                    <small class="text-muted"><?= number_format($totalSkus) ?> distinct books/items</small>
+                    <small class="text-muted"><?= number_format($totalSkus) ?> distinct products</small>
                 </div>
             </div>
         </div>
@@ -241,7 +230,7 @@ require_once __DIR__ . '/includes/header.php';
                     <table class="table table-hover align-middle mb-0 small">
                         <thead class="table-light text-uppercase">
                             <tr>
-                                <th>Product / Book Title</th>
+                                <th>Product Title</th>
                                 <th>Category / Type</th>
                                 <th class="text-center">Stored Qty</th>
                                 <th class="text-end">Cost Price</th>
@@ -279,10 +268,12 @@ require_once __DIR__ . '/includes/header.php';
                                     <td class="text-end font-monospace text-muted"><?= formatCurrency($retailTotal) ?></td>
                                     <td class="text-end">
                                         <div class="btn-group btn-group-sm">
-                                            <button type="button" class="btn btn-outline-secondary" title="Adjust Stock"
-                                                    onclick="openWhAdjustModal(<?= $it['product_id'] ?>, '<?= htmlspecialchars(addslashes($it['title'])) ?>', <?= (float)$it['wh_quantity'] ?>)">
-                                                <i class="fa-solid fa-sliders"></i> Adjust
-                                            </button>
+                                            <a href="stock_adjust.php?product_id=<?= $it['product_id'] ?>&warehouse_id=<?= $warehouseId ?>" class="btn btn-outline-secondary" title="Adjust Stock (Physical Audit)">
+                                                <i class="fa-solid fa-sliders me-1"></i> Adjust
+                                            </a>
+                                            <a href="warehouse_transfer_form.php?from_wh=<?= $warehouseId ?>" class="btn btn-outline-primary" title="Transfer Out">
+                                                <i class="fa-solid fa-truck-ramp-box"></i>
+                                            </a>
                                         </div>
                                     </td>
                                 </tr>
@@ -294,62 +285,7 @@ require_once __DIR__ . '/includes/header.php';
         </div>
     </div>
 
-    <!-- Quick Stock Adjustment Modal -->
-    <div class="modal fade" id="whAdjustModal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <form method="POST">
-                    <input type="hidden" name="adjust_warehouse_stock" value="1">
-                    <input type="hidden" name="product_id" id="modalAdjustProdId" value="0">
-                    <div class="modal-header">
-                        <h6 class="modal-title fw-bold"><i class="fa-solid fa-sliders text-primary me-2"></i> Adjust Warehouse Stock</h6>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="mb-3">
-                            <label class="form-label small fw-bold">Item Title</label>
-                            <input type="text" id="modalAdjustProdTitle" class="form-control bg-light" readonly>
-                        </div>
-                        <div class="row g-2 mb-3">
-                            <div class="col-6">
-                                <label class="form-label small fw-bold">Current Godown Stock</label>
-                                <input type="text" id="modalAdjustCurrentQty" class="form-control bg-light fw-bold text-primary" readonly>
-                            </div>
-                            <div class="col-6">
-                                <label class="form-label small fw-bold">Action Type</label>
-                                <select name="adj_type" class="form-select" required>
-                                    <option value="add">➕ Add (Stock Surplus / Found)</option>
-                                    <option value="subtract">➖ Deduct (Damaged / Missing / Audit)</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label small fw-bold">Quantity to Adjust <span class="text-danger">*</span></label>
-                            <input type="number" step="1" min="1" name="quantity" class="form-control form-control-lg fw-bold text-center" value="1" required>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label small fw-bold">Adjustment Reason</label>
-                            <input type="text" name="reason" class="form-control" placeholder="e.g. Broken packaging, Water damage, Audit recount">
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-primary btn-sm px-3 fw-bold">Save Adjustment</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
 
-    <script>
-    function openWhAdjustModal(prodId, title, currentQty) {
-        document.getElementById('modalAdjustProdId').value = prodId;
-        document.getElementById('modalAdjustProdTitle').value = title;
-        document.getElementById('modalAdjustCurrentQty').value = currentQty;
-        const modal = new bootstrap.Modal(document.getElementById('whAdjustModal'));
-        modal.show();
-    }
-    </script>
 
 <?php else: ?>
     <!-- Movements Tab -->
@@ -372,7 +308,7 @@ require_once __DIR__ . '/includes/header.php';
                         <thead class="table-light text-uppercase">
                             <tr>
                                 <th>Date & Time</th>
-                                <th>Item / Book Title</th>
+                                <th>Product Title</th>
                                 <th>Movement Type</th>
                                 <th>Reference #</th>
                                 <th class="text-center">Qty Change</th>

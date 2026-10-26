@@ -59,6 +59,8 @@ $pageTitle = 'Warehouses & Godowns';
 require_once __DIR__ . '/includes/header.php';
 ?>
 
+<div class="d-flex flex-column flex-grow-1" style="min-height: calc(100vh - 210px);">
+
 <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
     <div>
         <h4 class="fw-bold mb-1 text-dark">
@@ -139,15 +141,15 @@ require_once __DIR__ . '/includes/header.php';
 </div>
 
 <!-- Warehouses Table -->
-<div class="card border-0 shadow-sm">
+<div class="card border-0 shadow-sm flex-grow-1 d-flex flex-column" style="min-height: calc(100vh - 350px);">
     <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
         <h6 class="fw-bold mb-0 text-dark">
             <i class="fa-solid fa-list me-2 text-primary"></i> Configured Storage Facilities
         </h6>
     </div>
-    <div class="card-body p-0">
+    <div class="card-body p-0 flex-grow-1 d-flex flex-column">
         <?php if (empty($warehouses)): ?>
-            <div class="p-5 text-center text-muted">
+            <div class="p-5 text-center text-muted my-auto">
                 <i class="fa-solid fa-warehouse fa-3x mb-3 text-secondary opacity-50"></i>
                 <h5>No Warehouses Found</h5>
                 <p class="small">Add your first storage godown to start managing multi-location stock.</p>
@@ -156,7 +158,7 @@ require_once __DIR__ . '/includes/header.php';
                 </a>
             </div>
         <?php else: ?>
-            <div class="table-responsive">
+            <div class="table-responsive flex-grow-1">
                 <table class="table table-hover align-middle mb-0">
                     <thead class="table-light small text-uppercase">
                         <tr>
@@ -271,5 +273,8 @@ require_once __DIR__ . '/includes/header.php';
         <?php endif; ?>
     </div>
 </div>
+
+</div>
+<!-- End flex-column wrapper -->
 
 <?php require_once __DIR__ . '/includes/footer.php'; ?>

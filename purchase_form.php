@@ -16,7 +16,7 @@ require_once __DIR__ . '/includes/header.php';
 ?>
 
 <div class="row justify-content-center">
-    <div class="col-lg-11 col-xl-10">
+    <div class="col-12">
         <div class="d-flex align-items-center justify-content-between mb-3">
             <div>
                 <a href="purchases.php" class="btn btn-outline-secondary btn-sm mb-2">
@@ -34,7 +34,7 @@ require_once __DIR__ . '/includes/header.php';
                     <input type="hidden" name="save_purchase" value="1">
 
                     <div class="row g-3 mb-4">
-                        <div class="col-md-2">
+                        <div class="col-12 col-md-6 col-lg-3">
                             <label class="form-label small fw-bold">Supplier / Publisher <span class="text-danger">*</span></label>
                             <select name="supplier_id" class="form-select" required>
                                 <option value="">-- Choose Supplier --</option>
@@ -45,11 +45,11 @@ require_once __DIR__ . '/includes/header.php';
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="col-md-2">
+                        <div class="col-6 col-md-3 col-lg-2">
                             <label class="form-label small fw-bold">Purchase Date <span class="text-danger">*</span></label>
                             <input type="date" name="purchase_date" class="form-control" value="<?= date('Y-m-d') ?>" required>
                         </div>
-                        <div class="col-md-2">
+                        <div class="col-12 col-md-6 col-lg-3">
                             <label class="form-label small fw-bold text-primary"><i class="fa-solid fa-boxes-packing me-1"></i> Stock Destination <span class="text-danger">*</span></label>
                             <select name="stock_destination" class="form-select border-primary" required>
                                 <option value="shop:0">🏬 Main Shop / Storefront Counter</option>
@@ -62,11 +62,11 @@ require_once __DIR__ . '/includes/header.php';
                                 <?php endif; ?>
                             </select>
                         </div>
-                        <div class="col-md-2">
+                        <div class="col-6 col-md-3 col-lg-2">
                             <label class="form-label small fw-bold">Supplier Invoice / Bilty #</label>
                             <input type="text" name="invoice_no" class="form-control" placeholder="e.g. OUP-INV-9823">
                         </div>
-                        <div class="col-md-2">
+                        <div class="col-12 col-md-6 col-lg-2">
                             <label class="form-label small fw-bold">Payment Account</label>
                             <select name="payment_account_id" class="form-select">
                                 <?php foreach ($accounts as $acc): ?>
@@ -89,7 +89,7 @@ require_once __DIR__ . '/includes/header.php';
                                 <table class="table table-bordered mb-0 align-middle small" id="purchaseItemsTable">
                                     <thead class="table-light">
                                         <tr>
-                                            <th style="width: 48%;">Product / Book Title</th>
+                                            <th style="width: 48%;">Product Title</th>
                                             <th style="width: 18%;">Unit Purchase Cost (Rs.)</th>
                                             <th style="width: 14%;">Quantity</th>
                                             <th style="width: 15%;" class="text-end">Subtotal</th>
@@ -106,41 +106,50 @@ require_once __DIR__ . '/includes/header.php';
 
                     <!-- Settlement & Totals -->
                     <div class="row g-3 justify-content-between mb-4">
-                        <div class="col-md-6 col-lg-7">
+                        <div class="col-lg-6 col-xl-7">
                             <div class="card p-3 bg-light border h-100">
                                 <label class="form-label small fw-bold text-dark"><i class="fa-solid fa-note-sticky text-secondary me-1"></i> Purchase Notes / Bilty Remarks</label>
-                                <textarea name="notes" class="form-control" rows="4" placeholder="Optional notes, bilty/tracking number, parcel condition, payment terms..."></textarea>
+                                <textarea name="notes" class="form-control flex-grow-1" rows="5" placeholder="Optional notes, bilty/tracking number, parcel condition, payment terms..."></textarea>
                             </div>
                         </div>
-                        <div class="col-md-6 col-lg-5 col-xl-4">
+                        <div class="col-lg-6 col-xl-5">
                             <div class="card p-3 bg-light border">
-                                <div class="d-flex justify-content-between mb-2">
-                                    <span class="small">Items Subtotal:</span>
-                                    <strong id="purchaseSubtotalDisplay">Rs. 0.00</strong>
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span class="small fw-semibold text-secondary">Items Subtotal:</span>
+                                    <strong id="purchaseSubtotalDisplay" class="fs-6">Rs. 0.00</strong>
                                 </div>
                                 <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <span class="small">Supplier Discount:</span>
-                                    <input type="number" step="0.01" name="discount_amount" id="purchaseDiscount" class="form-control form-control-sm text-end" style="width: 120px;" value="0.00" oninput="calcPurchaseTotal()">
+                                    <span class="small text-secondary">Supplier Discount:</span>
+                                    <div class="input-group input-group-sm" style="width: 150px;">
+                                        <span class="input-group-text bg-white">Rs.</span>
+                                        <input type="number" step="0.01" name="discount_amount" id="purchaseDiscount" class="form-control text-end" value="0.00" oninput="calcPurchaseTotal()">
+                                    </div>
                                 </div>
                                 <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <span class="small">Shipping / Bilty Cost:</span>
-                                    <input type="number" step="0.01" name="shipping_cost" id="purchaseShipping" class="form-control form-control-sm text-end" style="width: 120px;" value="0.00" oninput="calcPurchaseTotal()">
+                                    <span class="small text-secondary">Shipping / Bilty Cost:</span>
+                                    <div class="input-group input-group-sm" style="width: 150px;">
+                                        <span class="input-group-text bg-white">Rs.</span>
+                                        <input type="number" step="0.01" name="shipping_cost" id="purchaseShipping" class="form-control text-end" value="0.00" oninput="calcPurchaseTotal()">
+                                    </div>
                                 </div>
-                                <div class="d-flex justify-content-between border-top pt-2 mb-2">
+                                <div class="d-flex justify-content-between align-items-center border-top pt-2 mb-2">
                                     <span class="fw-bold">Grand Total:</span>
                                     <strong class="text-primary fs-5" id="purchaseGrandTotalDisplay">Rs. 0.00</strong>
                                 </div>
                                 <div class="d-flex justify-content-between align-items-center mb-1">
                                     <div class="d-flex align-items-center gap-1">
-                                        <span class="small fw-bold">Amount Paid:</span>
-                                        <button type="button" class="btn btn-outline-success py-0 px-1" style="font-size: 0.68rem;" onclick="setPaidInFull()" title="Match Grand Total">
-                                            Full Paid
+                                        <span class="small fw-bold me-1">Amount Paid:</span>
+                                        <button type="button" class="btn btn-outline-success py-0 px-2 fw-semibold" style="font-size: 0.72rem;" onclick="setPaidInFull()" title="Match Grand Total">
+                                            Full
                                         </button>
-                                        <button type="button" class="btn btn-outline-secondary py-0 px-1" style="font-size: 0.68rem;" onclick="setPaidZero()" title="Set to 0 (Full Due)">
+                                        <button type="button" class="btn btn-outline-secondary py-0 px-2 fw-semibold" style="font-size: 0.72rem;" onclick="setPaidZero()" title="Set to 0 (Full Due)">
                                             Due
                                         </button>
                                     </div>
-                                    <input type="number" step="0.01" name="paid_amount" id="purchasePaid" class="form-control form-control-sm text-end fw-bold text-success" style="width: 120px;" value="0.00" oninput="onPaidManualInput()">
+                                    <div class="input-group input-group-sm" style="width: 150px;">
+                                        <span class="input-group-text bg-white text-success fw-bold">Rs.</span>
+                                        <input type="number" step="0.01" name="paid_amount" id="purchasePaid" class="form-control text-end fw-bold text-success" value="0.00" oninput="onPaidManualInput()">
+                                    </div>
                                 </div>
                             </div>
                         </div>

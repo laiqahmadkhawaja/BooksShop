@@ -35,16 +35,26 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
                 }
             }
         }
-        header("Location: inventory.php");
+        if ($locType === 'warehouse' && $whId > 0) {
+            header("Location: warehouse_view.php?id=$whId&tab=stock");
+        } else {
+            header("Location: inventory.php");
+        }
         exit;
     }
 }
 
-$productId = (int)($_GET['id'] ?? 0);
+$productId = (int)($_GET['id'] ?? ($_GET['product_id'] ?? 0));
+$warehouseId = (int)($_GET['warehouse_id'] ?? 0);
+$selectedLocation = $_GET['location'] ?? ($warehouseId > 0 ? "warehouse:$warehouseId" : 'shop:0');
+
 $selectedProduct = null;
 if ($productId > 0) {
     $selectedProduct = dbFetchOne("SELECT * FROM products WHERE id = ?", [$productId]);
 }
+
+$backUrl = ($warehouseId > 0) ? "warehouse_view.php?id=$warehouseId&tab=stock" : "inventory.php";
+$backTitle = ($warehouseId > 0) ? "Back to Warehouse" : "Back to Inventory";
 
 $allProducts = dbFetchAll("SELECT id, title, product_code, current_stock, unit, purchase_price, retail_price FROM products WHERE status = 1 ORDER BY title ASC");
 $allWhStockRaw = dbFetchAll("SELECT warehouse_id, product_id, quantity FROM warehouse_stock");
@@ -70,8 +80,8 @@ require_once __DIR__ . '/includes/header.php';
         </nav>
     </div>
     <div class="col-12 col-md-6 text-md-end">
-        <a href="inventory.php" class="btn btn-outline-secondary">
-            <i class="fa-solid fa-arrow-left me-1"></i> Back to Inventory
+        <a href="<?= htmlspecialchars($backUrl) ?>" class="btn btn-outline-secondary">
+            <i class="fa-solid fa-arrow-left me-1"></i> <?= htmlspecialchars($backTitle) ?>
         </a>
     </div>
 </div>
@@ -92,16 +102,16 @@ require_once __DIR__ . '/includes/header.php';
                     <div class="mb-3">
                         <label class="form-label small fw-bold">Location to Adjust *</label>
                         <select name="target_location" id="target_location" class="form-select form-select-lg" required onchange="updateStockDisplay()">
-                            <option value="shop:0">🏬 Main Shop / Storefront Counter</option>
+                            <option value="shop:0" <?= $selectedLocation === 'shop:0' ? 'selected' : '' ?>>🏬 Main Shop / Storefront Counter</option>
                             <?php foreach ($warehouses as $wh): ?>
-                                <option value="warehouse:<?= $wh['id'] ?>">🏭 <?= htmlspecialchars($wh['name']) ?> (<?= htmlspecialchars($wh['warehouse_code']) ?>)</option>
+                                <option value="warehouse:<?= $wh['id'] ?>" <?= $selectedLocation === "warehouse:{$wh['id']}" ? 'selected' : '' ?>>🏭 <?= htmlspecialchars($wh['name']) ?> (<?= htmlspecialchars($wh['warehouse_code']) ?>)</option>
                             <?php endforeach; ?>
                         </select>
                     </div>
 
                     <!-- Product Select -->
                     <div class="mb-3">
-                        <label class="form-label small fw-bold">Select Product / Book *</label>
+                        <label class="form-label small fw-bold">Select Product *</label>
                         <select name="product_id" id="product_id" class="form-select form-select-lg" required onchange="updateStockDisplay()">
                             <option value="">-- Choose Product --</option>
                             <?php foreach ($allProducts as $p): ?>
@@ -156,7 +166,7 @@ require_once __DIR__ . '/includes/header.php';
 
                     <!-- Buttons -->
                     <div class="d-flex justify-content-end gap-2">
-                        <a href="inventory.php" class="btn btn-secondary px-4">Cancel</a>
+                        <a href="<?= htmlspecialchars($backUrl) ?>" class="btn btn-secondary px-4">Cancel</a>
                         <button type="submit" class="btn btn-primary px-4 fw-bold">
                             <i class="fa-solid fa-check me-1"></i> Apply Adjustment
                         </button>

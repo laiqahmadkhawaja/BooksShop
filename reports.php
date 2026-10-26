@@ -397,7 +397,7 @@ if ($reportType === 'cash_closing') {
                     <td colspan="2" class="fw-bold text-danger"><i class="fa-solid fa-boxes-stacked me-1"></i> 2. COST OF GOODS SOLD (COGS)</td>
                 </tr>
                 <tr>
-                    <td class="ps-4">Cost of Textbooks, Books & Stationery Sold</td>
+                    <td class="ps-4">Cost of Goods / Products Sold</td>
                     <td class="text-end text-danger">- <?= formatCurrency($totalCogs) ?></td>
                 </tr>
                 <tr class="table-primary fw-bold">
@@ -1311,7 +1311,7 @@ function calculatePhysicalCash() {
             <table class="table table-hover align-middle mb-0 small">
                 <thead class="table-light text-uppercase">
                     <tr>
-                        <th>Item / Book Title</th>
+                        <th>Product Title</th>
                         <th>Category</th>
                         <th class="text-end">Unit Cost</th>
                         <th class="text-end">Retail Price</th>

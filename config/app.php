@@ -26,10 +26,10 @@ function setLanguage($lang) {
 // Translations Dictionary (Active Navigation & KPI Terms)
 $TRANSLATIONS = [
     'en' => [
-        'app_name' => 'Book Shop Management System',
+        'app_name' => 'Inventory & POS Management System',
         'dashboard' => 'Dashboard',
         'pos' => 'POS Billing',
-        'books_catalog' => 'Books & Products',
+        'books_catalog' => 'Products',
         'inventory' => 'Inventory & Stock',
         'sales_history' => 'Sales & Invoices',
         'purchases' => 'Purchases & Inward',
@@ -49,10 +49,10 @@ $TRANSLATIONS = [
         'transfers' => 'Stock Transfers',
     ],
     'ur' => [
-        'app_name' => 'بک شاپ مینجمنٹ سسٹم',
+        'app_name' => 'انوینٹری اور پی او ایس مینجمنٹ سسٹم',
         'dashboard' => 'ڈیش بورڈ',
         'pos' => 'پی او ایس بلنگ',
-        'books_catalog' => 'کتب اور اشیاء',
+        'books_catalog' => 'پروڈکٹس اور اشیاء',
         'inventory' => 'اسٹاک اور انوینٹری',
         'sales_history' => 'فروخت اور رسیدات',
         'purchases' => 'خریداری و سپلائرز',

@@ -11,7 +11,7 @@ $userRole = $_SESSION['user']['role'] ?? '';
             <i class="fa-solid fa-book-bookmark text-warning fs-3"></i>
             <div>
                 <h5 class="mb-0"><?= $currentLang === 'ur' ? 'کتاب گھر' : 'Kitab Ghar' ?></h5>
-                <small class="text-white-50" style="font-size: 0.72rem;"><?= $currentLang === 'ur' ? 'بک شاپ مینجمنٹ' : 'Bookshop POS & ERP' ?></small>
+                <small class="text-white-50" style="font-size: 0.72rem;"><?= $currentLang === 'ur' ? 'انوینٹری و بلنگ ERP' : 'POS & Inventory ERP' ?></small>
             </div>
         </div>
         <button class="btn btn-sm btn-link text-white-50 d-lg-none p-1 text-decoration-none" id="sidebarCloseBtn" type="button" aria-label="Close Sidebar">
@@ -34,10 +34,10 @@ $userRole = $_SESSION['user']['role'] ?? '';
             <span class="badge bg-warning text-dark ms-auto">F2</span>
         </a>
 
-        <div class="nav-category"><?= $currentLang === 'ur' ? 'کتب و فروخت' : 'Sales & Catalog' ?></div>
+        <div class="nav-category"><?= $currentLang === 'ur' ? 'اشیاء و فروخت' : 'Sales & Catalog' ?></div>
 
         <a href="books.php" class="nav-link <?= $currentPage === 'books.php' ? 'active' : '' ?>">
-            <i class="fa-solid fa-book-open"></i>
+            <i class="fa-solid fa-box-open"></i>
             <span><?= __t('books_catalog') ?></span>
         </a>
 

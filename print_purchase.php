@@ -349,7 +349,7 @@ $shopPhone = getSetting('shop_phone', '+92 300 1234567 / 042-37210000');
             <thead>
                 <tr>
                     <th style="width: 5%;" class="text-center">#</th>
-                    <th style="width: 48%;">Item / Book Description</th>
+                    <th style="width: 48%;">Product / Item Description</th>
                     <th style="width: 12%;" class="text-center">Type</th>
                     <th style="width: 15%;" class="text-end">Unit Cost</th>
                     <th style="width: 10%;" class="text-center">Qty</th>

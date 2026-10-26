@@ -232,7 +232,7 @@ require_once __DIR__ . '/includes/header.php';
                                 <table class="table table-bordered mb-0 align-middle small" id="transferItemsTable">
                                     <thead class="table-light">
                                         <tr>
-                                            <th style="width: 45%;">Product / Book Title</th>
+                                            <th style="width: 45%;">Product Title</th>
                                             <th style="width: 18%;" class="text-center">Available at Source</th>
                                             <th style="width: 18%;">Transfer Quantity</th>
                                             <th style="width: 14%;" class="text-end">Est. Value (Rs.)</th>

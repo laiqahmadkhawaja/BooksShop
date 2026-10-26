@@ -63,7 +63,7 @@ require_once __DIR__ . '/includes/header.php';
                         <table class="table table-hover align-middle mb-0">
                             <thead class="table-light small text-uppercase">
                                 <tr>
-                                    <th>Item / Book Title</th>
+                                    <th>Product Title</th>
                                     <th class="text-center" style="width: 12%;">Sold Qty</th>
                                     <th class="text-end" style="width: 15%;">Unit Price</th>
                                     <th class="text-center" style="width: 18%;">Return Qty</th>
