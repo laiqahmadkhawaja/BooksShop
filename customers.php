@@ -95,12 +95,12 @@ require_once __DIR__ . '/includes/header.php';
         <small class="text-muted">Manage regular clients, schools, credit balances & WhatsApp payment reminders</small>
     </div>
     <div class="d-flex gap-2">
-        <button type="button" class="btn btn-outline-success btn-sm" data-bs-toggle="modal" data-bs-target="#receivePaymentModal">
+        <a href="customer_payment.php<?= $selectedCustomerId ? '?customer_id=' . $selectedCustomerId : '' ?>" class="btn btn-outline-success btn-sm">
             <i class="fa-solid fa-hand-holding-dollar me-1"></i> Receive Payment Voucher
-        </button>
-        <button type="button" class="btn btn-primary btn-sm shadow-sm" data-bs-toggle="modal" data-bs-target="#customerModal" onclick="openNewCustomerModal()">
+        </a>
+        <a href="customer_form.php" class="btn btn-primary btn-sm shadow-sm">
             <i class="fa-solid fa-user-plus me-1"></i> Add New Customer
-        </button>
+        </a>
     </div>
 </div>
 
@@ -288,171 +288,6 @@ require_once __DIR__ . '/includes/header.php';
     </div>
 </div>
 
-<!-- Modal: Receive Payment Voucher -->
-<div class="modal fade" id="receivePaymentModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content">
-            <form method="POST" action="customers.php">
-                <input type="hidden" name="receive_payment" value="1">
-                <input type="hidden" name="customer_id" id="rcpt_customer_id" value="<?= $selectedCustomerId ?>">
-
-                <div class="modal-header bg-success text-white">
-                    <h5 class="modal-title fw-bold"><i class="fa-solid fa-hand-holding-dollar me-2"></i> Receive Customer Payment Voucher</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-
-                <div class="modal-body p-4">
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold">Customer *</label>
-                        <select name="customer_id" id="rcpt_cust_select" class="form-select" required>
-                            <?php foreach ($customers as $c): ?>
-                                <option value="<?= $c['id'] ?>" <?= $selectedCustomerId == $c['id'] ? 'selected' : '' ?>>
-                                    <?= htmlspecialchars($c['name']) ?> (Due: <?= formatCurrency($c['current_balance']) ?>)
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold">Amount Received (Rs.) *</label>
-                        <input type="number" step="0.01" name="amount" id="rcpt_amount" class="form-control form-control-lg fw-bold text-success" required>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold">Deposit to Account *</label>
-                        <select name="account_id" class="form-select" required>
-                            <?php foreach ($accounts as $acc): ?>
-                                <option value="<?= $acc['id'] ?>"><?= htmlspecialchars($acc['account_name']) ?> (<?= formatCurrency($acc['balance']) ?>)</option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold">Receipt / Voucher #</label>
-                        <input type="text" name="reference_no" class="form-control form-control-sm" value="RCPT-<?= date('Ymd-His') ?>">
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label small">Payment Note</label>
-                        <input type="text" name="notes" class="form-control form-control-sm" placeholder="e.g. Cleared October booklist installment">
-                    </div>
-                </div>
-
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-success"><i class="fa-solid fa-check me-1"></i> Confirm & Save Voucher</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<!-- Modal: Add / Edit Customer -->
-<div class="modal fade" id="customerModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content">
-            <form method="POST" action="customers.php">
-                <input type="hidden" name="save_customer" value="1">
-                <input type="hidden" name="customer_id" id="cust_id" value="0">
-
-                <div class="modal-header">
-                    <h5 class="modal-title fw-bold" id="customerModalTitle"><i class="fa-solid fa-user-plus text-primary me-2"></i> Add Customer Profile</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-
-                <div class="modal-body p-4">
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold">Customer / School Name *</label>
-                        <input type="text" name="name" id="cust_name" class="form-control" required placeholder="e.g. Beaconhouse or Tariq Ahmed">
-                    </div>
-
-                    <div class="row g-2 mb-3">
-                        <div class="col-6">
-                            <label class="form-label small fw-bold">Customer Type</label>
-                            <select name="customer_type" id="cust_type" class="form-select">
-                                <option value="regular">Regular Customer</option>
-                                <option value="walkin">Walk-in</option>
-                                <option value="wholesale">Wholesale Dealer</option>
-                                <option value="institution">School / Institution</option>
-                                <option value="school_parent">Student Parent</option>
-                            </select>
-                        </div>
-                        <div class="col-6">
-                            <label class="form-label small fw-bold">Phone (WhatsApp) *</label>
-                            <input type="text" name="phone" id="cust_phone" class="form-control" placeholder="03001234567">
-                        </div>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label small">Email Address</label>
-                        <input type="email" name="email" id="cust_email" class="form-control" placeholder="customer@example.com">
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label small">Physical Address / Campus</label>
-                        <textarea name="address" id="cust_address" class="form-control" rows="2" placeholder="Full address"></textarea>
-                    </div>
-
-                    <div class="row g-2 mb-3">
-                        <div class="col-6">
-                            <label class="form-label small fw-bold">Credit Limit (Rs.)</label>
-                            <input type="number" step="0.01" name="credit_limit" id="cust_limit" class="form-control" value="0">
-                        </div>
-                        <div class="col-6" id="openingBalDiv">
-                            <label class="form-label small fw-bold">Opening Due Balance</label>
-                            <input type="number" step="0.01" name="opening_balance" id="cust_opening" class="form-control" value="0">
-                        </div>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label small">Notes</label>
-                        <input type="text" name="notes" id="cust_notes" class="form-control" placeholder="e.g. 10% discount on syllabus sets">
-                    </div>
-                </div>
-
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary"><i class="fa-solid fa-save me-1"></i> Save Customer</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<script>
-function openNewCustomerModal() {
-    document.getElementById('customerModalTitle').innerHTML = '<i class="fa-solid fa-user-plus text-primary me-2"></i> Add Customer Profile';
-    document.getElementById('cust_id').value = '0';
-    document.getElementById('cust_name').value = '';
-    document.getElementById('cust_type').value = 'regular';
-    document.getElementById('cust_phone').value = '';
-    document.getElementById('cust_email').value = '';
-    document.getElementById('cust_address').value = '';
-    document.getElementById('cust_limit').value = '0';
-    document.getElementById('cust_opening').value = '0';
-    document.getElementById('openingBalDiv').style.display = 'block';
-    document.getElementById('cust_notes').value = '';
-}
-
-function openEditCustomerModal(c) {
-    document.getElementById('customerModalTitle').innerHTML = '<i class="fa-solid fa-pen-to-square text-secondary me-2"></i> Edit Customer Profile';
-    document.getElementById('cust_id').value = c.id;
-    document.getElementById('cust_name').value = c.name;
-    document.getElementById('cust_type').value = c.customer_type;
-    document.getElementById('cust_phone').value = c.phone || '';
-    document.getElementById('cust_email').value = c.email || '';
-    document.getElementById('cust_address').value = c.address || '';
-    document.getElementById('cust_limit').value = c.credit_limit || '0';
-    document.getElementById('openingBalDiv').style.display = 'none'; // only on create
-    document.getElementById('cust_notes').value = c.notes || '';
-    new bootstrap.Modal(document.getElementById('customerModal')).show();
-}
-
-function openReceivePaymentModal(custId, custName, due) {
-    document.getElementById('rcpt_cust_select').value = custId;
-    document.getElementById('rcpt_amount').value = due > 0 ? due : '';
-    new bootstrap.Modal(document.getElementById('receivePaymentModal')).show();
-}
-</script>
+<!-- Customer Add/Edit and Payment Voucher are managed via customer_form.php and customer_payment.php -->
 
 <?php require_once __DIR__ . '/includes/footer.php'; ?>

@@ -52,9 +52,7 @@ require_once __DIR__ . '/includes/header.php';
         <small class="text-muted">Manage system logins for Cashiers, Inventory Managers, Accountants and Administrators</small>
     </div>
     <div>
-        <button type="button" class="btn btn-primary btn-sm shadow-sm" data-bs-toggle="modal" data-bs-target="#userModal" onclick="openNewUserModal()">
-            <i class="fa-solid fa-user-plus me-1"></i> Add New User
-        </button>
+        <a href="user_form.php" class="btn btn-primary btn-sm shadow-sm"><i class="fa-solid fa-user-plus me-1"></i> Add New User</a>
     </div>
 </div>
 
@@ -115,101 +113,6 @@ require_once __DIR__ . '/includes/header.php';
     </div>
 </div>
 
-<!-- Modal: Add / Edit User -->
-<div class="modal fade" id="userModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content">
-            <form method="POST" action="users.php">
-                <input type="hidden" name="save_user" value="1">
-                <input type="hidden" name="user_id" id="modal_user_id" value="0">
-
-                <div class="modal-header">
-                    <h5 class="modal-title fw-bold" id="userModalTitle"><i class="fa-solid fa-user-plus text-primary me-2"></i> Add Staff Account</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-
-                <div class="modal-body p-4">
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold">Full Name *</label>
-                        <input type="text" name="full_name" id="modal_fullname" class="form-control" required placeholder="e.g. Asim Raza">
-                    </div>
-
-                    <div class="row g-2 mb-3">
-                        <div class="col-6">
-                            <label class="form-label small fw-bold">Username *</label>
-                            <input type="text" name="username" id="modal_username" class="form-control" required placeholder="asim.cashier">
-                        </div>
-                        <div class="col-6">
-                            <label class="form-label small fw-bold">Role *</label>
-                            <select name="role" id="modal_role" class="form-select">
-                                <option value="cashier">Cashier (POS & Sales)</option>
-                                <option value="accountant">Accountant (Ledgers & Finance)</option>
-                                <option value="manager">Manager (Stock & Purchases)</option>
-                                <option value="admin">Administrator (Full Control)</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="row g-2 mb-3">
-                        <div class="col-6">
-                            <label class="form-label small">Email Address</label>
-                            <input type="email" name="email" id="modal_email" class="form-control" placeholder="user@kitabghar.pk">
-                        </div>
-                        <div class="col-6">
-                            <label class="form-label small">Phone #</label>
-                            <input type="text" name="phone" id="modal_phone" class="form-control" placeholder="03001234567">
-                        </div>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold">Password</label>
-                        <input type="password" name="password" id="modal_password" class="form-control" placeholder="Enter password (leave blank to keep unchanged)">
-                    </div>
-
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" name="is_active" value="1" id="modal_is_active" checked>
-                        <label class="form-check-label small" for="modal_is_active">
-                            Active Account (Allow logging in)
-                        </label>
-                    </div>
-                </div>
-
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary"><i class="fa-solid fa-save me-1"></i> Save User</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<script>
-function openNewUserModal() {
-    document.getElementById('userModalTitle').innerHTML = '<i class="fa-solid fa-user-plus text-primary me-2"></i> Add Staff Account';
-    document.getElementById('modal_user_id').value = '0';
-    document.getElementById('modal_fullname').value = '';
-    document.getElementById('modal_username').value = '';
-    document.getElementById('modal_role').value = 'cashier';
-    document.getElementById('modal_email').value = '';
-    document.getElementById('modal_phone').value = '';
-    document.getElementById('modal_password').value = '';
-    document.getElementById('modal_password').required = true;
-    document.getElementById('modal_is_active').checked = true;
-}
-
-function openEditUserModal(u) {
-    document.getElementById('userModalTitle').innerHTML = '<i class="fa-solid fa-pen-to-square text-secondary me-2"></i> Edit Staff Account';
-    document.getElementById('modal_user_id').value = u.id;
-    document.getElementById('modal_fullname').value = u.full_name;
-    document.getElementById('modal_username').value = u.username;
-    document.getElementById('modal_role').value = u.role;
-    document.getElementById('modal_email').value = u.email || '';
-    document.getElementById('modal_phone').value = u.phone || '';
-    document.getElementById('modal_password').value = '';
-    document.getElementById('modal_password').required = false;
-    document.getElementById('modal_is_active').checked = u.is_active == 1;
-    new bootstrap.Modal(document.getElementById('userModal')).show();
-}
-</script>
+<!-- User Add/Edit is managed via dedicated user_form.php -->
 
 <?php require_once __DIR__ . '/includes/footer.php'; ?>

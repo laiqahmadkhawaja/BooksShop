@@ -134,12 +134,12 @@ require_once __DIR__ . '/includes/header.php';
         <small class="text-muted">Manage school syllabus, class-wise textbook packages, stationery lists & bulk orders</small>
     </div>
     <div class="d-flex gap-2">
-        <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#schoolModal">
+        <a href="school_form.php" class="btn btn-outline-primary btn-sm">
             <i class="fa-solid fa-school me-1"></i> Add School Profile
-        </button>
-        <button type="button" class="btn btn-info text-white btn-sm" data-bs-toggle="modal" data-bs-target="#newClassModal">
+        </a>
+        <a href="school_class_form.php" class="btn btn-info text-white btn-sm">
             <i class="fa-solid fa-plus-circle me-1"></i> Create Class Syllabus Package
-        </button>
+        </a>
     </div>
 </div>
 
@@ -211,9 +211,12 @@ require_once __DIR__ . '/includes/header.php';
                         <a href="pos.php" class="btn btn-pos btn-sm shadow-sm">
                             <i class="fa-solid fa-cart-arrow-down me-1"></i> Open in POS Terminal
                         </a>
-                        <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addItemModal">
+                        <a href="school_item_form.php?class_id=<?= $selectedClassId ?>" class="btn btn-outline-primary btn-sm">
                             <i class="fa-solid fa-plus me-1"></i> Add Book / Stationery Item
-                        </button>
+                        </a>
+                        <a href="school_class_form.php?id=<?= $selectedClassId ?>" class="btn btn-outline-secondary btn-sm">
+                            <i class="fa-solid fa-pen-to-square me-1"></i> Edit Class
+                        </a>
                         <a href="print_report.php?report=school_syllabus&class_id=<?= $selectedClassId ?>" target="_blank" class="btn btn-outline-dark btn-sm">
                             <i class="fa-solid fa-print me-1"></i> Print Syllabus Booklist (New Page)
                         </a>
@@ -292,137 +295,6 @@ require_once __DIR__ . '/includes/header.php';
                 </div>
             </div>
         <?php endif; ?>
-    </div>
-</div>
-
-<!-- Modal: Add Item to Syllabus Package -->
-<div class="modal fade" id="addItemModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content">
-            <form method="POST" action="schools.php">
-                <input type="hidden" name="add_class_item" value="1">
-                <input type="hidden" name="school_class_id" value="<?= $selectedClassId ?>">
-
-                <div class="modal-header">
-                    <h5 class="modal-title fw-bold"><i class="fa-solid fa-plus-circle text-primary me-2"></i> Add Book / Item to Syllabus</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-
-                <div class="modal-body p-4">
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold">Select Book or Stationery Product *</label>
-                        <select name="product_id" class="form-select" required>
-                            <option value="">-- Choose Product --</option>
-                            <?php foreach ($allProducts as $ap): ?>
-                                <option value="<?= $ap['id'] ?>">
-                                    <?= htmlspecialchars($ap['title']) ?> (<?= htmlspecialchars($ap['product_code']) ?> &bull; <?= formatCurrency($ap['retail_price']) ?>)
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-
-                    <div class="row g-2 mb-3">
-                        <div class="col-6">
-                            <label class="form-label small fw-bold">Quantity Needed per Student *</label>
-                            <input type="number" step="1" name="quantity_needed" class="form-control" value="1" min="1" required>
-                        </div>
-                        <div class="col-6">
-                            <label class="form-label small fw-bold">Custom Special Price (Optional)</label>
-                            <input type="number" step="0.01" name="custom_price" class="form-control" placeholder="Leave blank for retail">
-                        </div>
-                    </div>
-
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" name="is_mandatory" value="1" id="isMandatoryCheck" checked>
-                        <label class="form-check-label small" for="isMandatoryCheck">
-                            Mandatory requirement (Must be purchased for class)
-                        </label>
-                    </div>
-                </div>
-
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary"><i class="fa-solid fa-plus me-1"></i> Add to Package</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<!-- Modal: New School Profile -->
-<div class="modal fade" id="schoolModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content">
-            <form method="POST" action="schools.php">
-                <input type="hidden" name="save_school" value="1">
-                <div class="modal-header">
-                    <h5 class="modal-title fw-bold"><i class="fa-solid fa-school text-primary me-2"></i> Add School / College Profile</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body p-4">
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold">School / Institution Name *</label>
-                        <input type="text" name="name" class="form-control" required placeholder="e.g. Lahore Grammar School">
-                    </div>
-                    <div class="row g-2 mb-3">
-                        <div class="col-6">
-                            <label class="form-label small fw-bold">Contact Person / Principal</label>
-                            <input type="text" name="contact_person" class="form-control" placeholder="e.g. Sir Asif">
-                        </div>
-                        <div class="col-6">
-                            <label class="form-label small fw-bold">Phone / WhatsApp</label>
-                            <input type="text" name="phone" class="form-control" placeholder="e.g. 03001234567">
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold">Campus Address</label>
-                        <textarea name="address" class="form-control" rows="2" placeholder="Campus location, City"></textarea>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary"><i class="fa-solid fa-save me-1"></i> Save School</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<!-- Modal: New Class Package -->
-<div class="modal fade" id="newClassModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content">
-            <form method="POST" action="schools.php">
-                <input type="hidden" name="save_class" value="1">
-                <div class="modal-header">
-                    <h5 class="modal-title fw-bold"><i class="fa-solid fa-graduation-cap text-info me-2"></i> Create Class Syllabus Package</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body p-4">
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold">School *</label>
-                        <select name="school_id" class="form-select" required>
-                            <option value="">-- Choose School --</option>
-                            <?php foreach ($schools as $s): ?>
-                                <option value="<?= $s['id'] ?>"><?= htmlspecialchars($s['name']) ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold">Class Name / Level *</label>
-                        <input type="text" name="class_name" class="form-control" required placeholder="e.g. Grade 5, Class 9 (Computer Science), Prep">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold">Academic Session</label>
-                        <input type="text" name="academic_session" class="form-control" value="2026-2027">
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-info text-white"><i class="fa-solid fa-check me-1"></i> Create Package</button>
-                </div>
-            </form>
-        </div>
     </div>
 </div>
 

@@ -274,9 +274,9 @@ require_once __DIR__ . '/includes/header.php';
                                         <a href="print_invoice.php?id=<?= $s['id'] ?>&type=a4" target="_blank" class="btn btn-outline-primary" title="A4 Invoice">
                                             <i class="fa-solid fa-file-invoice"></i>
                                         </a>
-                                        <button type="button" class="btn btn-outline-danger" onclick="openReturnModal(<?= $s['id'] ?>, '<?= $s['invoice_no'] ?>')" title="Process Sales Return / Exchange">
+                                        <a href="sale_return.php?sale_id=<?= $s['id'] ?>" class="btn btn-outline-danger" title="Process Sales Return / Exchange">
                                             <i class="fa-solid fa-rotate-left"></i>
-                                        </button>
+                                        </a>
                                     </div>
                                 </td>
                             </tr>
@@ -287,115 +287,5 @@ require_once __DIR__ . '/includes/header.php';
         </div>
     </div>
 </div>
-
-<!-- Modal: Sales Return -->
-<div class="modal fade" id="returnModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content">
-            <form method="POST" action="sales.php">
-                <input type="hidden" name="process_sales_return" value="1">
-                <input type="hidden" name="sale_id" id="return_sale_id">
-                
-                <div class="modal-header bg-danger text-white">
-                    <h5 class="modal-title fw-bold"><i class="fa-solid fa-rotate-left me-2"></i> Process Sales Return / Book Exchange</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-
-                <div class="modal-body p-4">
-                    <div class="alert alert-light border mb-3">
-                        Invoice: <strong id="return_invoice_label" class="text-primary"></strong>
-                    </div>
-
-                    <div id="returnItemsContainer" class="table-responsive mb-3">
-                        <div class="text-center py-3"><i class="fa-solid fa-spinner fa-spin"></i> Loading invoice items...</div>
-                    </div>
-
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label small fw-bold">Refund Method</label>
-                            <select name="refund_method" class="form-select" id="return_refund_method">
-                                <option value="cash">Cash Refund to Customer</option>
-                                <option value="credit">Credit / Adjust Customer Khata</option>
-                            </select>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label small fw-bold">Refund From Account</label>
-                            <select name="refund_account_id" class="form-select">
-                                <?php foreach ($accounts as $acc): ?>
-                                    <option value="<?= $acc['id'] ?>"><?= htmlspecialchars($acc['account_name']) ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label small fw-bold">Reason for Return</label>
-                            <input type="text" name="return_reason" class="form-control" placeholder="e.g. Wrong class syllabus purchased, defective binding" required>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="modal-footer bg-light">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-danger"><i class="fa-solid fa-check me-1"></i> Confirm & Process Return</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<script>
-function openReturnModal(saleId, invoiceNo) {
-    document.getElementById('return_sale_id').value = saleId;
-    document.getElementById('return_invoice_label').innerText = invoiceNo;
-    const container = document.getElementById('returnItemsContainer');
-    container.innerHTML = '<div class="text-center py-3"><i class="fa-solid fa-spinner fa-spin"></i> Loading invoice items...</div>';
-    
-    fetch(`pos_ajax.php?action=get_sale_items&sale_id=${saleId}`)
-        .then(res => res.json())
-        .then(data => {
-            if (data.success && data.items.length > 0) {
-                let html = `
-                    <table class="table table-bordered align-middle small">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Item / Title</th>
-                                <th>Sold Qty</th>
-                                <th>Unit Price</th>
-                                <th>Return Qty</th>
-                                <th>Condition</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                `;
-                data.items.forEach(it => {
-                    html += `
-                        <tr>
-                            <td>
-                                <strong>${it.title}</strong>
-                                <div class="text-muted">${it.product_code}</div>
-                            </td>
-                            <td>${parseFloat(it.quantity)}</td>
-                            <td>Rs. ${parseFloat(it.unit_price).toFixed(2)}</td>
-                            <td>
-                                <input type="number" step="1" name="return_qty[${it.product_id}]" class="form-control form-control-sm" value="0" min="0" max="${it.quantity}">
-                            </td>
-                            <td>
-                                <select name="condition[${it.product_id}]" class="form-select form-select-sm">
-                                    <option value="restockable">Good / Restockable</option>
-                                    <option value="damaged">Damaged / Defective</option>
-                                </select>
-                            </td>
-                        </tr>
-                    `;
-                });
-                html += '</tbody></table>';
-                container.innerHTML = html;
-            } else {
-                container.innerHTML = '<div class="alert alert-warning">No items found for this invoice.</div>';
-            }
-        });
-
-    new bootstrap.Modal(document.getElementById('returnModal')).show();
-}
-</script>
 
 <?php require_once __DIR__ . '/includes/footer.php'; ?>

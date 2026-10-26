@@ -92,12 +92,12 @@ require_once __DIR__ . '/includes/header.php';
         <small class="text-muted">Manage book publishers, stationery manufacturers, invoices & payment vouchers</small>
     </div>
     <div class="d-flex gap-2">
-        <button type="button" class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#paySupplierModal">
+        <a href="supplier_payment.php<?= $selectedSupplierId ? '?supplier_id=' . $selectedSupplierId : '' ?>" class="btn btn-outline-danger btn-sm">
             <i class="fa-solid fa-money-bill-transfer me-1"></i> Pay Supplier Voucher
-        </button>
-        <button type="button" class="btn btn-primary btn-sm shadow-sm" data-bs-toggle="modal" data-bs-target="#supplierModal" onclick="openNewSupplierModal()">
+        </a>
+        <a href="supplier_form.php" class="btn btn-primary btn-sm shadow-sm">
             <i class="fa-solid fa-plus-circle me-1"></i> Add Supplier / Publisher
-        </button>
+        </a>
     </div>
 </div>
 
@@ -271,148 +271,6 @@ require_once __DIR__ . '/includes/header.php';
     </div>
 </div>
 
-<!-- Modal: Pay Supplier Voucher -->
-<div class="modal fade" id="paySupplierModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content">
-            <form method="POST" action="suppliers.php">
-                <input type="hidden" name="pay_supplier" value="1">
-                <div class="modal-header bg-danger text-white">
-                    <h5 class="modal-title fw-bold"><i class="fa-solid fa-money-bill-transfer me-2"></i> Pay Supplier / Publisher Voucher</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body p-4">
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold">Supplier *</label>
-                        <select name="supplier_id" id="pay_supp_select" class="form-select" required>
-                            <?php foreach ($suppliers as $s): ?>
-                                <option value="<?= $s['id'] ?>" <?= $selectedSupplierId == $s['id'] ? 'selected' : '' ?>>
-                                    <?= htmlspecialchars($s['name']) ?> (Payable: <?= formatCurrency($s['current_balance']) ?>)
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold">Payment Amount (Rs.) *</label>
-                        <input type="number" step="0.01" name="amount" id="pay_amount" class="form-control form-control-lg fw-bold text-danger" required>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold">Pay From Account *</label>
-                        <select name="account_id" class="form-select" required>
-                            <?php foreach ($accounts as $acc): ?>
-                                <option value="<?= $acc['id'] ?>"><?= htmlspecialchars($acc['account_name']) ?> (<?= formatCurrency($acc['balance']) ?>)</option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold">Voucher / Cheque #</label>
-                        <input type="text" name="reference_no" class="form-control form-control-sm" value="PV-<?= date('Ymd-His') ?>">
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label small">Notes</label>
-                        <input type="text" name="notes" class="form-control form-control-sm" placeholder="e.g. Paid against OUP October textbooks invoice">
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-danger"><i class="fa-solid fa-check me-1"></i> Confirm & Make Payment</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<!-- Modal: Add / Edit Supplier -->
-<div class="modal fade" id="supplierModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content">
-            <form method="POST" action="suppliers.php">
-                <input type="hidden" name="save_supplier" value="1">
-                <input type="hidden" name="supplier_id" id="supp_id" value="0">
-
-                <div class="modal-header">
-                    <h5 class="modal-title fw-bold" id="supplierModalTitle"><i class="fa-solid fa-truck-field text-primary me-2"></i> Add Supplier / Publisher</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-
-                <div class="modal-body p-4">
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold">Supplier / Contact Name *</label>
-                        <input type="text" name="name" id="supp_name" class="form-control" required placeholder="e.g. Oxford University Press or Tariq Book Store">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold">Company / Publishing House</label>
-                        <input type="text" name="company_name" id="supp_company" class="form-control" placeholder="e.g. OUP Pakistan or PCTB">
-                    </div>
-                    <div class="row g-2 mb-3">
-                        <div class="col-6">
-                            <label class="form-label small fw-bold">Phone</label>
-                            <input type="text" name="phone" id="supp_phone" class="form-control" placeholder="042-35756611">
-                        </div>
-                        <div class="col-6">
-                            <label class="form-label small">Email</label>
-                            <input type="email" name="email" id="supp_email" class="form-control" placeholder="orders@publisher.com">
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label small">Address / Warehouse</label>
-                        <textarea name="address" id="supp_address" class="form-control" rows="2" placeholder="Urdu Bazaar, Lahore"></textarea>
-                    </div>
-                    <div class="mb-3" id="suppOpeningDiv">
-                        <label class="form-label small fw-bold">Opening Payable Balance (Rs.)</label>
-                        <input type="number" step="0.01" name="opening_balance" id="supp_opening" class="form-control" value="0">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label small">Notes</label>
-                        <input type="text" name="notes" id="supp_notes" class="form-control" placeholder="Payment terms: Net 30 days">
-                    </div>
-                </div>
-
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary"><i class="fa-solid fa-save me-1"></i> Save Supplier</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<script>
-function openNewSupplierModal() {
-    document.getElementById('supplierModalTitle').innerHTML = '<i class="fa-solid fa-truck-field text-primary me-2"></i> Add Supplier / Publisher';
-    document.getElementById('supp_id').value = '0';
-    document.getElementById('supp_name').value = '';
-    document.getElementById('supp_company').value = '';
-    document.getElementById('supp_phone').value = '';
-    document.getElementById('supp_email').value = '';
-    document.getElementById('supp_address').value = '';
-    document.getElementById('supp_opening').value = '0';
-    document.getElementById('suppOpeningDiv').style.display = 'block';
-    document.getElementById('supp_notes').value = '';
-}
-
-function openEditSupplierModal(s) {
-    document.getElementById('supplierModalTitle').innerHTML = '<i class="fa-solid fa-pen-to-square text-secondary me-2"></i> Edit Supplier / Publisher';
-    document.getElementById('supp_id').value = s.id;
-    document.getElementById('supp_name').value = s.name;
-    document.getElementById('supp_company').value = s.company_name || '';
-    document.getElementById('supp_phone').value = s.phone || '';
-    document.getElementById('supp_email').value = s.email || '';
-    document.getElementById('supp_address').value = s.address || '';
-    document.getElementById('suppOpeningDiv').style.display = 'none';
-    document.getElementById('supp_notes').value = s.notes || '';
-    new bootstrap.Modal(document.getElementById('supplierModal')).show();
-}
-
-function openPaySupplierModal(suppId, suppName, due) {
-    document.getElementById('pay_supp_select').value = suppId;
-    document.getElementById('pay_amount').value = due > 0 ? due : '';
-    new bootstrap.Modal(document.getElementById('paySupplierModal')).show();
-}
-</script>
+<!-- Supplier Add/Edit and Payment Voucher are managed via supplier_form.php and supplier_payment.php -->
 
 <?php require_once __DIR__ . '/includes/footer.php'; ?>

@@ -12,6 +12,7 @@ $schoolClasses = dbFetchAll("SELECT sc.id, sc.class_name, sc.academic_session, s
                              ORDER BY s.name ASC, sc.class_name ASC");
 ?>
 
+<div id="posViewRegister">
 <div class="row g-2 mb-2">
     <!-- Top POS Controls Bar -->
     <div class="col-12">
@@ -55,7 +56,7 @@ $schoolClasses = dbFetchAll("SELECT sc.id, sc.class_name, sc.academic_session, s
 
                 <!-- School Package 1-Click Bundle Loader -->
                 <div class="d-flex align-items-center gap-2">
-                    <button type="button" class="btn btn-outline-info btn-sm" data-bs-toggle="modal" data-bs-target="#schoolPackageModal">
+                    <button type="button" class="btn btn-outline-info btn-sm" onclick="showSchoolPackagesView()">
                         <i class="fa-solid fa-graduation-cap me-1"></i> <strong>Load School Book Bundle</strong>
                     </button>
                     <button type="button" class="btn btn-outline-warning btn-sm" onclick="openHeldBillsModal()">
@@ -80,7 +81,7 @@ $schoolClasses = dbFetchAll("SELECT sc.id, sc.class_name, sc.academic_session, s
                 <div class="input-group">
                     <span class="input-group-text bg-primary text-white"><i class="fa-solid fa-barcode"></i></span>
                     <input type="text" id="barcodeSearchInput" class="form-control form-control-lg" placeholder="Scan Barcode or Search Book Title, ISBN, Author (Press Enter)..." autofocus autocomplete="off">
-                    <button class="btn btn-warning text-dark fw-bold px-3 d-flex align-items-center gap-1" type="button" onclick="openCameraScannerModal()" title="Scan Barcode via Camera (Alt+S or F3)">
+                    <button class="btn btn-warning text-dark fw-bold px-3 d-flex align-items-center gap-1" type="button" onclick="toggleInlineCameraScanner()" title="Scan Barcode via Camera (Alt+S or F3)">
                         <i class="fa-solid fa-camera"></i> <span class="d-none d-sm-inline">Scan</span>
                     </button>
                     <button class="btn btn-primary px-3" type="button" onclick="triggerSearchOrScan()">
@@ -89,6 +90,78 @@ $schoolClasses = dbFetchAll("SELECT sc.id, sc.class_name, sc.academic_session, s
                 </div>
                 <!-- Live Search Suggestions Dropdown List -->
                 <div id="liveSearchResults" class="list-group shadow position-absolute w-100 start-0 mt-1 d-none" style="z-index: 1050; max-height: 380px; overflow-y: auto; padding: 0 15px;"></div>
+
+                <!-- Inline Camera Barcode Scanner Container (Zero-modal) -->
+                <div id="inlineCameraScannerContainer" class="card bg-dark text-white border-warning shadow-sm mt-2 mb-0" style="display: none; border-radius: 10px; overflow: hidden;">
+                    <div class="card-header bg-black py-2 px-3 border-bottom border-secondary d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-warning text-dark"><i class="fa-solid fa-camera"></i> LIVE SCAN</span>
+                            <span class="fw-bold small text-white"><i class="fa-solid fa-barcode text-primary me-1"></i> Barcode Camera Scanner</span>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <select id="cameraSourceSelect" class="form-select form-select-sm bg-dark text-white border-secondary py-0" style="max-width: 140px; font-size: 0.75rem;" onchange="switchCameraSource(this.value)">
+                                <option value="">Camera...</option>
+                            </select>
+                            <button type="button" class="btn btn-sm btn-outline-light py-0 px-2 d-none" id="scannerTorchBtn" onclick="toggleScannerTorch()" title="Flashlight">
+                                <i class="fa-solid fa-bolt"></i>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-danger py-0 px-2" onclick="toggleInlineCameraScanner()" title="Close Camera">
+                                <i class="fa-solid fa-xmark"></i> Close
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="card-body p-0 position-relative bg-black" style="min-height: 250px; max-height: 320px;">
+                        <div class="scanner-viewport-wrapper" id="cameraScannerViewport" style="height: 260px; position: relative;">
+                            <div id="interactiveScannerReader"></div>
+                            <div class="scanner-hud-overlay" id="scannerHudOverlay">
+                                <div class="scanner-target-box" id="scannerTargetBox">
+                                    <div class="corner corner-tl"></div>
+                                    <div class="corner corner-tr"></div>
+                                    <div class="corner corner-bl"></div>
+                                    <div class="corner corner-br"></div>
+                                    <div class="scanner-laser-line"></div>
+                                    <div class="scanner-target-label" id="scannerTargetLabel">
+                                        <i class="fa-solid fa-arrows-to-dot me-1 text-info"></i> Center Barcode Inside Box
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="scannerFeedbackToast" class="scanner-feedback-toast d-none">
+                                <i class="fa-solid fa-circle-check text-success fs-5"></i>
+                                <div class="text-truncate">
+                                    <strong id="toastScannedTitle" class="text-white d-block small"></strong>
+                                    <span id="toastScannedDetails" class="text-warning" style="font-size: 11px;"></span>
+                                </div>
+                            </div>
+                            <div id="scannerErrorToast" class="scanner-error-toast d-none">
+                                <i class="fa-solid fa-triangle-exclamation text-danger fs-5"></i>
+                                <div class="text-truncate">
+                                    <strong id="toastErrorTitle" class="text-white d-block small">Barcode Not Found</strong>
+                                    <span id="toastErrorDetails" class="text-white-50" style="font-size: 11px;"></span>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="scannerErrorNotice" class="alert alert-danger m-2 d-none small"></div>
+                    </div>
+
+                    <div class="card-footer bg-black py-1 px-3 border-top border-secondary d-flex justify-content-between align-items-center small text-muted">
+                        <div>
+                            <i class="fa-solid fa-info-circle text-info me-1"></i> Point camera at book barcode.
+                        </div>
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="d-flex align-items-center gap-1">
+                                <span class="text-white-50" style="font-size: 0.75rem;">Zoom:</span>
+                                <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-1 text-white" onclick="applyScannerZoom(1.0)">1x</button>
+                                <button type="button" class="btn btn-primary btn-sm py-0 px-1 text-white" onclick="applyScannerZoom(1.5)">1.5x</button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-1 text-white" onclick="applyScannerZoom(2.0)">2x</button>
+                            </div>
+                            <div class="form-check form-switch mb-0">
+                                <input class="form-check-input" type="checkbox" id="continuousScanToggle" checked>
+                                <label class="form-check-label text-white-50" for="continuousScanToggle" style="font-size: 0.75rem;">Continuous</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- Cart Table Items -->
@@ -112,7 +185,7 @@ $schoolClasses = dbFetchAll("SELECT sc.id, sc.class_name, sc.academic_session, s
                                 <i class="fa-solid fa-cart-shopping fa-3x mb-2 text-secondary opacity-25"></i>
                                 <div>Your POS Cart is empty.</div>
                                 <small class="text-muted d-block">Scan a barcode, use your camera scanner, or click any product from the catalog.</small>
-                                <button type="button" class="btn btn-sm btn-outline-warning mt-2 fw-semibold" onclick="openCameraScannerModal()">
+                                <button type="button" class="btn btn-sm btn-outline-warning mt-2 fw-semibold" onclick="toggleInlineCameraScanner()">
                                     <i class="fa-solid fa-camera me-1"></i> Scan with Camera
                                 </button>
                             </td>
@@ -180,273 +253,244 @@ $schoolClasses = dbFetchAll("SELECT sc.id, sc.class_name, sc.academic_session, s
     </div>
 </div>
 
-<!-- Modal: School Book Package / Syllabus Bundle -->
-<div class="modal fade" id="schoolPackageModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable">
-        <div class="modal-content">
-            <div class="modal-header bg-info-subtle">
-                <h5 class="modal-title fw-bold text-info-emphasis">
-                    <i class="fa-solid fa-graduation-cap me-2"></i> Select Class Syllabus Book Package
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body p-4">
-                <p class="text-muted small">Choose an educational institution and class level to load the entire approved textbook & stationery set directly into this POS cart.</p>
-                <div class="row g-3">
-                    <?php foreach ($schoolClasses as $sc): ?>
-                        <div class="col-md-6">
-                            <div class="card border p-3 h-100 shadow-sm hover-shadow">
-                                <div class="badge bg-primary mb-2 align-self-start"><?= htmlspecialchars($sc['school_name']) ?></div>
-                                <h6 class="fw-bold mb-1"><?= htmlspecialchars($sc['class_name']) ?></h6>
-                                <div class="small text-muted mb-3">Academic Session: <?= htmlspecialchars($sc['academic_session']) ?></div>
-                                <button type="button" class="btn btn-outline-primary btn-sm mt-auto" onclick="loadSchoolPackage(<?= $sc['id'] ?>)">
-                                    <i class="fa-solid fa-cart-arrow-down me-1"></i> Load Complete Package into Cart
-                                </button>
-                            </div>
+</div><!-- /#posViewRegister -->
+
+<!-- IN-PAGE VIEW: School Book Package / Syllabus Bundle -->
+<div id="posViewSchoolPackages" style="display: none;">
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-header bg-info-subtle py-3 d-flex justify-content-between align-items-center">
+            <h5 class="fw-bold text-info-emphasis mb-0">
+                <i class="fa-solid fa-graduation-cap me-2"></i> Select Class Syllabus Book Package
+            </h5>
+            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="hideSchoolPackagesView()">
+                <i class="fa-solid fa-arrow-left me-1"></i> Back to POS Register
+            </button>
+        </div>
+        <div class="card-body p-4">
+            <p class="text-muted small">Choose an educational institution and class level to load the entire approved textbook & stationery set directly into this POS cart.</p>
+            <div class="row g-3">
+                <?php foreach ($schoolClasses as $sc): ?>
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card border p-3 h-100 shadow-sm hover-shadow">
+                            <div class="badge bg-primary mb-2 align-self-start"><?= htmlspecialchars($sc['school_name']) ?></div>
+                            <h6 class="fw-bold mb-1"><?= htmlspecialchars($sc['class_name']) ?></h6>
+                            <div class="small text-muted mb-3">Academic Session: <?= htmlspecialchars($sc['academic_session']) ?></div>
+                            <button type="button" class="btn btn-outline-primary btn-sm mt-auto" onclick="loadSchoolPackage(<?= $sc['id'] ?>)">
+                                <i class="fa-solid fa-cart-arrow-down me-1"></i> Load Complete Package into Cart
+                            </button>
                         </div>
-                    <?php endforeach; ?>
-                </div>
+                    </div>
+                <?php endforeach; ?>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Modal: Checkout & Payment Settlement -->
-<div class="modal fade" id="checkoutModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title fw-bold"><i class="fa-solid fa-cash-register me-2"></i> Bill Payment & Checkout</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body p-4">
-                <!-- Bill Amount Summary -->
-                <div class="bg-light p-3 rounded mb-3 text-center border">
-                    <div class="small text-muted text-uppercase fw-semibold">Net Payable Amount</div>
-                    <div class="display-6 fw-bold text-primary" id="modalPayableAmount">Rs. 0.00</div>
-                </div>
-
-                <!-- Payment Method Selection -->
-                <div class="mb-3">
-                    <label class="form-label small fw-bold">Payment Method</label>
-                    <div class="btn-group w-100" role="group">
-                        <input type="radio" class="btn-check" name="payMethod" id="pay_cash" value="cash" checked onchange="onPaymentMethodChange()">
-                        <label class="btn btn-outline-primary" for="pay_cash"><i class="fa-solid fa-money-bill-wave me-1"></i> Cash</label>
-
-                        <input type="radio" class="btn-check" name="payMethod" id="pay_bank" value="bank" onchange="onPaymentMethodChange()">
-                        <label class="btn btn-outline-primary" for="pay_bank"><i class="fa-solid fa-building-columns me-1"></i> Bank</label>
-
-                        <input type="radio" class="btn-check" name="payMethod" id="pay_wallet" value="wallet" onchange="onPaymentMethodChange()">
-                        <label class="btn btn-outline-primary" for="pay_wallet"><i class="fa-solid fa-mobile-screen-button me-1"></i> Wallet</label>
-
-                        <input type="radio" class="btn-check" name="payMethod" id="pay_credit" value="credit" onchange="onPaymentMethodChange()">
-                        <label class="btn btn-outline-primary" for="pay_credit"><i class="fa-solid fa-hand-holding-dollar me-1"></i> Khata (Credit)</label>
-                    </div>
-                </div>
-
-                <!-- Receiving Account -->
-                <div class="mb-3" id="depositAccountDiv">
-                    <label class="form-label small fw-bold">Deposit Into Account</label>
-                    <select id="paymentAccountId" class="form-select">
-                        <?php foreach ($accounts as $acc): ?>
-                            <option value="<?= $acc['id'] ?>"><?= htmlspecialchars($acc['account_name']) ?> (<?= formatCurrency($acc['balance']) ?>)</option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-
-                <!-- Cash Tendered & Quick Fill Buttons -->
-                <div id="cashTenderedDiv">
-                    <div class="d-flex justify-content-between align-items-center mb-1">
-                        <label class="form-label small fw-bold mb-0">Cash Received (Tendered) *</label>
-                        <small class="text-muted">Smart note shortcuts:</small>
-                    </div>
-                    <input type="number" step="1" id="tenderedAmountInput" class="form-control form-control-lg fw-bold text-success font-monospace" oninput="calculateChange()">
-                    <!-- Dynamic Closer Currency Shortcuts Container -->
-                    <div class="d-flex flex-wrap gap-1 mt-2" id="smartShortcutsContainer"></div>
-                    <div id="checkoutWarningBox"></div>
-                </div>
-
-                <!-- Return Change Display -->
-                <div class="mt-3 p-3 bg-light rounded border d-flex justify-content-between align-items-center">
-                    <div>
-                        <div class="small text-muted">Change to Return:</div>
-                        <h4 class="fw-bold mb-0 text-success" id="displayChangeAmount">Rs. 0.00</h4>
-                    </div>
-                    <div>
-                        <div class="small text-muted text-end">Remaining Due:</div>
-                        <h5 class="fw-bold mb-0 text-danger text-end" id="displayDueAmount">Rs. 0.00</h5>
-                    </div>
-                </div>
-
-                <div class="mt-3">
-                    <input type="text" id="saleNotesInput" class="form-control form-control-sm" placeholder="Order notes or customer reference (optional)">
-                </div>
-            </div>
-
-            <div class="modal-footer bg-light">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-success btn-lg px-4 fw-bold" id="confirmCheckoutBtn" onclick="processCheckout()">
-                    <i class="fa-solid fa-check-circle me-1"></i> Complete & Print
+<!-- IN-PAGE VIEW: Checkout & Payment Settlement -->
+<div id="posViewCheckout" style="display: none;">
+    <div class="row justify-content-center">
+        <div class="col-lg-7 col-md-9">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="hideCheckoutView()">
+                    <i class="fa-solid fa-arrow-left me-1"></i> Back to Register / Cart (Esc)
                 </button>
+                <h5 class="fw-bold mb-0 text-primary">
+                    <i class="fa-solid fa-cash-register me-2"></i> Bill Payment & Checkout
+                </h5>
+            </div>
+
+            <div class="card shadow border-0">
+                <div class="card-body p-4">
+                    <!-- Bill Amount Summary -->
+                    <div class="bg-light p-3 rounded mb-3 text-center border">
+                        <div class="small text-muted text-uppercase fw-semibold">Net Payable Amount</div>
+                        <div class="display-6 fw-bold text-primary" id="modalPayableAmount">Rs. 0.00</div>
+                    </div>
+
+                    <!-- Payment Method Selection -->
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Payment Method</label>
+                        <div class="btn-group w-100" role="group">
+                            <input type="radio" class="btn-check" name="payMethod" id="pay_cash" value="cash" checked onchange="onPaymentMethodChange()">
+                            <label class="btn btn-outline-primary" for="pay_cash"><i class="fa-solid fa-money-bill-wave me-1"></i> Cash</label>
+
+                            <input type="radio" class="btn-check" name="payMethod" id="pay_bank" value="bank" onchange="onPaymentMethodChange()">
+                            <label class="btn btn-outline-primary" for="pay_bank"><i class="fa-solid fa-building-columns me-1"></i> Bank</label>
+
+                            <input type="radio" class="btn-check" name="payMethod" id="pay_wallet" value="wallet" onchange="onPaymentMethodChange()">
+                            <label class="btn btn-outline-primary" for="pay_wallet"><i class="fa-solid fa-mobile-screen-button me-1"></i> Wallet</label>
+
+                            <input type="radio" class="btn-check" name="payMethod" id="pay_credit" value="credit" onchange="onPaymentMethodChange()">
+                            <label class="btn btn-outline-primary" for="pay_credit"><i class="fa-solid fa-hand-holding-dollar me-1"></i> Khata (Credit)</label>
+                        </div>
+                    </div>
+
+                    <!-- Receiving Account -->
+                    <div class="mb-3" id="depositAccountDiv">
+                        <label class="form-label small fw-bold">Deposit Into Account</label>
+                        <select id="paymentAccountSelect" class="form-select">
+                            <?php foreach ($accounts as $acc): ?>
+                                <option value="<?= $acc['id'] ?>"><?= htmlspecialchars($acc['account_name']) ?> (<?= htmlspecialchars($acc['account_type']) ?>)</option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+
+                    <!-- Amount Tendered / Paid -->
+                    <div class="mb-3" id="tenderedAmountDiv">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <label class="form-label small fw-bold mb-0">Cash Tendered by Customer</label>
+                            <small class="text-muted">Smart note shortcuts:</small>
+                        </div>
+                        <input type="number" step="1" id="tenderedAmountInput" class="form-control form-control-lg fw-bold text-success font-monospace" oninput="calculateChange()">
+                        <!-- Dynamic Closer Currency Shortcuts Container -->
+                        <div class="d-flex flex-wrap gap-1 mt-2" id="smartShortcutsContainer"></div>
+                        <div id="checkoutWarningBox"></div>
+                    </div>
+
+                    <!-- Return Change Display -->
+                    <div class="mt-3 p-3 bg-light rounded border d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="small text-muted">Change to Return:</div>
+                            <h4 class="fw-bold mb-0 text-success" id="displayChangeAmount">Rs. 0.00</h4>
+                        </div>
+                        <div>
+                            <div class="small text-muted text-end">Remaining Due:</div>
+                            <h5 class="fw-bold mb-0 text-danger text-end" id="displayDueAmount">Rs. 0.00</h5>
+                        </div>
+                    </div>
+
+                    <div class="mt-3">
+                        <input type="text" id="saleNotesInput" class="form-control form-control-sm" placeholder="Order notes or customer reference (optional)">
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center pt-3 border-top mt-4">
+                        <button type="button" class="btn btn-secondary px-4" onclick="hideCheckoutView()">Cancel</button>
+                        <button type="button" class="btn btn-success btn-lg px-4 fw-bold" id="confirmCheckoutBtn" onclick="processCheckout()">
+                            <i class="fa-solid fa-check-circle me-1"></i> Complete & Print
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Modal: Held Bills Management -->
-<div class="modal fade" id="heldBillsModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-scrollable">
-        <div class="modal-content">
-            <div class="modal-header bg-warning-subtle">
-                <h5 class="modal-title fw-bold text-warning-emphasis"><i class="fa-solid fa-pause me-2"></i> Held Bills</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+<!-- IN-PAGE VIEW: Held Bills Management -->
+<div id="posViewHeldBills" style="display: none;">
+    <div class="row justify-content-center">
+        <div class="col-lg-7 col-md-9">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="hideHeldBillsView()">
+                    <i class="fa-solid fa-arrow-left me-1"></i> Back to POS Register
+                </button>
+                <h5 class="fw-bold mb-0 text-warning-emphasis">
+                    <i class="fa-solid fa-pause me-2"></i> Held / Parked Bills
+                </h5>
             </div>
-            <div class="modal-body p-3">
-                <div id="heldBillsList" class="list-group">
-                    <!-- Populated dynamically -->
+            <div class="card shadow border-0">
+                <div class="card-body p-3">
+                    <div id="heldBillsList" class="list-group">
+                        <!-- Populated dynamically -->
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Modal: Post-Checkout Success & Receipt Printing -->
-<div class="modal fade" id="receiptSuccessModal" tabindex="-1" data-bs-backdrop="static" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content">
-            <div class="modal-header bg-success text-white">
-                <h5 class="modal-title fw-bold"><i class="fa-solid fa-circle-check me-2"></i> Sale Completed Successfully!</h5>
-            </div>
-            <div class="modal-body text-center p-4">
-                <div class="text-success mb-2"><i class="fa-solid fa-check-double fa-3x"></i></div>
-                <h4 class="fw-bold mb-1" id="successInvoiceNo">INV-2026-0001</h4>
-                <p class="text-muted small mb-3">Total: <strong id="successTotal">Rs. 0.00</strong> &bull; Change: <strong id="successChange" class="text-success">Rs. 0.00</strong></p>
+<!-- IN-PAGE VIEW: Post-Checkout Success & Receipt Printing -->
+<div id="posViewReceiptSuccess" style="display: none;">
+    <div class="row justify-content-center">
+        <div class="col-lg-6 col-md-8">
+            <div class="card shadow border-0 text-center">
+                <div class="card-header bg-success text-white py-3">
+                    <h5 class="fw-bold mb-0"><i class="fa-solid fa-circle-check me-2"></i> Sale Completed Successfully!</h5>
+                </div>
+                <div class="card-body p-4">
+                    <div class="text-success mb-3"><i class="fa-solid fa-check-double fa-3x"></i></div>
+                    <h4 class="fw-bold mb-1" id="successInvoiceNo">INV-2026-0001</h4>
+                    <p class="text-muted small mb-4">Total: <strong id="successTotal">Rs. 0.00</strong> &bull; Change: <strong id="successChange" class="text-success">Rs. 0.00</strong></p>
 
-                <!-- Receipt Preview Frame / Action Buttons -->
-                <div class="d-grid gap-2">
-                    <a href="#" id="thermalPrintLink" target="_blank" class="btn btn-dark btn-lg">
-                        <i class="fa-solid fa-receipt me-2"></i> Print 80mm Thermal Receipt (F9)
-                    </a>
-                    <a href="#" id="a4PrintLink" target="_blank" class="btn btn-outline-primary">
-                        <i class="fa-solid fa-file-invoice me-2"></i> Print Standard A4 Invoice
-                    </a>
-                    <button type="button" class="btn btn-outline-secondary" onclick="startNewSale()">
-                        <i class="fa-solid fa-plus-circle me-1"></i> New Bill / Next Customer (Enter)
-                    </button>
+                    <div class="d-grid gap-2 mb-3">
+                        <a href="#" id="thermalPrintLink" target="_blank" class="btn btn-dark btn-lg">
+                            <i class="fa-solid fa-receipt me-2"></i> Print 80mm Thermal Receipt (F9)
+                        </a>
+                        <a href="#" id="a4PrintLink" target="_blank" class="btn btn-outline-primary">
+                            <i class="fa-solid fa-file-invoice me-2"></i> Print Standard A4 Invoice
+                        </a>
+                        <button type="button" class="btn btn-success btn-lg fw-bold" onclick="startNewSale()">
+                            <i class="fa-solid fa-plus-circle me-1"></i> New Bill / Next Customer (Enter)
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Modal: Interactive Camera Barcode Scanner with Auto-Alignment & Zoom -->
-<div class="modal fade" id="cameraScannerModal" tabindex="-1" data-bs-backdrop="static" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
-        <div class="modal-content bg-dark text-white border-secondary shadow-lg">
-            <div class="modal-header border-secondary py-2 px-3">
-                <div class="d-flex align-items-center gap-2">
-                    <span class="badge bg-warning text-dark"><i class="fa-solid fa-camera"></i> LIVE SCAN</span>
-                    <h5 class="modal-title fw-bold mb-0 text-white fs-6">
-                        <i class="fa-solid fa-barcode text-primary me-1"></i> Barcode & Book Scanner
-                    </h5>
-                </div>
-                <div class="d-flex align-items-center gap-2">
-                    <!-- Torch Button (if supported by mobile device) -->
-                    <button type="button" class="btn btn-sm btn-outline-light d-none" id="scannerTorchBtn" onclick="toggleScannerTorch()" title="Toggle Flashlight">
-                        <i class="fa-solid fa-bolt"></i>
-                    </button>
-                    <!-- Close button -->
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close" onclick="stopCameraScanner()"></button>
-                </div>
-            </div>
-            
-            <div class="modal-body p-0 position-relative bg-black" style="min-height: 380px;">
-                <!-- Video Viewport Container -->
-                <div class="scanner-viewport-wrapper" id="cameraScannerViewport">
-                    <div id="interactiveScannerReader"></div>
-                    
-                    <!-- HUD Alignment Overlay Layer -->
-                    <div class="scanner-hud-overlay" id="scannerHudOverlay">
-                        <!-- Targeting reticle frame for 1D/2D Barcodes -->
-                        <div class="scanner-target-box" id="scannerTargetBox">
-                            <!-- Corner HUD brackets -->
-                            <div class="corner corner-tl"></div>
-                            <div class="corner corner-tr"></div>
-                            <div class="corner corner-bl"></div>
-                            <div class="corner corner-br"></div>
-                            
-                            <!-- Sweeping Red Laser Bar -->
-                            <div class="scanner-laser-line"></div>
-                            
-                            <!-- Status Label -->
-                            <div class="scanner-target-label" id="scannerTargetLabel">
-                                <i class="fa-solid fa-arrows-to-dot me-1 text-info"></i> Center Barcode Inside Box
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Floating Feedback Toast (appears on scan) -->
-                    <div id="scannerFeedbackToast" class="scanner-feedback-toast d-none">
-                        <i class="fa-solid fa-circle-check text-success fs-5"></i>
-                        <div class="text-truncate">
-                            <strong id="toastScannedTitle" class="text-white d-block small"></strong>
-                            <span id="toastScannedDetails" class="text-warning" style="font-size: 11px;"></span>
-                        </div>
-                    </div>
-
-                    <!-- Floating Error Toast (if code not found) -->
-                    <div id="scannerErrorToast" class="scanner-error-toast d-none">
-                        <i class="fa-solid fa-triangle-exclamation text-danger fs-5"></i>
-                        <div class="text-truncate">
-                            <strong id="toastErrorTitle" class="text-white d-block small">Barcode Not Found</strong>
-                            <span id="toastErrorDetails" class="text-white-50" style="font-size: 11px;"></span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Camera Error / Permission Notice if needed -->
-                <div id="scannerErrorNotice" class="alert alert-danger m-3 d-none"></div>
-            </div>
-
-            <!-- Controls Footer -->
-            <div class="modal-footer border-secondary py-2 px-3 justify-content-between flex-wrap bg-dark">
-                <!-- Zoom Controls -->
-                <div class="d-flex align-items-center gap-2 my-1">
-                    <span class="small text-white-50"><i class="fa-solid fa-magnifying-glass-plus me-1"></i> Zoom:</span>
-                    <div class="btn-group btn-group-sm" role="group">
-                        <button type="button" class="btn btn-outline-secondary text-white zoom-btn" data-zoom="1.0" onclick="applyScannerZoom(1.0)">1x</button>
-                        <button type="button" class="btn btn-primary text-white zoom-btn active" data-zoom="1.5" onclick="applyScannerZoom(1.5)">1.5x</button>
-                        <button type="button" class="btn btn-outline-secondary text-white zoom-btn" data-zoom="2.0" onclick="applyScannerZoom(2.0)">2x</button>
-                        <button type="button" class="btn btn-outline-secondary text-white zoom-btn" data-zoom="3.0" onclick="applyScannerZoom(3.0)">3x</button>
-                    </div>
-                    <input type="range" class="form-range d-none d-md-inline-block" id="scannerZoomSlider" min="1.0" max="3.5" step="0.1" value="1.5" style="width: 80px;" oninput="applyScannerZoom(parseFloat(this.value))">
-                </div>
-
-                <!-- Camera Selector & Continuous Scan Toggle -->
-                <div class="d-flex align-items-center gap-3 flex-wrap my-1">
-                    <div class="form-check form-switch mb-0">
-                        <input class="form-check-input" type="checkbox" id="continuousScanToggle" checked>
-                        <label class="form-check-label small text-white" for="continuousScanToggle">Continuous Scan</label>
-                    </div>
-
-                    <!-- Camera Select Dropdown (if multiple cameras exist) -->
-                    <select id="cameraSourceSelect" class="form-select form-select-sm bg-dark text-white border-secondary" style="max-width: 140px;" onchange="switchCameraSource(this.value)">
-                        <option value="">Detecting...</option>
-                    </select>
-
-                    <button type="button" class="btn btn-sm btn-light fw-bold px-3" data-bs-dismiss="modal" onclick="stopCameraScanner()">
-                        <i class="fa-solid fa-check me-1"></i> Done
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
+<!-- Camera Scanner is rendered inline above cart -->
 </div>
 
 <!-- Local Html5Qrcode Barcode Scanning Library -->
 <script src="assets/js/html5-qrcode.min.js"></script>
 
 <script>
+
+// ========================================================
+// ZERO-MODAL IN-PAGE NAVIGATION SYSTEM
+// ========================================================
+function showPosView(viewId) {
+    const views = ['posViewRegister', 'posViewCheckout', 'posViewReceiptSuccess', 'posViewHeldBills', 'posViewSchoolPackages'];
+    views.forEach(v => {
+        const el = document.getElementById(v);
+        if (el) el.style.display = (v === viewId) ? 'block' : 'none';
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function showCheckoutView() {
+    showPosView('posViewCheckout');
+    setTimeout(() => {
+        const input = document.getElementById('tenderedAmountInput');
+        if (input) {
+            input.focus();
+            input.select();
+        }
+    }, 100);
+}
+
+function hideCheckoutView() {
+    showPosView('posViewRegister');
+    setTimeout(() => {
+        const input = document.getElementById('barcodeSearchInput');
+        if (input) input.focus();
+    }, 100);
+}
+
+function showReceiptSuccessView() {
+    showPosView('posViewReceiptSuccess');
+}
+
+function hideReceiptSuccessView() {
+    showPosView('posViewRegister');
+}
+
+function showSchoolPackagesView() {
+    showPosView('posViewSchoolPackages');
+}
+
+function hideSchoolPackagesView() {
+    showPosView('posViewRegister');
+}
+
+function showHeldBillsView() {
+    showPosView('posViewHeldBills');
+}
+
+function hideHeldBillsView() {
+    showPosView('posViewRegister');
+}
+
 // POS State
 let cartItems = [];
 let allCatalogProducts = [];
@@ -576,16 +620,34 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Ensure camera stops if user dismisses scanner modal
-    const scannerModalEl = document.getElementById('cameraScannerModal');
-    if (scannerModalEl) {
-        scannerModalEl.addEventListener('hidden.bs.modal', function () {
-            stopCameraScanner();
-        });
-    }
+// Camera stops when inline scanner closed
 
     // POS Hotkeys (F3 = Camera Scan, F4 = Hold, F6 = Switch Rate, F8 = Checkout, F7 = Held Bills)
     document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+            if (document.getElementById('posViewCheckout')?.style.display === 'block') {
+                hideCheckoutView();
+                return;
+            }
+            if (document.getElementById('posViewSchoolPackages')?.style.display === 'block') {
+                hideSchoolPackagesView();
+                return;
+            }
+            if (document.getElementById('posViewHeldBills')?.style.display === 'block') {
+                hideHeldBillsView();
+                return;
+            }
+        }
+        if (e.key === 'Enter' && document.getElementById('posViewReceiptSuccess')?.style.display === 'block') {
+            e.preventDefault();
+            startNewSale();
+            return;
+        }
+        if (e.key === 'F9' && document.getElementById('posViewReceiptSuccess')?.style.display === 'block') {
+            e.preventDefault();
+            document.getElementById('thermalPrintLink')?.click();
+            return;
+        }
         if (e.key === 'F3' || (e.altKey && (e.key === 's' || e.key === 'S'))) {
             e.preventDefault();
             openCameraScannerModal();
@@ -1088,7 +1150,7 @@ function loadSchoolPackage(classId) {
                         retail_price: item.custom_price || item.retail_price
                     }, parseFloat(item.quantity_needed));
                 });
-                bootstrap.Modal.getInstance(document.getElementById('schoolPackageModal')).hide();
+                hideSchoolPackagesView();
                 alert(`Loaded ${data.items.length} items from ${data.class_info.class_name}!`);
             } else {
                 alert('No items found in this school package.');
@@ -1115,7 +1177,7 @@ function openCheckoutModal() {
     renderSmartCashShortcuts(grandTotal);
     calculateChange();
 
-    new bootstrap.Modal(document.getElementById('checkoutModal')).show();
+    showCheckoutView();
 }
 
 // Generate smart cash shortcuts tailored closely to the actual bill
@@ -1335,7 +1397,7 @@ function processCheckout() {
         btn.innerHTML = '<i class="fa-solid fa-check-circle me-1"></i> Complete & Print';
 
         if (data.success) {
-            bootstrap.Modal.getInstance(document.getElementById('checkoutModal')).hide();
+            hideCheckoutView();
 
             // Populate success modal
             document.getElementById('successInvoiceNo').innerText = data.invoice_no;
@@ -1344,7 +1406,7 @@ function processCheckout() {
             document.getElementById('thermalPrintLink').href = 'print_invoice.php?id=' + data.sale_id + '&type=thermal';
             document.getElementById('a4PrintLink').href = 'print_invoice.php?id=' + data.sale_id + '&type=a4';
 
-            new bootstrap.Modal(document.getElementById('receiptSuccessModal')).show();
+            showReceiptSuccessView();
 
             // Auto-trigger thermal receipt in background or new window
             // window.open('print_invoice.php?id=' + data.sale_id + '&type=thermal', '_blank');
@@ -1364,7 +1426,7 @@ function startNewSale() {
     document.getElementById('orderDiscountInput').value = '0.00';
     document.getElementById('posCustomerSelect').value = '1';
     renderCart();
-    bootstrap.Modal.getInstance(document.getElementById('receiptSuccessModal')).hide();
+    hideReceiptSuccessView();
     document.getElementById('barcodeSearchInput').focus();
     loadCatalog(); // Refresh stock counts in background
 }
@@ -1441,7 +1503,7 @@ function openHeldBillsModal() {
             } else {
                 list.innerHTML = '<div class="text-center py-4 text-muted">No held bills found.</div>';
             }
-            new bootstrap.Modal(document.getElementById('heldBillsModal')).show();
+            showHeldBillsView();
         });
 }
 
@@ -1456,7 +1518,7 @@ function resumeHeldBill(ref) {
                     document.getElementById('posCustomerSelect').value = d.bill.customer_id;
                 }
                 renderCart();
-                bootstrap.Modal.getInstance(document.getElementById('heldBillsModal')).hide();
+                hideHeldBillsView();
                 checkHeldBills();
             } else {
                 alert('Could not resume held bill.');
@@ -1478,28 +1540,33 @@ let scannerToastTimer = null;
 let availableCameras = [];
 let currentCameraDeviceId = null;
 
-function openCameraScannerModal(targetFieldId = null) {
+function toggleInlineCameraScanner(targetFieldId = null) {
     scannerTargetFieldId = targetFieldId;
-    
-    // Clear feedback notifications & reset target frame
-    hideScannerToasts();
-    const errorNotice = document.getElementById('scannerErrorNotice');
-    if (errorNotice) {
-        errorNotice.classList.add('d-none');
-        errorNotice.innerHTML = '';
+    const container = document.getElementById('inlineCameraScannerContainer');
+    if (!container) return;
+
+    if (container.style.display === 'none' || container.style.display === '') {
+        container.style.display = 'block';
+        hideScannerToasts();
+        const errorNotice = document.getElementById('scannerErrorNotice');
+        if (errorNotice) {
+            errorNotice.classList.add('d-none');
+            errorNotice.innerHTML = '';
+        }
+        const targetBox = document.getElementById('scannerTargetBox');
+        if (targetBox) targetBox.classList.remove('detected');
+
+        setTimeout(() => {
+            initCameraScanner();
+        }, 150);
+    } else {
+        stopCameraScanner();
+        container.style.display = 'none';
     }
-    const targetBox = document.getElementById('scannerTargetBox');
-    if (targetBox) targetBox.classList.remove('detected');
+}
 
-    // Show modal
-    const modalEl = document.getElementById('cameraScannerModal');
-    const modalInstance = bootstrap.Modal.getOrCreateInstance(modalEl);
-    modalInstance.show();
-
-    // Start camera stream after modal is visible
-    setTimeout(() => {
-        initCameraScanner();
-    }, 350);
+function openCameraScannerModal(targetFieldId = null) {
+    toggleInlineCameraScanner(targetFieldId);
 }
 
 function initCameraScanner() {
@@ -1768,7 +1835,7 @@ function onBarcodeSuccess(decodedText, decodedResult) {
             targetInput.dispatchEvent(new Event('input', { bubbles: true }));
             targetInput.dispatchEvent(new Event('change', { bubbles: true }));
         }
-        bootstrap.Modal.getInstance(document.getElementById('cameraScannerModal')).hide();
+        const c = document.getElementById('inlineCameraScannerContainer'); if (c) c.style.display = 'none';
         stopCameraScanner();
         return;
     }
@@ -1779,7 +1846,7 @@ function onBarcodeSuccess(decodedText, decodedResult) {
     // If Continuous Scan is toggled OFF, close modal
     const isContinuous = document.getElementById('continuousScanToggle')?.checked ?? true;
     if (!isContinuous) {
-        bootstrap.Modal.getInstance(document.getElementById('cameraScannerModal')).hide();
+        const c = document.getElementById('inlineCameraScannerContainer'); if (c) c.style.display = 'none';
         stopCameraScanner();
     }
 }

@@ -319,68 +319,6 @@ require_once __DIR__ . '/includes/header.php';
     <?php endif; ?>
 </div>
 
-<!-- Modal: Stock Adjustment Voucher -->
-<div class="modal fade" id="stockAdjustmentModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content">
-            <form method="POST" action="inventory.php">
-                <input type="hidden" name="save_stock_adjustment" value="1">
-                
-                <div class="modal-header bg-warning text-dark">
-                    <h5 class="modal-title fw-bold"><i class="fa-solid fa-sliders me-2"></i> Stock Adjustment Voucher</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-
-                <div class="modal-body p-4">
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold">Select Product *</label>
-                        <select name="product_id" id="modalAdjProdSelect" class="form-select" required onchange="onAdjProdChange(this)">
-                            <option value="">-- Choose Book or Stationery Item --</option>
-                            <?php foreach ($allProducts as $p): ?>
-                                <option value="<?= $p['id'] ?>" data-stock="<?= (float)$p['current_stock'] ?>" data-cost="<?= (float)$p['purchase_price'] ?>">
-                                    <?= htmlspecialchars($p['title']) ?> (Current Stock: <?= (float)$p['current_stock'] ?>)
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-
-                    <div class="row g-2 mb-3">
-                        <div class="col-6">
-                            <label class="form-label small fw-bold">Adjustment Type *</label>
-                            <select name="adj_type" class="form-select" required>
-                                <option value="add">Add Stock (Found / Audit Surplus)</option>
-                                <option value="deduct">Deduct Stock (Damage / Lost / Expired)</option>
-                            </select>
-                        </div>
-                        <div class="col-6">
-                            <label class="form-label small fw-bold">Quantity *</label>
-                            <input type="number" step="0.01" name="quantity" class="form-control" required min="0.01" value="1">
-                        </div>
-                    </div>
-
-                    <input type="hidden" name="cost_price" id="modalAdjCost" value="0.00">
-
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold">Reason / Audit Trail Note *</label>
-                        <input type="text" name="reason" class="form-control" required placeholder="e.g. Physical stock count discrepancy, water leakage damage">
-                    </div>
-                </div>
-
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-warning text-dark fw-bold"><i class="fa-solid fa-check me-1"></i> Apply Stock Adjustment</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<script>
-function onAdjProdChange(select) {
-    const opt = select.options[select.selectedIndex];
-    const cost = opt.getAttribute('data-cost') || 0;
-    document.getElementById('modalAdjCost').value = cost;
-}
-</script>
+<!-- Stock Adjustment is managed via dedicated stock_adjust.php -->
 
 <?php require_once __DIR__ . '/includes/footer.php'; ?>
