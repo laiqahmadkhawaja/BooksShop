@@ -4,6 +4,7 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.ContentValues
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Color
@@ -11,6 +12,8 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
+import android.print.PrintAttributes
+import android.print.PrintManager
 import android.provider.MediaStore
 import android.util.Base64
 import android.util.Log
@@ -121,6 +124,8 @@ class MainActivity : AppCompatActivity() {
         }
 
         web.addJavascriptInterface(WebAppInterface(), "AndroidDownloader")
+        web.addJavascriptInterface(AndroidPrintShareInterface(), "AndroidPrinter")
+        web.addJavascriptInterface(AndroidPrintShareInterface(), "AndroidShare")
 
         swipeRefresh.setOnRefreshListener { web.reload() }
 
@@ -162,8 +167,18 @@ class MainActivity : AppCompatActivity() {
                 super.onPageFinished(view, url)
                 swipeRefresh.isRefreshing = false
                 
+                // Inject print/share interceptor and downloader
                 web.evaluateJavascript("""
                     (function() {
+                        // Override window.print() to open Android native Share Sheet for printing/sharing
+                        window.print = function() {
+                            if (window.AndroidPrinter && typeof window.AndroidPrinter.printOrShare === 'function') {
+                                window.AndroidPrinter.printOrShare(window.location.href, document.title);
+                            } else if (navigator.share) {
+                                navigator.share({ title: document.title, url: window.location.href }).catch(function(){});
+                            }
+                        };
+
                         if (window.hasDownloaderInstalled) return;
                         window.hasDownloaderInstalled = true;
                         document.addEventListener('click', function(e) {
@@ -177,7 +192,9 @@ class MainActivity : AppCompatActivity() {
                                         reader.onload = function() {
                                             var base64 = reader.result.split(',')[1];
                                             var filename = target.getAttribute('download') || 'download';
-                                            AndroidDownloader.downloadBase64(filename, base64);
+                                            if (window.AndroidDownloader) {
+                                                AndroidDownloader.downloadBase64(filename, base64);
+                                            }
                                         };
                                         reader.readAsDataURL(blob);
                                     });
@@ -291,6 +308,56 @@ class MainActivity : AppCompatActivity() {
             web.loadUrl(startUrl)
         } else {
             web.restoreState(savedInstanceState)
+        }
+    }
+
+    inner class AndroidPrintShareInterface {
+        @JavascriptInterface
+        fun openShareDialog(url: String?, title: String?, text: String? = "") {
+            runOnUiThread {
+                try {
+                    val shareUrl = if (!url.isNullOrBlank()) url else (web.url ?: "")
+                    val shareTitle = if (!title.isNullOrBlank()) title else (web.title ?: "Document")
+                    val shareBody = if (!text.isNullOrBlank()) "$shareTitle\n$text\n$shareUrl" else "$shareTitle\n$shareUrl"
+
+                    val sendIntent = Intent().apply {
+                        action = Intent.ACTION_SEND
+                        type = "text/plain"
+                        putExtra(Intent.EXTRA_SUBJECT, shareTitle)
+                        putExtra(Intent.EXTRA_TEXT, shareBody)
+                    }
+                    val chooser = Intent.createChooser(sendIntent, "Share / Print: $shareTitle")
+                    startActivity(chooser)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    Toast.makeText(this@MainActivity, "Unable to open share sheet", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+
+        @JavascriptInterface
+        fun printDocument() {
+            runOnUiThread {
+                try {
+                    val printManager = getSystemService(Context.PRINT_SERVICE) as? PrintManager
+                    if (printManager != null) {
+                        val docName = "BookShop_" + (web.title?.replace("[^a-zA-Z0-9]".toRegex(), "_") ?: "Doc")
+                        val printAdapter = web.createPrintDocumentAdapter(docName)
+                        printManager.print(docName, printAdapter, PrintAttributes.Builder().build())
+                    } else {
+                        openShareDialog(web.url ?: "", web.title ?: "Document", "")
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    openShareDialog(web.url ?: "", web.title ?: "Document", "")
+                }
+            }
+        }
+
+        @JavascriptInterface
+        fun printOrShare(url: String?, title: String?) {
+            // Opens the native Android share sheet as requested
+            openShareDialog(url, title, "")
         }
     }
 

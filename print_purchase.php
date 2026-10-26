@@ -170,7 +170,10 @@ $shopPhone = getSetting('shop_phone', '+92 300 1234567 / 042-37210000');
         </div>
         <div class="d-flex align-items-center gap-2">
             <button onclick="window.print()" class="btn btn-success btn-sm fw-bold shadow-sm px-3">
-                <i class="fa-solid fa-print me-1"></i> Print Purchase Invoice
+                <i class="fa-solid fa-print me-1"></i> Print / Share
+            </button>
+            <button type="button" onclick="triggerShareDialog()" class="btn btn-outline-success btn-sm fw-bold shadow-sm px-2">
+                <i class="fa-solid fa-share-nodes me-1"></i> Share
             </button>
             <button onclick="window.close()" class="btn btn-secondary btn-sm">
                 <i class="fa-solid fa-xmark me-1"></i> Close
@@ -452,6 +455,17 @@ document.addEventListener('DOMContentLoaded', function() {
         displayValue: true
     });
 });
+</script>
+<script>
+function triggerShareDialog() {
+    if (window.AndroidPrinter && typeof window.AndroidPrinter.openShareDialog === 'function') {
+        window.AndroidPrinter.openShareDialog(window.location.href, document.title, "");
+    } else if (navigator.share) {
+        navigator.share({ title: document.title, url: window.location.href }).catch(function(){});
+    } else {
+        window.print();
+    }
+}
 </script>
 </body>
 </html>

@@ -156,9 +156,7 @@ $receiptFooterUrdu = getSetting('receipt_footer_urdu', 'خریداری کا شک
             <a href="print_invoice.php?id=<?= $saleId ?>&type=a4" class="btn btn-<?= $type === 'a4' ? 'primary' : 'outline-light' ?>">
                 <i class="fa-solid fa-file-invoice me-1"></i> A4 Invoice
             </a>
-            <button onclick="window.print()" class="btn btn-success fw-bold">
-                <i class="fa-solid fa-print me-1"></i> Print (Ctrl+P)
-            </button>
+            <button onclick="window.print()" class="btn btn-success fw-bold"><i class="fa-solid fa-print me-1"></i> Print / Share</button><button type="button" onclick="triggerShareDialog()" class="btn btn-outline-light fw-semibold ms-1"><i class="fa-solid fa-share-nodes me-1"></i> Share</button>
             <a href="pos.php" class="btn btn-outline-warning">
                 <i class="fa-solid fa-arrow-left me-1"></i> Back to POS
             </a>
@@ -416,6 +414,17 @@ document.addEventListener('DOMContentLoaded', function() {
         displayValue: true
     });
 });
+</script>
+<script>
+function triggerShareDialog() {
+    if (window.AndroidPrinter && typeof window.AndroidPrinter.openShareDialog === 'function') {
+        window.AndroidPrinter.openShareDialog(window.location.href, document.title, "");
+    } else if (navigator.share) {
+        navigator.share({ title: document.title, url: window.location.href }).catch(function(){});
+    } else {
+        window.print();
+    }
+}
 </script>
 </body>
 </html>

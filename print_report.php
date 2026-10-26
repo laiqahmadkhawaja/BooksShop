@@ -368,7 +368,10 @@ elseif ($reportType === 'supplier_statement') {
     </div>
     <div class="d-flex gap-2">
         <button type="button" class="btn btn-warning btn-sm fw-bold px-3 shadow-sm" onclick="window.print()">
-            <i class="fa-solid fa-print me-1"></i> Print Report (Ctrl + P)
+            <i class="fa-solid fa-print me-1"></i> Print / Share
+        </button>
+        <button type="button" class="btn btn-outline-light btn-sm fw-bold px-2 shadow-sm" onclick="triggerShareDialog()">
+            <i class="fa-solid fa-share-nodes me-1"></i> Share
         </button>
         <button type="button" class="btn btn-outline-light btn-sm px-3" onclick="window.close()">
             <i class="fa-solid fa-xmark me-1"></i> Close Window
@@ -1045,5 +1048,16 @@ window.onload = function() {
 };
 </script>
 
+<script>
+function triggerShareDialog() {
+    if (window.AndroidPrinter && typeof window.AndroidPrinter.openShareDialog === 'function') {
+        window.AndroidPrinter.openShareDialog(window.location.href, document.title, "");
+    } else if (navigator.share) {
+        navigator.share({ title: document.title, url: window.location.href }).catch(function(){});
+    } else {
+        window.print();
+    }
+}
+</script>
 </body>
 </html>
