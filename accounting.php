@@ -8,6 +8,29 @@ $action = $_GET['action'] ?? '';
 
 // Handle POST actions
 if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
+    // AJAX: Add Expense / Income Category directly from forms
+    if (isset($_POST['ajax_add_category'])) {
+        header('Content-Type: application/json');
+        $catName = trim($_POST['name'] ?? '');
+        $catType = in_array($_POST['type'] ?? '', ['expense', 'income']) ? $_POST['type'] : 'expense';
+        $catDesc = trim($_POST['description'] ?? '');
+
+        if (empty($catName)) {
+            echo json_encode(['success' => false, 'message' => 'Category name is required.']);
+            exit;
+        }
+
+        $existing = dbFetchOne("SELECT id, name FROM expense_categories WHERE LOWER(name) = LOWER(?) AND type = ?", [$catName, $catType]);
+        if ($existing) {
+            echo json_encode(['success' => true, 'id' => $existing['id'], 'name' => $existing['name'], 'message' => 'Category already exists.']);
+            exit;
+        }
+
+        dbQuery("INSERT INTO expense_categories (name, type, description) VALUES (?, ?, ?)", [$catName, $catType, $catDesc]);
+        $newId = dbInsertId();
+        echo json_encode(['success' => true, 'id' => $newId, 'name' => $catName, 'message' => 'Category created successfully.']);
+        exit;
+    }
     // 1. Add / Edit Account
     if (isset($_POST['save_account'])) {
         $id = (int)($_POST['account_id'] ?? 0);
@@ -63,12 +86,21 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
     // 3. Add Expense Voucher
     if (isset($_POST['save_expense'])) {
         $accountId = (int)$_POST['account_id'];
-        $category = trim($_POST['category_name'] ?? 'General Expense');
+        $newCat = trim($_POST['new_category_name'] ?? '');
+        $selectedCat = trim($_POST['category_name'] ?? '');
+        $category = (!empty($newCat) && $selectedCat === '__new__') ? $newCat : (!empty($newCat) ? $newCat : $selectedCat);
+        if (empty($category) || $category === '__new__') {
+            $category = 'General Expense';
+        }
         $amount = (float)$_POST['amount'];
         $refNo = trim($_POST['reference_no'] ?? 'EXP-' . date('Ymd-His'));
         $desc = trim($_POST['description'] ?? '');
 
         if ($accountId > 0 && $amount > 0) {
+            $catExists = dbFetchOne("SELECT id FROM expense_categories WHERE LOWER(name) = LOWER(?) AND type = 'expense'", [$category]);
+            if (!$catExists) {
+                dbQuery("INSERT INTO expense_categories (name, type, description) VALUES (?, 'expense', 'Added via expense voucher')", [$category]);
+            }
             recordCashTransaction('expense', $accountId, $amount, $category, $refNo, $desc);
             setFlash('success', "Expense voucher of " . formatCurrency($amount) . " ($category) recorded.");
         }
@@ -78,14 +110,23 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
     // 4. Add Income / Capital Voucher
     if (isset($_POST['save_income'])) {
         $accountId = (int)$_POST['account_id'];
-        $category = trim($_POST['category_name'] ?? 'Other Income');
+        $newCat = trim($_POST['new_category_name'] ?? '');
+        $selectedCat = trim($_POST['category_name'] ?? '');
+        $category = (!empty($newCat) && $selectedCat === '__new__') ? $newCat : (!empty($newCat) ? $newCat : $selectedCat);
+        if (empty($category) || $category === '__new__') {
+            $category = 'Other Income';
+        }
         $amount = (float)$_POST['amount'];
         $refNo = trim($_POST['reference_no'] ?? 'INC-' . date('Ymd-His'));
         $desc = trim($_POST['description'] ?? '');
 
         if ($accountId > 0 && $amount > 0) {
+            $catExists = dbFetchOne("SELECT id FROM expense_categories WHERE LOWER(name) = LOWER(?) AND type = 'income'", [$category]);
+            if (!$catExists) {
+                dbQuery("INSERT INTO expense_categories (name, type, description) VALUES (?, 'income', 'Added via income voucher')", [$category]);
+            }
             recordCashTransaction('income', $accountId, $amount, $category, $refNo, $desc);
-            setFlash('success', "Income voucher of " . formatCurrency($amount) . " recorded.");
+            setFlash('success', "Income voucher of " . formatCurrency($amount) . " ($category) recorded.");
         }
         redirect("accounting.php?date=$selectedDate");
     }
