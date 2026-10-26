@@ -458,14 +458,31 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 <script>
 function triggerShareDialog() {
-    if (window.AndroidPrinter && typeof window.AndroidPrinter.openShareDialog === 'function') {
-        window.AndroidPrinter.openShareDialog(window.location.href, document.title, "");
+    if (window.AndroidPrinter && typeof window.AndroidPrinter.printOrShare === 'function') {
+        window.AndroidPrinter.printOrShare(window.location.href, document.title || 'Document');
+    } else if (window.AndroidShare && typeof window.AndroidShare.openShareDialog === 'function') {
+        window.AndroidShare.openShareDialog(window.location.href, document.title || 'Document', "");
     } else if (navigator.share) {
         navigator.share({ title: document.title, url: window.location.href }).catch(function(){});
     } else {
         window.print();
     }
 }
+
+(function() {
+    var originalWindowPrint = window.print;
+    window.print = function() {
+        if (window.AndroidPrinter && typeof window.AndroidPrinter.printOrShare === 'function') {
+            window.AndroidPrinter.printOrShare(window.location.href, document.title || 'Document');
+            return;
+        }
+        if (window.AndroidShare && typeof window.AndroidShare.openShareDialog === 'function') {
+            window.AndroidShare.openShareDialog(window.location.href, document.title || 'Document', "");
+            return;
+        }
+        if (originalWindowPrint) originalWindowPrint.call(window);
+    };
+})();
 </script>
 </body>
 </html>

@@ -61,6 +61,61 @@
         }
     });
 
+    // Ensure Bootstrap 5 modals are never trapped in CSS stacking contexts (.main-content)
+    function reparentModals() {
+        document.querySelectorAll('.modal').forEach(function(modal) {
+            if (modal.parentElement && modal.parentElement !== document.body) {
+                document.body.appendChild(modal);
+            }
+        });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', reparentModals);
+    } else {
+        reparentModals();
+    }
+
+    document.addEventListener('show.bs.modal', function(e) {
+        if (e.target && e.target.parentElement !== document.body) {
+            document.body.appendChild(e.target);
+        }
+    });
+
+    // Android APK Native Share / Print Interceptor
+    var originalWindowPrint = window.print;
+    window.print = function() {
+        if (window.AndroidPrinter && typeof window.AndroidPrinter.printOrShare === 'function') {
+            window.AndroidPrinter.printOrShare(window.location.href, document.title || 'Document');
+            return;
+        }
+        if (window.AndroidShare && typeof window.AndroidShare.openShareDialog === 'function') {
+            window.AndroidShare.openShareDialog(window.location.href, document.title || 'Document', "");
+            return;
+        }
+        if (originalWindowPrint) {
+            originalWindowPrint.call(window);
+        }
+    };
+
+    window.triggerAppShare = function(url, title) {
+        url = url || window.location.href;
+        title = title || document.title || 'Document';
+        if (window.AndroidPrinter && typeof window.AndroidPrinter.printOrShare === 'function') {
+            window.AndroidPrinter.printOrShare(url, title);
+            return;
+        }
+        if (window.AndroidShare && typeof window.AndroidShare.openShareDialog === 'function') {
+            window.AndroidShare.openShareDialog(url, title, "");
+            return;
+        }
+        if (navigator.share) {
+            navigator.share({ title: title, url: url }).catch(function(){});
+            return;
+        }
+        window.print();
+    };
+
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape') {
             closeSidebar();

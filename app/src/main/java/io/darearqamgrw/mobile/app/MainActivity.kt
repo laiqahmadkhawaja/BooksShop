@@ -167,17 +167,34 @@ class MainActivity : AppCompatActivity() {
                 super.onPageFinished(view, url)
                 swipeRefresh.isRefreshing = false
                 
-                // Inject print/share interceptor and downloader
+                // Inject print/share interceptor and modal fix
                 web.evaluateJavascript("""
                     (function() {
                         // Override window.print() to open Android native Share Sheet for printing/sharing
                         window.print = function() {
                             if (window.AndroidPrinter && typeof window.AndroidPrinter.printOrShare === 'function') {
-                                window.AndroidPrinter.printOrShare(window.location.href, document.title);
+                                window.AndroidPrinter.printOrShare(window.location.href, document.title || 'Document');
+                            } else if (window.AndroidShare && typeof window.AndroidShare.openShareDialog === 'function') {
+                                window.AndroidShare.openShareDialog(window.location.href, document.title || 'Document', "");
                             } else if (navigator.share) {
                                 navigator.share({ title: document.title, url: window.location.href }).catch(function(){});
                             }
                         };
+
+                        // Reparent modals to body so they are not trapped inside stacking contexts
+                        function reparentModals() {
+                            document.querySelectorAll('.modal').forEach(function(m) {
+                                if (m.parentElement && m.parentElement !== document.body) {
+                                    document.body.appendChild(m);
+                                }
+                            });
+                        }
+                        reparentModals();
+                        document.addEventListener('show.bs.modal', function(e) {
+                            if (e.target && e.target.parentElement !== document.body) {
+                                document.body.appendChild(e.target);
+                            }
+                        });
 
                         if (window.hasDownloaderInstalled) return;
                         window.hasDownloaderInstalled = true;
@@ -313,7 +330,22 @@ class MainActivity : AppCompatActivity() {
 
     inner class AndroidPrintShareInterface {
         @JavascriptInterface
-        fun openShareDialog(url: String?, title: String?, text: String? = "") {
+        fun openShareDialog() {
+            openShareDialog(null, null, "")
+        }
+
+        @JavascriptInterface
+        fun openShareDialog(url: String?) {
+            openShareDialog(url, null, "")
+        }
+
+        @JavascriptInterface
+        fun openShareDialog(url: String?, title: String?) {
+            openShareDialog(url, title, "")
+        }
+
+        @JavascriptInterface
+        fun openShareDialog(url: String?, title: String?, text: String?) {
             runOnUiThread {
                 try {
                     val shareUrl = if (!url.isNullOrBlank()) url else (web.url ?: "")
@@ -325,8 +357,10 @@ class MainActivity : AppCompatActivity() {
                         type = "text/plain"
                         putExtra(Intent.EXTRA_SUBJECT, shareTitle)
                         putExtra(Intent.EXTRA_TEXT, shareBody)
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
                     }
                     val chooser = Intent.createChooser(sendIntent, "Share / Print: $shareTitle")
+                    chooser.flags = Intent.FLAG_ACTIVITY_NEW_TASK
                     startActivity(chooser)
                 } catch (e: Exception) {
                     e.printStackTrace()
@@ -337,26 +371,22 @@ class MainActivity : AppCompatActivity() {
 
         @JavascriptInterface
         fun printDocument() {
-            runOnUiThread {
-                try {
-                    val printManager = getSystemService(Context.PRINT_SERVICE) as? PrintManager
-                    if (printManager != null) {
-                        val docName = "BookShop_" + (web.title?.replace("[^a-zA-Z0-9]".toRegex(), "_") ?: "Doc")
-                        val printAdapter = web.createPrintDocumentAdapter(docName)
-                        printManager.print(docName, printAdapter, PrintAttributes.Builder().build())
-                    } else {
-                        openShareDialog(web.url ?: "", web.title ?: "Document", "")
-                    }
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                    openShareDialog(web.url ?: "", web.title ?: "Document", "")
-                }
-            }
+            // User requested opening Android share sheet for printing in APK
+            openShareDialog(web.url, web.title, "")
+        }
+
+        @JavascriptInterface
+        fun printOrShare() {
+            openShareDialog(web.url, web.title, "")
+        }
+
+        @JavascriptInterface
+        fun printOrShare(url: String?) {
+            openShareDialog(url, web.title, "")
         }
 
         @JavascriptInterface
         fun printOrShare(url: String?, title: String?) {
-            // Opens the native Android share sheet as requested
             openShareDialog(url, title, "")
         }
     }
