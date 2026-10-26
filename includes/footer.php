@@ -78,16 +78,20 @@
         reparentModals();
     }
 
-    // Disable Android SwipeRefreshLayout while modal is open so it cannot steal touch events
-    document.addEventListener('show.bs.modal', function() {
-        if (window.AndroidPrinter && typeof window.AndroidPrinter.setSwipeEnabled === 'function') {
-            window.AndroidPrinter.setSwipeEnabled(false);
-        }
+    // Disable Android SwipeRefreshLayout while modal/bottom-sheet is open so it cannot steal touch events
+    ['show.bs.modal', 'show.bs.offcanvas'].forEach(function(evt) {
+        document.addEventListener(evt, function() {
+            if (window.AndroidPrinter && typeof window.AndroidPrinter.setSwipeEnabled === 'function') {
+                window.AndroidPrinter.setSwipeEnabled(false);
+            }
+        });
     });
-    document.addEventListener('hidden.bs.modal', function() {
-        if (window.AndroidPrinter && typeof window.AndroidPrinter.setSwipeEnabled === 'function') {
-            window.AndroidPrinter.setSwipeEnabled(true);
-        }
+    ['hidden.bs.modal', 'hidden.bs.offcanvas'].forEach(function(evt) {
+        document.addEventListener(evt, function() {
+            if (window.AndroidPrinter && typeof window.AndroidPrinter.setSwipeEnabled === 'function') {
+                window.AndroidPrinter.setSwipeEnabled(true);
+            }
+        });
     });
 
     // Android APK Native Share / Print Interceptor

@@ -233,16 +233,16 @@ require_once __DIR__ . '/includes/header.php';
         <small class="text-muted">Manage textbook syllabus, general books, barcodes, and stationery items</small>
     </div>
     <div class="d-flex gap-2">
-        <button type="button" class="btn btn-outline-secondary btn-sm shadow-sm" data-bs-toggle="modal" data-bs-target="#productTypeManageModal">
+        <button type="button" class="btn btn-outline-secondary btn-sm shadow-sm" data-bs-toggle="offcanvas" data-bs-target="#productTypeManageModal">
             <i class="fa-solid fa-layer-group me-1"></i> Manage Types
         </button>
-        <button type="button" class="btn btn-outline-primary btn-sm shadow-sm" data-bs-toggle="modal" data-bs-target="#categoryManageModal">
+        <button type="button" class="btn btn-outline-primary btn-sm shadow-sm" data-bs-toggle="offcanvas" data-bs-target="#categoryManageModal">
             <i class="fa-solid fa-tags me-1"></i> Manage Categories
         </button>
         <a href="?export_csv=1" class="btn btn-outline-success btn-sm">
             <i class="fa-solid fa-file-excel me-1"></i> Export CSV
         </a>
-        <button type="button" class="btn btn-primary btn-sm shadow-sm" data-bs-toggle="modal" data-bs-target="#productModal" onclick="openNewProductModal()">
+        <button type="button" class="btn btn-primary btn-sm shadow-sm" data-bs-toggle="offcanvas" data-bs-target="#productModal" onclick="openNewProductModal()">
             <i class="fa-solid fa-plus-circle me-1"></i> Add New Product / Book
         </button>
     </div>
@@ -419,25 +419,24 @@ require_once __DIR__ . '/includes/header.php';
 </div>
 
 <!-- Modal: Add / Edit Product -->
-<div class="modal fade" id="productModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable">
-        <div class="modal-content">
-            <form method="POST" action="books.php" class="m-0">
-                <input type="hidden" name="save_product" value="1">
-                <input type="hidden" name="product_id" id="prod_id" value="0">
+<!-- Bottom Sheet: Add/Edit Product -->
+<div class="offcanvas offcanvas-bottom" id="productModal" tabindex="-1" aria-labelledby="productModalTitle" style="height: 94vh; max-height: 94vh; border-top-left-radius: 20px; border-top-right-radius: 20px; box-shadow: 0 -10px 30px rgba(0,0,0,0.25);">
+    <form method="POST" action="books.php" class="m-0 d-flex flex-column h-100">
+        <input type="hidden" name="save_product" value="1">
+        <input type="hidden" name="product_id" id="prod_id" value="0">
 
-                <div class="modal-header bg-light flex-shrink-0">
-                    <h5 class="modal-title fw-bold" id="productModalTitle"><i class="fa-solid fa-book text-primary me-2"></i> Add New Product</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
+        <div class="offcanvas-header bg-light border-bottom flex-shrink-0 py-3 px-4">
+            <h5 class="offcanvas-title fw-bold" id="productModalTitle"><i class="fa-solid fa-book text-primary me-2"></i> Add New Product</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+        </div>
 
-                <div class="modal-body p-4 flex-grow-1" style="overflow-y: auto; max-height: calc(100vh - 190px);">
+        <div class="offcanvas-body p-3 p-md-4 flex-grow-1" style="overflow-y: auto;">
                     <div class="row g-3">
                         <!-- Product Type & Code -->
                         <div class="col-md-4">
                             <div class="d-flex justify-content-between align-items-center mb-1">
                                 <label class="form-label small fw-bold mb-0">Product Type *</label>
-                                <a href="javascript:void(0)" class="small text-decoration-none fw-bold text-primary" data-bs-toggle="modal" data-bs-target="#productTypeManageModal">+ Add Type</a>
+                                <a href="javascript:void(0)" class="small text-decoration-none fw-bold text-primary" data-bs-toggle="offcanvas" data-bs-target="#productTypeManageModal">+ Add Type</a>
                             </div>
                             <select name="product_type" id="prod_type" class="form-select" onchange="toggleProductTypeFields()">
                                 <?php foreach ($productTypes as $pt): ?>
@@ -468,7 +467,7 @@ require_once __DIR__ . '/includes/header.php';
                         <div class="col-md-6">
                             <div class="d-flex justify-content-between align-items-center mb-1">
                                 <label class="form-label small fw-bold mb-0">Category</label>
-                                <a href="javascript:void(0)" class="small text-decoration-none fw-bold text-primary" data-bs-toggle="modal" data-bs-target="#categoryManageModal">+ Add Category</a>
+                                <a href="javascript:void(0)" class="small text-decoration-none fw-bold text-primary" data-bs-toggle="offcanvas" data-bs-target="#categoryManageModal">+ Add Category</a>
                             </div>
                             <select name="category_id" id="prod_category_id" class="form-select">
                                 <option value="">-- Select Category --</option>
@@ -562,27 +561,25 @@ require_once __DIR__ . '/includes/header.php';
                     </div>
                 </div>
 
-                <div class="modal-footer bg-light flex-shrink-0">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary"><i class="fa-solid fa-save me-1"></i> Save Product</button>
                 </div>
-            </form>
+        <div class="p-3 bg-light border-top flex-shrink-0 d-flex justify-content-end gap-2">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="offcanvas">Cancel</button>
+            <button type="submit" class="btn btn-primary px-4 fw-bold"><i class="fa-solid fa-save me-1"></i> Save Product</button>
         </div>
-    </div>
+    </form>
 </div>
 
 <!-- Modal: Quick Stock Adjustment -->
-<div class="modal fade" id="stockAdjustModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-scrollable">
-        <div class="modal-content">
-            <form method="POST" action="books.php" class="m-0">
-                <input type="hidden" name="adjust_stock_quick" value="1">
-                <input type="hidden" name="product_id" id="adj_prod_id">
-                <div class="modal-header flex-shrink-0">
-                    <h5 class="modal-title fw-bold"><i class="fa-solid fa-sliders text-info me-2"></i> Stock Adjustment</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body flex-grow-1" style="overflow-y: auto;">
+<!-- Bottom Sheet: Quick Stock Adjustment -->
+<div class="offcanvas offcanvas-bottom" id="stockAdjustModal" tabindex="-1" style="height: 80vh; max-height: 80vh; border-top-left-radius: 20px; border-top-right-radius: 20px; box-shadow: 0 -10px 30px rgba(0,0,0,0.25);">
+    <form method="POST" action="books.php" class="m-0 d-flex flex-column h-100">
+        <input type="hidden" name="adjust_stock_quick" value="1">
+        <input type="hidden" name="product_id" id="adj_prod_id">
+        <div class="offcanvas-header bg-light border-bottom flex-shrink-0 py-3 px-4">
+            <h5 class="offcanvas-title fw-bold"><i class="fa-solid fa-sliders text-info me-2"></i> Stock Adjustment</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+        </div>
+        <div class="offcanvas-body flex-grow-1 p-3 p-md-4" style="overflow-y: auto;">
                     <p class="mb-1 text-muted small">Product:</p>
                     <h6 class="fw-bold mb-3" id="adj_prod_name"></h6>
                     <div class="alert alert-light border py-2 mb-3">
@@ -604,24 +601,22 @@ require_once __DIR__ . '/includes/header.php';
                         <input type="text" name="reason" class="form-control" placeholder="e.g. Damaged during rain, Stock count audit">
                     </div>
                 </div>
-                <div class="modal-footer flex-shrink-0">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="submit" class="btn btn-info text-white"><i class="fa-solid fa-check me-1"></i> Apply Adjustment</button>
                 </div>
-            </form>
+        <div class="p-3 bg-light border-top flex-shrink-0 d-flex justify-content-end gap-2">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="offcanvas">Close</button>
+            <button type="submit" class="btn btn-info text-white fw-bold"><i class="fa-solid fa-check me-1"></i> Apply Adjustment</button>
         </div>
-    </div>
+    </form>
 </div>
 
 <!-- Modal: Barcode Label Sticker Preview -->
-<div class="modal fade" id="barcodeModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-scrollable">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title fw-bold"><i class="fa-solid fa-barcode me-2"></i> Print Barcode Sticker</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body text-center p-4">
+<!-- Bottom Sheet: Barcode Label Sticker Preview -->
+<div class="offcanvas offcanvas-bottom" id="barcodeModal" tabindex="-1" style="height: 70vh; max-height: 70vh; border-top-left-radius: 20px; border-top-right-radius: 20px; box-shadow: 0 -10px 30px rgba(0,0,0,0.25);">
+    <div class="offcanvas-header bg-light border-bottom flex-shrink-0 py-3 px-4">
+        <h5 class="offcanvas-title fw-bold"><i class="fa-solid fa-barcode me-2"></i> Print Barcode Sticker</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+    <div class="offcanvas-body text-center p-3 p-md-4" style="overflow-y: auto;">
                 <div id="barcodePrintArea" class="border p-3 rounded bg-white shadow-sm d-inline-block">
                     <div class="small fw-bold text-uppercase" id="barcodeStoreName"><?= htmlspecialchars(getSetting('shop_name', 'Kitab Ghar')) ?></div>
                     <div class="small fw-semibold text-truncate my-1" style="max-width: 250px;" id="barcodeTitle"></div>
@@ -629,23 +624,20 @@ require_once __DIR__ . '/includes/header.php';
                     <div class="fw-bold fs-6 text-primary mt-1" id="barcodePrice"></div>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-dark" onclick="window.print()"><i class="fa-solid fa-print me-1"></i> Print Sticker</button>
-            </div>
-        </div>
+            <div class="p-3 bg-light border-top flex-shrink-0 d-flex justify-content-end gap-2">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="offcanvas">Close</button>
+        <button type="button" class="btn btn-dark fw-bold" onclick="window.print()"><i class="fa-solid fa-print me-1"></i> Print Sticker</button>
     </div>
 </div>
 
 <!-- Modal: Manage & Add Product Categories -->
-<div class="modal fade" id="categoryManageModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable">
-        <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title fw-bold"><i class="fa-solid fa-tags me-2"></i> Product Categories Manager</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body p-4">
+<!-- Bottom Sheet: Product Categories Manager -->
+<div class="offcanvas offcanvas-bottom" id="categoryManageModal" tabindex="-1" style="height: 94vh; max-height: 94vh; border-top-left-radius: 20px; border-top-right-radius: 20px; box-shadow: 0 -10px 30px rgba(0,0,0,0.25);">
+    <div class="offcanvas-header bg-primary text-white flex-shrink-0 py-3 px-4">
+        <h5 class="offcanvas-title fw-bold"><i class="fa-solid fa-tags me-2"></i> Product Categories Manager</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+    <div class="offcanvas-body p-3 p-md-4" style="overflow-y: auto;">
                 <!-- Add / Edit Category Form -->
                 <div class="card bg-light border p-3 mb-4">
                     <h6 class="fw-bold mb-3 text-dark" id="catFormTitle"><i class="fa-solid fa-plus-circle text-primary me-1"></i> Add New Category</h6>
@@ -734,22 +726,19 @@ require_once __DIR__ . '/includes/header.php';
                     </table>
                 </div>
             </div>
-            <div class="modal-footer bg-light">
-                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
-            </div>
-        </div>
+            <div class="p-3 bg-light border-top flex-shrink-0 d-flex justify-content-end">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="offcanvas">Close</button>
     </div>
 </div>
 
 <!-- Modal: Manage & Add Product Types -->
-<div class="modal fade" id="productTypeManageModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable">
-        <div class="modal-content">
-            <div class="modal-header bg-dark text-white">
-                <h5 class="modal-title fw-bold"><i class="fa-solid fa-layer-group me-2 text-warning"></i> Product Types Manager</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body p-4">
+<!-- Bottom Sheet: Product Types Manager -->
+<div class="offcanvas offcanvas-bottom" id="productTypeManageModal" tabindex="-1" style="height: 94vh; max-height: 94vh; border-top-left-radius: 20px; border-top-right-radius: 20px; box-shadow: 0 -10px 30px rgba(0,0,0,0.25);">
+    <div class="offcanvas-header bg-dark text-white flex-shrink-0 py-3 px-4">
+        <h5 class="offcanvas-title fw-bold"><i class="fa-solid fa-layer-group me-2 text-warning"></i> Product Types Manager</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+    <div class="offcanvas-body p-3 p-md-4" style="overflow-y: auto;">
                 <!-- Add / Edit Product Type Form -->
                 <div class="card bg-light border p-3 mb-4">
                     <h6 class="fw-bold mb-3 text-dark" id="typeFormTitle"><i class="fa-solid fa-plus-circle text-primary me-1"></i> Add New Product Type</h6>
@@ -831,10 +820,8 @@ require_once __DIR__ . '/includes/header.php';
                     </table>
                 </div>
             </div>
-            <div class="modal-footer bg-light">
-                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
-            </div>
-        </div>
+            <div class="p-3 bg-light border-top flex-shrink-0 d-flex justify-content-end">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="offcanvas">Close</button>
     </div>
 </div>
 
@@ -905,14 +892,14 @@ function openEditProductModal(p) {
     document.getElementById('prod_rack').value = p.rack_location || '';
     document.getElementById('prod_desc').value = p.description || '';
     toggleProductTypeFields();
-    new bootstrap.Modal(document.getElementById('productModal')).show();
+    bootstrap.Offcanvas.getOrCreateInstance(document.getElementById('productModal')).show();
 }
 
 function openStockAdjustModal(id, name, curStock) {
     document.getElementById('adj_prod_id').value = id;
     document.getElementById('adj_prod_name').innerText = name;
     document.getElementById('adj_current_stock').innerText = curStock;
-    new bootstrap.Modal(document.getElementById('stockAdjustModal')).show();
+    bootstrap.Offcanvas.getOrCreateInstance(document.getElementById('stockAdjustModal')).show();
 }
 
 function openBarcodeModal(barcodeVal, title, price) {
@@ -924,7 +911,7 @@ function openBarcodeModal(barcodeVal, title, price) {
         height: 45,
         displayValue: true
     });
-    new bootstrap.Modal(document.getElementById('barcodeModal')).show();
+    bootstrap.Offcanvas.getOrCreateInstance(document.getElementById('barcodeModal')).show();
 }
 
 function editCategoryRow(c) {
@@ -987,7 +974,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
                         // Close productTypeManageModal
                         const modalEl = document.getElementById('productTypeManageModal');
-                        const modalInstance = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+                        const modalInstance = bootstrap.Offcanvas.getInstance(modalEl);
                         if (modalInstance) modalInstance.hide();
 
                         // Reset form
