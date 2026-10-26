@@ -35,7 +35,7 @@ $TRANSLATIONS = [
         'purchases' => 'Purchases & Inward',
         'suppliers' => 'Suppliers',
         'customers' => 'Customers & Khata',
-        'schools' => 'School Book Lists',
+        'schools' => 'Packages & Bundles',
         'accounting' => 'Accounts & Cashbook',
         'reports' => 'Reports & Analytics',
         'users' => 'Users & Roles',
@@ -58,7 +58,7 @@ $TRANSLATIONS = [
         'purchases' => 'خریداری و سپلائرز',
         'suppliers' => 'سپلائرز (ڈیلرز)',
         'customers' => 'گاہک اور کھاتہ',
-        'schools' => 'سکول نصاب و پیکجز',
+        'schools' => 'پیکجز اور بنڈلز',
         'accounting' => 'اکاؤنٹس و کیش بک',
         'reports' => 'رپورٹس اور تجزیات',
         'users' => 'صارفین اور اختیارات',
@@ -254,8 +254,8 @@ function ensureProductSchema() {
             $cnt = dbFetchOne("SELECT COUNT(*) as c FROM product_types")['c'] ?? 0;
             if ($cnt == 0) {
                 $defaults = [
-                    ['code' => 'book', 'name' => 'Book / Textbook / Novel', 'description' => 'Curriculum textbooks, literature, general books', 'is_system' => 1],
-                    ['code' => 'stationery', 'name' => 'Stationery / Office Supply', 'description' => 'Notebooks, pens, registers, office supplies', 'is_system' => 1],
+                    ['code' => 'book', 'name' => 'Standard Products / Items', 'description' => 'Standard inventory items and retail products', 'is_system' => 1],
+                    ['code' => 'stationery', 'name' => 'Supplies & Stationery', 'description' => 'Consumables, packaging, stationery, office supplies', 'is_system' => 1],
                     ['code' => 'toys', 'name' => 'Toys & Games', 'description' => 'Educational toys, board games, puzzles and creative play', 'is_system' => 0]
                 ];
                 foreach ($defaults as $d) {
@@ -281,8 +281,8 @@ function getProductTypes() {
         return dbFetchAll("SELECT * FROM product_types ORDER BY is_system DESC, name ASC");
     } catch (Exception $e) {
         return [
-            ['id' => 1, 'code' => 'book', 'name' => 'Book / Textbook / Novel', 'is_system' => 1],
-            ['id' => 2, 'code' => 'stationery', 'name' => 'Stationery / Office Supply', 'is_system' => 1]
+            ['id' => 1, 'code' => 'book', 'name' => 'Standard Products / Items', 'is_system' => 1],
+            ['id' => 2, 'code' => 'stationery', 'name' => 'Supplies & Stationery', 'is_system' => 1]
         ];
     }
 }

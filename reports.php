@@ -379,7 +379,7 @@ if ($reportType === 'cash_closing') {
                     <td colspan="2" class="fw-bold text-primary"><i class="fa-solid fa-cart-shopping me-1"></i> 1. REVENUE FROM SALES</td>
                 </tr>
                 <tr>
-                    <td class="ps-4">Gross Sales & Course Sets Invoiced</td>
+                    <td class="ps-4">Gross Sales Invoiced</td>
                     <td class="text-end fw-semibold"><?= formatCurrency($salesData['gross_subtotal'] ?? 0) ?></td>
                 </tr>
                 <?php if ($totalDiscount > 0): ?>
@@ -504,7 +504,7 @@ if ($reportType === 'cash_closing') {
                     <?php $totalDebits += $totReceivables; ?>
                     <tr>
                         <td class="ps-4">
-                            <strong>Accounts Receivable (Customer & School Khata)</strong>
+                            <strong>Accounts Receivable (Customer Accounts)</strong>
                             <div class="text-muted small">Total outstanding balance due from credit buyers</div>
                         </td>
                         <td class="text-end font-monospace"><?= formatCurrency($totReceivables) ?></td>
@@ -516,7 +516,7 @@ if ($reportType === 'cash_closing') {
                     <tr>
                         <td class="ps-4">
                             <strong>Merchandise Inventory at Purchase Cost</strong>
-                            <div class="text-muted small">Current physical stock valuation (Books, Notebooks, Stationery)</div>
+                            <div class="text-muted small">Current physical inventory valuation</div>
                         </td>
                         <td class="text-end font-monospace"><?= formatCurrency($inventoryValuation) ?></td>
                         <td class="text-end font-monospace">-</td>
@@ -527,8 +527,8 @@ if ($reportType === 'cash_closing') {
                     <?php $totalCredits += $totPayables; ?>
                     <tr>
                         <td class="ps-4">
-                            <strong>Accounts Payable (Suppliers & Publishers Khata)</strong>
-                            <div class="text-muted small">Outstanding bills due to publishers and wholesale stationery vendors</div>
+                            <strong>Accounts Payable (Suppliers & Vendors Khata)</strong>
+                            <div class="text-muted small">Outstanding bills payable to suppliers and vendors</div>
                         </td>
                         <td class="text-end font-monospace">-</td>
                         <td class="text-end font-monospace"><?= formatCurrency($totPayables) ?></td>

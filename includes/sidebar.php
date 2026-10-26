@@ -47,7 +47,7 @@ $userRole = $_SESSION['user']['role'] ?? '';
         </a>
 
         <a href="schools.php" class="nav-link <?= $currentPage === 'schools.php' ? 'active' : '' ?>">
-            <i class="fa-solid fa-graduation-cap text-info"></i>
+            <i class="fa-solid fa-boxes-packing text-info"></i>
             <span><?= __t('schools') ?></span>
         </a>
 

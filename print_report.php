@@ -11,9 +11,9 @@ $selectedAccountId = (int)($_GET['account_id'] ?? 1);
 $selectedClassId = (int)($_GET['class_id'] ?? 0);
 
 $user = authUser();
-$shopName = getSetting('shop_name', 'Kitab Ghar & Stationery');
+$shopName = getSetting('shop_name', 'Retail & Wholesale Mart');
 $shopNameUrdu = getSetting('shop_name_urdu', 'کتاب گھر اینڈ اسٹیشنری مارٹ');
-$shopTagline = getSetting('shop_tagline', 'Complete Textbooks, General Books & Quality Stationery');
+$shopTagline = getSetting('shop_tagline', 'Point of Sale & Inventory Management System');
 $shopAddress = getSetting('shop_address', 'Shop # 14-18, Urdu Bazaar, Lahore, Pakistan');
 $shopPhone = getSetting('shop_phone', '+92 300 1234567 / 042-37210000');
 
@@ -193,7 +193,7 @@ elseif ($reportType === 'school_syllabus') {
                                 JOIN schools s ON s.id = sc.school_id 
                                 WHERE sc.id = ?", [$selectedClassId]);
     if ($currentClass) {
-        $reportTitle = 'CLASS SYLLABUS & BOOKLIST PACKAGE';
+        $reportTitle = 'PRODUCT PACKAGE & BUNDLE SPECIFICATION';
         $reportSubtitle = htmlspecialchars($currentClass['school_name']) . " &mdash; " . htmlspecialchars($currentClass['class_name']) . " (Session: " . htmlspecialchars($currentClass['academic_session']) . ")";
         $packageItems = dbFetchAll("SELECT sci.*, p.title, p.product_code, p.barcode, p.product_type, p.unit, 
                                            p.purchase_price, p.retail_price, p.current_stock, p.publisher, p.author
@@ -415,7 +415,7 @@ elseif ($reportType === 'supplier_statement') {
             </thead>
             <tbody>
                 <tr class="table-light"><td colspan="2" class="fw-bold text-primary">1. REVENUE FROM TRADING & SALES</td></tr>
-                <tr><td class="ps-4">Gross Sales & Syllabi Invoices</td><td class="text-end"><?= formatCurrency($salesData['gross_subtotal'] ?? 0) ?></td></tr>
+                <tr><td class="ps-4">Gross Sales Invoiced</td><td class="text-end"><?= formatCurrency($salesData['gross_subtotal'] ?? 0) ?></td></tr>
                 <?php if ($totalDiscount > 0): ?>
                     <tr><td class="ps-4 text-danger">Less: Customer Discounts Allowed</td><td class="text-end text-danger">- <?= formatCurrency($totalDiscount) ?></td></tr>
                 <?php endif; ?>
@@ -487,7 +487,7 @@ elseif ($reportType === 'supplier_statement') {
                 <tr class="table-light"><td colspan="3" class="fw-bold">CURRENT LIABILITIES</td></tr>
                 <?php $totC += $totPayables; ?>
                 <tr>
-                    <td class="ps-4">Accounts Payable (Publishers & Vendors Khata)</td>
+                    <td class="ps-4">Accounts Payable (Suppliers & Vendors Khata)</td>
                     <td class="text-end font-monospace">-</td>
                     <td class="text-end font-monospace"><?= formatCurrency($totPayables) ?></td>
                 </tr>
@@ -868,7 +868,7 @@ elseif ($reportType === 'supplier_statement') {
             <thead>
                 <tr>
                     <th style="width: 5%;">#</th>
-                    <th style="width: 45%;">Book / Stationery Item</th>
+                    <th style="width: 45%;">Product / Item Description</th>
                     <th style="width: 15%;">Publisher / Brand</th>
                     <th style="width: 10%;" class="text-center">Qty</th>
                     <th style="width: 10%;">Requirement</th>

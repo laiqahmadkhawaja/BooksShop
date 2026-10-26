@@ -123,7 +123,7 @@ require_once __DIR__ . '/includes/header.php';
                 <div class="col-12 col-md-6">
                     <label class="form-label small fw-bold">Title / Item Name *</label>
                     <input type="text" name="title" id="prod_title" class="form-control" required
-                           value="<?= htmlspecialchars($product['title']) ?>" placeholder="e.g. Oxford Progressive English 5">
+                           value="<?= htmlspecialchars($product['title']) ?>" placeholder="e.g. Wireless Mouse, Cotton Shirt, Standard Book">
                 </div>
 
                 <!-- Urdu Title -->
@@ -166,40 +166,40 @@ require_once __DIR__ . '/includes/header.php';
     <div class="card border-0 shadow-sm mb-4" id="bookSpecificFields">
         <div class="card-header bg-white py-3 border-bottom">
             <h6 class="fw-bold mb-0 text-success">
-                <i class="fa-solid fa-graduation-cap me-2"></i> 2. Textbook & Educational Syllabus Details
+                <i class="fa-solid fa-sliders me-2"></i> 2. Additional Specifications & Attributes (Optional)
             </h6>
         </div>
         <div class="card-body p-4">
             <div class="row g-3">
                 <div class="col-12 col-md-4">
-                    <label class="form-label small fw-bold">Subject / مضمون</label>
+                    <label class="form-label small fw-bold">Department / Subject / Tag</label>
                     <input type="text" name="subject" id="prod_subject" class="form-control"
-                           value="<?= htmlspecialchars($product['subject'] ?? '') ?>" placeholder="e.g. Mathematics, Science, Urdu">
+                           value="<?= htmlspecialchars($product['subject'] ?? '') ?>" placeholder="e.g. General, Apparel, Electronics, Science">
                 </div>
                 <div class="col-12 col-md-4">
-                    <label class="form-label small fw-bold">Class / Grade</label>
+                    <label class="form-label small fw-bold">Size / Model / Grade</label>
                     <input type="text" name="class_grade" id="prod_class_grade" class="form-control"
-                           value="<?= htmlspecialchars($product['class_grade'] ?? '') ?>" placeholder="e.g. Class 5, Grade 9, Matric">
+                           value="<?= htmlspecialchars($product['class_grade'] ?? '') ?>" placeholder="e.g. Standard, Medium, XL, Grade 5">
                 </div>
                 <div class="col-12 col-md-4">
-                    <label class="form-label small fw-bold">Educational Board / Syllabus</label>
+                    <label class="form-label small fw-bold">Brand / Series / Syllabus</label>
                     <input type="text" name="educational_board" id="prod_board" class="form-control"
-                           value="<?= htmlspecialchars($product['educational_board'] ?? '') ?>" placeholder="e.g. Punjab Curriculum, Oxford, Cambridge">
+                           value="<?= htmlspecialchars($product['educational_board'] ?? '') ?>" placeholder="e.g. Samsung, Oxford, National">
                 </div>
                 <div class="col-12 col-md-4">
-                    <label class="form-label small fw-bold">Author / Writer</label>
+                    <label class="form-label small fw-bold">Manufacturer / Author</label>
                     <input type="text" name="author" id="prod_author" class="form-control"
-                           value="<?= htmlspecialchars($product['author'] ?? '') ?>" placeholder="e.g. Nicholas Horsburgh">
+                           value="<?= htmlspecialchars($product['author'] ?? '') ?>" placeholder="e.g. Dell, Sony, Author">
                 </div>
                 <div class="col-12 col-md-4">
-                    <label class="form-label small fw-bold">Publisher</label>
+                    <label class="form-label small fw-bold">Publisher / Vendor</label>
                     <input type="text" name="publisher" id="prod_publisher" class="form-control"
-                           value="<?= htmlspecialchars($product['publisher'] ?? '') ?>" placeholder="e.g. Oxford University Press">
+                           value="<?= htmlspecialchars($product['publisher'] ?? '') ?>" placeholder="e.g. Vendor or Publisher">
                 </div>
                 <div class="col-12 col-md-4">
-                    <label class="form-label small fw-bold">ISBN</label>
+                    <label class="form-label small fw-bold">ISBN / Model / Part No</label>
                     <input type="text" name="isbn" id="prod_isbn" class="form-control"
-                           value="<?= htmlspecialchars($product['isbn'] ?? '') ?>" placeholder="e.g. 978-0-19-940825-3">
+                           value="<?= htmlspecialchars($product['isbn'] ?? '') ?>" placeholder="e.g. 978-0-19-940825-3, MOD-204">
                 </div>
                 <div class="col-12 col-md-4">
                     <label class="form-label small fw-bold">Edition</label>
@@ -324,12 +324,10 @@ require_once __DIR__ . '/includes/header.php';
 
 <script>
 function toggleProductTypeFields() {
-    const type = document.getElementById('prod_type').value;
+    // Keep additional specifications available for all product types
     const bookFields = document.getElementById('bookSpecificFields');
-    if (type === 'book') {
+    if (bookFields) {
         bookFields.style.display = 'block';
-    } else {
-        bookFields.style.display = 'none';
     }
 }
 

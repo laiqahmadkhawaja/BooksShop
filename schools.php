@@ -49,7 +49,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 dbQuery("INSERT INTO school_classes (school_id, class_name, academic_session, notes) VALUES (?, ?, ?, ?)",
                         [$schoolId, $className, $session, $notes]);
                 $classId = dbInsertId();
-                setFlash('success', "Class package created. Now add syllabus books and stationery.");
+                setFlash('success', "Package created. Now add products.");
             }
             redirect("schools.php?class_id=$classId");
         }
@@ -68,7 +68,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                      VALUES (?, ?, ?, ?, ?)
                      ON DUPLICATE KEY UPDATE quantity_needed = VALUES(quantity_needed), custom_price = VALUES(custom_price)",
                      [$classId, $productId, $isMandatory, $qty, $customPrice]);
-            setFlash('success', "Item added to class syllabus package.");
+            setFlash('success', "Item added to package.");
         }
         redirect("schools.php?class_id=$classId");
     }
@@ -78,7 +78,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $itemId = (int)$_POST['item_id'];
         $classId = (int)$_POST['class_id'];
         dbQuery("DELETE FROM school_class_items WHERE id = ?", [$itemId]);
-        setFlash('success', "Item removed from syllabus.");
+        setFlash('success', "Item removed from package.");
         redirect("schools.php?class_id=$classId");
     }
 }
@@ -124,21 +124,21 @@ if ($selectedClassId) {
 // All products list for the syllabus item selector
 $allProducts = dbFetchAll("SELECT id, title, product_code, product_type, retail_price, current_stock FROM products WHERE status = 1 ORDER BY title ASC");
 
-$pageTitle = 'School Book Lists & Packages';
+$pageTitle = 'Product Packages & Bundles';
 require_once __DIR__ . '/includes/header.php';
 ?>
 
 <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
     <div>
-        <h4 class="fw-bold mb-0 text-dark"><i class="fa-solid fa-graduation-cap text-info me-2"></i> Academic Book Lists & Class Packages</h4>
-        <small class="text-muted">Manage school syllabus, class-wise textbook packages, stationery lists & bulk orders</small>
+        <h4 class="fw-bold mb-0 text-dark"><i class="fa-solid fa-boxes-packing text-info me-2"></i> Product Packages & Bundles</h4>
+        <small class="text-muted">Manage product bundles, combo packages, kits & bulk sets</small>
     </div>
     <div class="d-flex gap-2">
         <a href="school_form.php" class="btn btn-outline-primary btn-sm">
-            <i class="fa-solid fa-school me-1"></i> Add School Profile
+            <i class="fa-solid fa-folder-plus me-1"></i> Add Organization / Group
         </a>
         <a href="school_class_form.php" class="btn btn-info text-white btn-sm">
-            <i class="fa-solid fa-plus-circle me-1"></i> Create Class Syllabus Package
+            <i class="fa-solid fa-plus-circle me-1"></i> Create Package / Bundle
         </a>
     </div>
 </div>
@@ -148,11 +148,11 @@ require_once __DIR__ . '/includes/header.php';
     <div class="col-lg-4">
         <div class="card shadow-sm h-100">
             <div class="card-header bg-white py-3">
-                <h6 class="mb-0 fw-bold text-dark"><i class="fa-solid fa-layer-group text-primary me-2"></i> Syllabus Packages</h6>
+                <h6 class="mb-0 fw-bold text-dark"><i class="fa-solid fa-layer-group text-primary me-2"></i> Packages & Bundles</h6>
             </div>
             <div class="list-group list-group-flush directory-list-scroll">
                 <?php if (empty($classes)): ?>
-                    <div class="p-4 text-center text-muted">No classes created yet. Click "Create Class Syllabus Package".</div>
+                    <div class="p-4 text-center text-muted">No packages created yet. Click "Create Package / Bundle".</div>
                 <?php else: ?>
                     <?php foreach ($classes as $c): ?>
                         <a href="schools.php?class_id=<?= $c['id'] ?>" class="list-group-item list-group-item-action <?= $selectedClassId == $c['id'] ? 'active' : '' ?> py-3">
@@ -179,8 +179,8 @@ require_once __DIR__ . '/includes/header.php';
     <div class="col-lg-8">
         <?php if (!$currentClass): ?>
             <div class="card shadow-sm p-5 text-center text-muted">
-                <i class="fa-solid fa-book-bookmark fa-3x mb-3 text-secondary opacity-50"></i>
-                <h5>Select a class syllabus package on the left to view its complete booklist.</h5>
+                <i class="fa-solid fa-boxes-stacked fa-3x mb-3 text-secondary opacity-50"></i>
+                <h5>Select a package on the left to view its complete item list.</h5>
             </div>
         <?php else: ?>
             <!-- Package Header Banner -->
@@ -200,7 +200,7 @@ require_once __DIR__ . '/includes/header.php';
 
                         <!-- Package Cost & Retail Pill -->
                         <div class="text-start text-sm-end">
-                            <div class="small text-muted">Complete Course Package Price:</div>
+                            <div class="small text-muted">Complete Package Price:</div>
                             <h3 class="fw-bold text-success mb-0"><?= formatCurrency($packageTotalPrice) ?></h3>
                             <span class="small text-muted">Estimated Margin: <?= formatCurrency($packageTotalPrice - $packageTotalCost) ?></span>
                         </div>
@@ -212,13 +212,13 @@ require_once __DIR__ . '/includes/header.php';
                             <i class="fa-solid fa-cart-arrow-down me-1"></i> Open in POS Terminal
                         </a>
                         <a href="school_item_form.php?class_id=<?= $selectedClassId ?>" class="btn btn-outline-primary btn-sm">
-                            <i class="fa-solid fa-plus me-1"></i> Add Book / Stationery Item
+                            <i class="fa-solid fa-plus me-1"></i> Add Product to Package
                         </a>
                         <a href="school_class_form.php?id=<?= $selectedClassId ?>" class="btn btn-outline-secondary btn-sm">
-                            <i class="fa-solid fa-pen-to-square me-1"></i> Edit Class
+                            <i class="fa-solid fa-pen-to-square me-1"></i> Edit Package
                         </a>
                         <a href="print_report.php?report=school_syllabus&class_id=<?= $selectedClassId ?>" target="_blank" class="btn btn-outline-dark btn-sm">
-                            <i class="fa-solid fa-print me-1"></i> Print Syllabus Booklist (New Page)
+                            <i class="fa-solid fa-print me-1"></i> Print Package Specification (New Page)
                         </a>
                     </div>
                 </div>
@@ -230,7 +230,7 @@ require_once __DIR__ . '/includes/header.php';
                             <thead class="table-light small text-uppercase">
                                 <tr>
                                     <th style="width: 5%;">#</th>
-                                    <th style="width: 40%;">Title / Book Description</th>
+                                    <th style="width: 40%;">Product / Item Description</th>
                                     <th style="width: 15%;">Type</th>
                                     <th style="width: 10%;" class="text-center">Required Qty</th>
                                     <th style="width: 12%;" class="text-center">Item Price</th>
@@ -242,7 +242,7 @@ require_once __DIR__ . '/includes/header.php';
                                 <?php if (empty($packageItems)): ?>
                                     <tr>
                                         <td colspan="7" class="text-center py-4 text-muted">
-                                            No items added to this package yet. Click "Add Book / Stationery Item" above.
+                                            No items added to this package yet. Click "Add Product to Package" above.
                                         </td>
                                     </tr>
                                 <?php else: ?>

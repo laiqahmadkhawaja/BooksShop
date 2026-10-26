@@ -7,8 +7,8 @@ $todayDate = date('Y-m-d');
 $firstDayMonth = date('Y-m-01');
 
 // 1. KPI Cards data
-$totalBooks = dbFetchOne("SELECT COUNT(*) as cnt FROM products WHERE product_type = 'book' AND status = 1")['cnt'] ?? 0;
-$totalStationery = dbFetchOne("SELECT COUNT(*) as cnt FROM products WHERE product_type = 'stationery' AND status = 1")['cnt'] ?? 0;
+$totalActiveProducts = dbFetchOne("SELECT COUNT(*) as cnt FROM products WHERE status = 1")['cnt'] ?? 0;
+$totalDepartments = dbFetchOne("SELECT COUNT(*) as cnt FROM product_types")['cnt'] ?? 0;
 $totalCategories = dbFetchOne("SELECT COUNT(*) as cnt FROM categories")['cnt'] ?? 0;
 
 // Stock quantity & valuation
@@ -64,7 +64,7 @@ $recentSales = dbFetchAll("SELECT s.*, c.name as customer_name
     WHERE s.hold_status = 0 
     ORDER BY s.id DESC LIMIT 8");
 
-// Top Selling Books / Stationery
+// Top Selling Products
 $topSelling = dbFetchAll("SELECT p.title, p.product_code, p.product_type, SUM(si.quantity) as sold_qty, SUM(si.subtotal) as total_amount
     FROM sale_items si
     JOIN products p ON p.id = si.product_id
@@ -107,14 +107,14 @@ for ($i = 5; $i >= 0; $i--) {
                     <a href="pos.php" class="btn btn-pos btn-sm shadow-sm">
                         <i class="fa-solid fa-cash-register me-1"></i> New POS Bill (F2)
                     </a>
-                    <a href="books.php?action=new" class="btn btn-primary btn-sm">
+                    <a href="product_form.php" class="btn btn-primary btn-sm">
                         <i class="fa-solid fa-plus-circle me-1"></i> Add Product
                     </a>
                     <a href="purchases.php?action=new" class="btn btn-success btn-sm">
                         <i class="fa-solid fa-cart-arrow-down me-1"></i> Record Purchase
                     </a>
-                    <a href="schools.php" class="btn btn-info text-white btn-sm">
-                        <i class="fa-solid fa-graduation-cap me-1"></i> Class Syllabus Bundles
+                    <a href="categories.php" class="btn btn-info text-white btn-sm">
+                        <i class="fa-solid fa-tags me-1"></i> Categories & Depts
                     </a>
                     <a href="accounting.php?action=expense" class="btn btn-danger btn-sm">
                         <i class="fa-solid fa-receipt me-1"></i> Add Expense
@@ -213,11 +213,11 @@ for ($i = 5; $i >= 0; $i--) {
         <div class="card p-3 border-start border-info border-4 shadow-sm">
             <div class="d-flex justify-content-between align-items-center">
                 <div>
-                    <span class="text-secondary small fw-semibold">Books & Textbooks</span>
-                    <h5 class="fw-bold mb-0 text-info mt-1"><?= number_format($totalBooks) ?> Titles</h5>
-                    <span class="text-muted small">Oxford, PTB, Literature, Islamic</span>
+                    <span class="text-secondary small fw-semibold">Active Catalog Products</span>
+                    <h5 class="fw-bold mb-0 text-info mt-1"><?= number_format($totalActiveProducts) ?> Items</h5>
+                    <span class="text-muted small"><?= number_format($totalCategories) ?> Categories &bull; <?= number_format($totalDepartments) ?> Depts</span>
                 </div>
-                <div class="p-3 bg-light rounded text-info"><i class="fa-solid fa-book-open fs-4"></i></div>
+                <div class="p-3 bg-light rounded text-info"><i class="fa-solid fa-boxes-stacked fs-4"></i></div>
             </div>
         </div>
     </div>
@@ -226,11 +226,11 @@ for ($i = 5; $i >= 0; $i--) {
         <div class="card p-3 border-start border-warning border-4 shadow-sm">
             <div class="d-flex justify-content-between align-items-center">
                 <div>
-                    <span class="text-secondary small fw-semibold">Stationery Products</span>
-                    <h5 class="fw-bold mb-0 text-warning mt-1"><?= number_format($totalStationery) ?> Items</h5>
-                    <span class="text-muted small">Pens, Registers, Notebooks, Art</span>
+                    <span class="text-secondary small fw-semibold">Total Stock in Hand</span>
+                    <h5 class="fw-bold mb-0 text-warning mt-1"><?= number_format($totalStockQty) ?> Units</h5>
+                    <span class="text-muted small"><?= $lowStockCount > 0 ? "<span class='text-danger fw-semibold'><i class='fa-solid fa-triangle-exclamation me-1'></i>{$lowStockCount} Low stock alerts</span>" : "<span class='text-success'>All stock healthy</span>" ?></span>
                 </div>
-                <div class="p-3 bg-light rounded text-warning"><i class="fa-solid fa-pencil fs-4"></i></div>
+                <div class="p-3 bg-light rounded text-warning"><i class="fa-solid fa-layer-group fs-4"></i></div>
             </div>
         </div>
     </div>
