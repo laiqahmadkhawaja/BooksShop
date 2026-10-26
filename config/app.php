@@ -251,13 +251,7 @@ function ensureProductSchema() {
         $cnt = dbFetchOne("SELECT COUNT(*) as c FROM product_types")['c'] ?? 0;
         if ($cnt == 0) {
             dbQuery("INSERT IGNORE INTO product_types (code, name, description, is_system) VALUES 
-                ('book', 'Book / Textbook / Novel', 'Curriculum textbooks, literature, general books', 1),
-                ('stationery', 'Stationery / Office Supply', 'Notebooks, pens, registers, office supplies', 1),
-                ('toys', 'Toys & Games', 'Educational toys, board games, puzzles and creative play', 0)");
-        } else {
-            // Ensure default toys product type is available
-            dbQuery("INSERT IGNORE INTO product_types (code, name, description, is_system) VALUES 
-                ('toys', 'Toys & Games', 'Educational toys, board games, puzzles and creative play', 0)");
+                ('book', 'Standard Products', 'General retail products and catalog items', 1)");
         }
 
         // Ensure products and categories tables support arbitrary custom types
