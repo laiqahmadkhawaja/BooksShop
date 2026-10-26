@@ -39,7 +39,7 @@ if ($isEdit) {
         'retail_price' => '0.00',
         'wholesale_price' => '0.00',
         'discount_percent' => '0.00',
-        'stock' => 0,
+        'current_stock' => 0,
         'min_stock_alert' => 5,
         'rack_location' => '',
         'shelf_location' => '',
@@ -268,7 +268,7 @@ require_once __DIR__ . '/includes/header.php';
                 <div class="col-12 col-md-4">
                     <label class="form-label small fw-bold">Current System Stock</label>
                     <input type="text" class="form-control bg-light fw-bold text-primary" readonly
-                           value="<?= (float)$product['stock'] ?> <?= htmlspecialchars($product['unit']) ?>">
+                           value="<?= (float)($product['current_stock'] ?? 0) ?> <?= htmlspecialchars($product['unit']) ?>">
                     <div class="form-text small">Adjust stock via Stock Adjustment on catalog page.</div>
                 </div>
                 <?php endif; ?>
