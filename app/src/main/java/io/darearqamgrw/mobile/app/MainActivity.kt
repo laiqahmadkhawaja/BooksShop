@@ -174,12 +174,12 @@ class MainActivity : AppCompatActivity() {
                 // Inject print/share interceptor and downloader
                 web.evaluateJavascript("""
                     (function() {
-                        // Override window.print() to trigger receipt image sharing in APK
+                        // Override window.print() to route to html2canvas receipt capture
                         window.print = function() {
-                            if (window.AndroidPrinter && typeof window.AndroidPrinter.sharePageAsImage === 'function') {
+                            if (typeof triggerShareDialog === 'function') {
+                                triggerShareDialog();
+                            } else if (window.AndroidPrinter && typeof window.AndroidPrinter.sharePageAsImage === 'function') {
                                 window.AndroidPrinter.sharePageAsImage(document.title || 'Receipt');
-                            } else if (window.AndroidPrinter && typeof window.AndroidPrinter.printOrShare === 'function') {
-                                window.AndroidPrinter.printOrShare(window.location.href, document.title || 'Receipt');
                             } else if (navigator.share) {
                                 navigator.share({ title: document.title, url: window.location.href }).catch(function(){});
                             }
@@ -325,20 +325,26 @@ class MainActivity : AppCompatActivity() {
         @JavascriptInterface
         fun sharePageAsImage(title: String? = null) {
             runOnUiThread {
-                try {
-                    val w = web.width
-                    val h = web.height
-                    if (w <= 0 || h <= 0) {
-                        Toast.makeText(this@MainActivity, "Unable to capture page image", Toast.LENGTH_SHORT).show()
-                        return@runOnUiThread
+                web.evaluateJavascript("typeof triggerShareDialog === 'function'") { result ->
+                    if (result == "true") {
+                        web.evaluateJavascript("triggerShareDialog()", null)
+                    } else {
+                        try {
+                            val w = web.width
+                            val h = web.height
+                            if (w <= 0 || h <= 0) {
+                                Toast.makeText(this@MainActivity, "Unable to capture page image", Toast.LENGTH_SHORT).show()
+                                return@evaluateJavascript
+                            }
+                            val bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+                            val canvas = Canvas(bitmap)
+                            web.draw(canvas)
+                            shareBitmap(bitmap, title ?: (web.title ?: "Receipt"))
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                            Toast.makeText(this@MainActivity, "Error capturing receipt: ${e.message}", Toast.LENGTH_SHORT).show()
+                        }
                     }
-                    val bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
-                    val canvas = Canvas(bitmap)
-                    web.draw(canvas)
-                    shareBitmap(bitmap, title ?: (web.title ?: "Receipt"))
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                    Toast.makeText(this@MainActivity, "Error capturing receipt: ${e.message}", Toast.LENGTH_SHORT).show()
                 }
             }
         }

@@ -620,7 +620,6 @@ body.lang-ur .stat-card .stat-icon {
     display: flex;
     flex-direction: column;
     width: 100%;
-    min-height: 120px;
     background-color: #fff;
     border-radius: 0.75rem;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
@@ -636,12 +635,11 @@ body.lang-ur .stat-card .stat-icon {
 }
 
 .modal-dialog-scrollable {
-    display: flex;
-    max-height: calc(100% - 1.5rem);
+    height: calc(100% - 3.5rem);
 }
 
 .modal-dialog-scrollable .modal-content {
-    max-height: calc(100vh - 3.5rem);
+    max-height: 100%;
     overflow: hidden;
 }
 
@@ -649,30 +647,54 @@ body.lang-ur .stat-card .stat-icon {
 .modal-content > form > .modal-body {
     overflow-y: auto !important;
     -webkit-overflow-scrolling: touch;
-    max-height: calc(100vh - 180px);
+    flex: 1 1 auto;
+    padding: 1.25rem;
 }
 
-.modal-header,
+.modal-header {
+    flex-shrink: 0;
+}
+
 .modal-footer {
     flex-shrink: 0;
 }
 
+/* Mobile: prevent vertical centering from pushing dialog down off-screen */
 @media (max-width: 768px) {
+    .modal-dialog-centered {
+        align-items: flex-start !important;
+        min-height: calc(100% - 20px) !important;
+    }
     .modal-dialog {
         max-width: 96% !important;
         margin: 10px auto !important;
     }
+    .modal-dialog-scrollable {
+        height: calc(100% - 20px) !important;
+        max-height: calc(100vh - 20px) !important;
+    }
     .modal-dialog-scrollable .modal-content {
         max-height: calc(100vh - 20px) !important;
+        height: auto !important;
+        display: flex !important;
+        flex-direction: column !important;
     }
     .modal-dialog-scrollable .modal-body,
     .modal-content > form > .modal-body {
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch;
+        flex: 1 1 auto !important;
         max-height: calc(100vh - 140px) !important;
         padding: 14px !important;
     }
     .modal-footer {
+        flex-shrink: 0 !important;
         flex-wrap: wrap;
         gap: 6px;
+        position: sticky;
+        bottom: 0;
+        background: #f8f9fa;
+        z-index: 5;
     }
     .modal-footer .btn {
         flex: 1 1 auto;
@@ -680,6 +702,7 @@ body.lang-ur .stat-card .stat-icon {
         padding: 8px 10px;
     }
 }
+
 /* Mobile Responsive Enhancements */
 @media (max-width: 576px) {
     .container-fluid.px-4 {

@@ -169,7 +169,7 @@ $shopPhone = getSetting('shop_phone', '+92 300 1234567 / 042-37210000');
             </div>
         </div>
         <div class="d-flex align-items-center gap-2">
-            <button onclick="window.print()" class="btn btn-success btn-sm fw-bold shadow-sm px-3">
+            <button type="button" onclick="triggerShareDialog()" class="btn btn-success btn-sm fw-bold shadow-sm px-3">
                 <i class="fa-solid fa-print me-1"></i> Print / Share
             </button>
             <button type="button" onclick="triggerShareDialog()" class="btn btn-outline-success btn-sm fw-bold shadow-sm px-2">
@@ -459,17 +459,35 @@ document.addEventListener('DOMContentLoaded', function() {
 <script src="assets/js/html2canvas.min.js"></script>
 <script>
 function triggerShareDialog() {
-    var captureTarget = document.querySelector('.thermal-wrapper') || document.querySelector('.invoice-box') || document.querySelector('.report-container') || document.body;
-    
-    // In Android APK, share receipt picture/image directly to thermal printer app or share sheet
+    var captureTarget = document.querySelector('.thermal-wrapper') || 
+                        document.querySelector('.a4-wrapper') || 
+                        document.querySelector('.print-container') || 
+                        document.querySelector('.report-container') || 
+                        document.body;
+
+    // Hide any toolbar or action buttons so they never appear in the receipt image
+    var toolbars = document.querySelectorAll('.print-actions, .action-toolbar, .no-print');
+    toolbars.forEach(function(el) { el.style.display = 'none'; });
+
+    var originalBg = captureTarget.style.backgroundColor;
+    captureTarget.style.backgroundColor = '#ffffff';
+
     if (window.AndroidPrinter) {
         if (typeof html2canvas !== 'undefined') {
+            window.scrollTo(0, 0);
             html2canvas(captureTarget, {
                 scale: 2,
                 backgroundColor: '#ffffff',
                 useCORS: true,
-                logging: false
+                logging: false,
+                windowWidth: captureTarget.scrollWidth,
+                windowHeight: captureTarget.scrollHeight,
+                scrollX: 0,
+                scrollY: 0
             }).then(function(canvas) {
+                toolbars.forEach(function(el) { el.style.display = ''; });
+                captureTarget.style.backgroundColor = originalBg;
+
                 var base64 = canvas.toDataURL('image/png');
                 if (typeof window.AndroidPrinter.shareBase64Image === 'function') {
                     window.AndroidPrinter.shareBase64Image(base64, document.title || 'Receipt');
@@ -477,17 +495,22 @@ function triggerShareDialog() {
                     window.AndroidPrinter.sharePageAsImage(document.title || 'Receipt');
                 }
             }).catch(function(err) {
+                toolbars.forEach(function(el) { el.style.display = ''; });
+                captureTarget.style.backgroundColor = originalBg;
                 if (typeof window.AndroidPrinter.sharePageAsImage === 'function') {
                     window.AndroidPrinter.sharePageAsImage(document.title || 'Receipt');
                 }
             });
             return;
         } else if (typeof window.AndroidPrinter.sharePageAsImage === 'function') {
+            toolbars.forEach(function(el) { el.style.display = ''; });
             window.AndroidPrinter.sharePageAsImage(document.title || 'Receipt');
             return;
         }
     }
 
+    toolbars.forEach(function(el) { el.style.display = ''; });
+    captureTarget.style.backgroundColor = originalBg;
     if (navigator.share) {
         navigator.share({ title: document.title, url: window.location.href }).catch(function(){});
     } else {
@@ -498,7 +521,7 @@ function triggerShareDialog() {
 (function() {
     var originalWindowPrint = window.print;
     window.print = function() {
-        if (window.AndroidPrinter) {
+        if (typeof triggerShareDialog === 'function') {
             triggerShareDialog();
             return;
         }
