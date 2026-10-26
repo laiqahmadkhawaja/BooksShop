@@ -242,9 +242,9 @@ require_once __DIR__ . '/includes/header.php';
         <a href="?export_csv=1" class="btn btn-outline-success btn-sm">
             <i class="fa-solid fa-file-excel me-1"></i> Export CSV
         </a>
-        <button type="button" class="btn btn-primary btn-sm shadow-sm" data-bs-toggle="offcanvas" data-bs-target="#productModal" onclick="openNewProductModal()">
+        <a href="product_form.php" class="btn btn-primary btn-sm shadow-sm">
             <i class="fa-solid fa-plus-circle me-1"></i> Add New Product / Book
-        </button>
+        </a>
     </div>
 </div>
 
@@ -396,9 +396,9 @@ require_once __DIR__ . '/includes/header.php';
                                 <td class="text-end">
                                     <div class="btn-group btn-group-sm">
                                         <!-- Edit -->
-                                        <button type="button" class="btn btn-outline-secondary" onclick='openEditProductModal(<?= json_encode($p) ?>)' title="Edit Product">
+                                        <a href="product_form.php?id=<?= $p['id'] ?>" class="btn btn-outline-secondary" title="Edit Product">
                                             <i class="fa-solid fa-pen-to-square"></i>
-                                        </button>
+                                        </a>
                                         <!-- Adjust Stock -->
                                         <button type="button" class="btn btn-outline-info" onclick="openStockAdjustModal(<?= $p['id'] ?>, '<?= htmlspecialchars(addslashes($p['title'])) ?>', <?= (float)$p['current_stock'] ?>)" title="Adjust Stock">
                                             <i class="fa-solid fa-sliders"></i>
@@ -419,155 +419,7 @@ require_once __DIR__ . '/includes/header.php';
 </div>
 
 <!-- Modal: Add / Edit Product -->
-<!-- Bottom Sheet: Add/Edit Product -->
-<div class="offcanvas offcanvas-bottom" id="productModal" tabindex="-1" aria-labelledby="productModalTitle" style="height: 94vh; max-height: 94vh; border-top-left-radius: 20px; border-top-right-radius: 20px; box-shadow: 0 -10px 30px rgba(0,0,0,0.25);">
-    <form method="POST" action="books.php" class="m-0 d-flex flex-column h-100">
-        <input type="hidden" name="save_product" value="1">
-        <input type="hidden" name="product_id" id="prod_id" value="0">
-
-        <div class="offcanvas-header bg-light border-bottom flex-shrink-0 py-3 px-4">
-            <h5 class="offcanvas-title fw-bold" id="productModalTitle"><i class="fa-solid fa-book text-primary me-2"></i> Add New Product</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
-        </div>
-
-        <div class="offcanvas-body p-3 p-md-4 flex-grow-1" style="overflow-y: auto;">
-                    <div class="row g-3">
-                        <!-- Product Type & Code -->
-                        <div class="col-md-4">
-                            <div class="d-flex justify-content-between align-items-center mb-1">
-                                <label class="form-label small fw-bold mb-0">Product Type *</label>
-                                <a href="javascript:void(0)" class="small text-decoration-none fw-bold text-primary" data-bs-toggle="offcanvas" data-bs-target="#productTypeManageModal">+ Add Type</a>
-                            </div>
-                            <select name="product_type" id="prod_type" class="form-select" onchange="toggleProductTypeFields()">
-                                <?php foreach ($productTypes as $pt): ?>
-                                    <option value="<?= htmlspecialchars($pt['code']) ?>"><?= htmlspecialchars($pt['name']) ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label small fw-bold">Product Code / SKU *</label>
-                            <input type="text" name="product_code" id="prod_code" class="form-control" required placeholder="e.g. BK-1025 or ST-2030">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label small fw-bold">Barcode (EAN-13 / Code128)</label>
-                            <input type="text" name="barcode" id="prod_barcode" class="form-control" placeholder="Scan or leave blank to use code">
-                        </div>
-
-                        <!-- Titles -->
-                        <div class="col-md-6">
-                            <label class="form-label small fw-bold">Title / Item Name *</label>
-                            <input type="text" name="title" id="prod_title" class="form-control" required placeholder="e.g. Oxford Progressive English 5">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label small fw-bold">Urdu Title (اردو نام)</label>
-                            <input type="text" name="urdu_title" id="prod_urdu_title" class="form-control" placeholder="اردو میں کتاب یا آئٹم کا نام">
-                        </div>
-
-                        <!-- Category & Unit -->
-                        <div class="col-md-6">
-                            <div class="d-flex justify-content-between align-items-center mb-1">
-                                <label class="form-label small fw-bold mb-0">Category</label>
-                                <a href="javascript:void(0)" class="small text-decoration-none fw-bold text-primary" data-bs-toggle="offcanvas" data-bs-target="#categoryManageModal">+ Add Category</a>
-                            </div>
-                            <select name="category_id" id="prod_category_id" class="form-select">
-                                <option value="">-- Select Category --</option>
-                                <?php foreach ($categories as $cat): ?>
-                                    <option value="<?= $cat['id'] ?>"><?= htmlspecialchars($cat['name']) ?> (<?= ucfirst($cat['type']) ?>)</option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label small fw-bold">Selling Unit</label>
-                            <select name="unit" id="prod_unit" class="form-select">
-                                <option value="Piece">Piece / Single Book</option>
-                                <option value="Pack">Pack</option>
-                                <option value="Box">Box</option>
-                                <option value="Dozen">Dozen</option>
-                                <option value="Carton">Carton</option>
-                                <option value="Set">Complete Course Set</option>
-                            </select>
-                        </div>
-
-                        <!-- Book-Specific Fields Container -->
-                        <div id="bookSpecificFields" class="row g-3 m-0 p-3 bg-light rounded border">
-                            <div class="col-12"><h6 class="fw-bold text-primary mb-0"><i class="fa-solid fa-graduation-cap me-1"></i> Academic & Book Details</h6></div>
-                            <div class="col-md-4">
-                                <label class="form-label small">ISBN</label>
-                                <input type="text" name="isbn" id="prod_isbn" class="form-control form-control-sm" placeholder="e.g. 978-0199408221">
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label small">Author</label>
-                                <input type="text" name="author" id="prod_author" class="form-control form-control-sm" placeholder="Author name">
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label small">Publisher</label>
-                                <input type="text" name="publisher" id="prod_publisher" class="form-control form-control-sm" placeholder="e.g. Oxford, PCTB">
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label small">Edition</label>
-                                <input type="text" name="edition" id="prod_edition" class="form-control form-control-sm" placeholder="e.g. 3rd Edition">
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label small">Class / Grade</label>
-                                <input type="text" name="class_grade" id="prod_class_grade" class="form-control form-control-sm" placeholder="e.g. Class 5 / Matric">
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label small">Educational Board</label>
-                                <input type="text" name="educational_board" id="prod_board" class="form-control form-control-sm" placeholder="e.g. Punjab Board, Cambridge">
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label small">Language</label>
-                                <select name="language" id="prod_language" class="form-select form-select-sm">
-                                    <option value="English">English</option>
-                                    <option value="Urdu">Urdu</option>
-                                    <option value="Arabic">Arabic</option>
-                                    <option value="Other">Other</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <!-- Pricing & Stock -->
-                        <div class="col-md-4">
-                            <label class="form-label small fw-bold">Purchase Cost (Rs.)</label>
-                            <input type="number" step="0.01" name="purchase_price" id="prod_cost" class="form-control" value="0.00">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label small fw-bold">Retail Price / MRP (Rs.) *</label>
-                            <input type="number" step="0.01" name="retail_price" id="prod_retail" class="form-control" required value="0.00">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label small fw-bold">Wholesale Price (Rs.)</label>
-                            <input type="number" step="0.01" name="wholesale_price" id="prod_wholesale" class="form-control" value="0.00">
-                        </div>
-
-                        <!-- Stock levels -->
-                        <div class="col-md-4" id="initialStockDiv">
-                            <label class="form-label small fw-bold">Initial Opening Stock</label>
-                            <input type="number" step="0.01" name="initial_stock" id="prod_stock" class="form-control" value="0">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label small fw-bold">Min Stock Alert Level</label>
-                            <input type="number" step="0.01" name="min_stock_alert" id="prod_min_stock" class="form-control" value="5">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label small fw-bold">Rack / Storage Location</label>
-                            <input type="text" name="rack_location" id="prod_rack" class="form-control" placeholder="e.g. Rack B, Row 2">
-                        </div>
-
-                        <div class="col-12">
-                            <label class="form-label small">Description / Notes</label>
-                            <textarea name="description" id="prod_desc" class="form-control" rows="2" placeholder="Course syllabus notes, tags, or description"></textarea>
-                        </div>
-                    </div>
-                </div>
-
-                </div>
-        <div class="p-3 bg-light border-top flex-shrink-0 d-flex justify-content-end gap-2">
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="offcanvas">Cancel</button>
-            <button type="submit" class="btn btn-primary px-4 fw-bold"><i class="fa-solid fa-save me-1"></i> Save Product</button>
-        </div>
-    </form>
-</div>
+<!-- Product Add/Edit is managed via dedicated product_form.php -->
 
 <!-- Modal: Quick Stock Adjustment -->
 <!-- Bottom Sheet: Quick Stock Adjustment -->
@@ -837,62 +689,6 @@ function toggleProductTypeFields() {
     } else {
         bookFields.style.display = 'none';
     }
-}
-
-function openNewProductModal() {
-    document.getElementById('productModalTitle').innerHTML = '<i class="fa-solid fa-book text-primary me-2"></i> Add New Product / Book';
-    document.getElementById('prod_id').value = '0';
-    document.getElementById('prod_code').value = 'BK-' + Math.floor(1000 + Math.random() * 9000);
-    document.getElementById('prod_barcode').value = '';
-    document.getElementById('prod_title').value = '';
-    document.getElementById('prod_urdu_title').value = '';
-    document.getElementById('prod_type').value = 'book';
-    document.getElementById('prod_category_id').value = '';
-    document.getElementById('prod_isbn').value = '';
-    document.getElementById('prod_author').value = '';
-    document.getElementById('prod_publisher').value = '';
-    document.getElementById('prod_edition').value = '';
-    document.getElementById('prod_class_grade').value = '';
-    document.getElementById('prod_board').value = '';
-    document.getElementById('prod_language').value = 'English';
-    document.getElementById('prod_unit').value = 'Piece';
-    document.getElementById('prod_cost').value = '0.00';
-    document.getElementById('prod_retail').value = '0.00';
-    document.getElementById('prod_wholesale').value = '0.00';
-    document.getElementById('prod_stock').value = '0';
-    document.getElementById('initialStockDiv').style.display = 'block';
-    document.getElementById('prod_min_stock').value = '5';
-    document.getElementById('prod_rack').value = '';
-    document.getElementById('prod_desc').value = '';
-    toggleProductTypeFields();
-}
-
-function openEditProductModal(p) {
-    document.getElementById('productModalTitle').innerHTML = '<i class="fa-solid fa-pen-to-square text-secondary me-2"></i> Edit Product';
-    document.getElementById('prod_id').value = p.id;
-    document.getElementById('prod_code').value = p.product_code;
-    document.getElementById('prod_barcode').value = p.barcode || '';
-    document.getElementById('prod_title').value = p.title;
-    document.getElementById('prod_urdu_title').value = p.urdu_title || '';
-    document.getElementById('prod_type').value = p.product_type;
-    document.getElementById('prod_category_id').value = p.category_id || '';
-    document.getElementById('prod_isbn').value = p.isbn || '';
-    document.getElementById('prod_author').value = p.author || '';
-    document.getElementById('prod_publisher').value = p.publisher || '';
-    document.getElementById('prod_edition').value = p.edition || '';
-    document.getElementById('prod_class_grade').value = p.class_grade || '';
-    document.getElementById('prod_board').value = p.educational_board || '';
-    document.getElementById('prod_language').value = p.language || 'English';
-    document.getElementById('prod_unit').value = p.unit || 'Piece';
-    document.getElementById('prod_cost').value = p.purchase_price;
-    document.getElementById('prod_retail').value = p.retail_price;
-    document.getElementById('prod_wholesale').value = p.wholesale_price;
-    document.getElementById('initialStockDiv').style.display = 'none'; // stock adjusted via adjustment modal
-    document.getElementById('prod_min_stock').value = p.min_stock_alert;
-    document.getElementById('prod_rack').value = p.rack_location || '';
-    document.getElementById('prod_desc').value = p.description || '';
-    toggleProductTypeFields();
-    bootstrap.Offcanvas.getOrCreateInstance(document.getElementById('productModal')).show();
 }
 
 function openStockAdjustModal(id, name, curStock) {
