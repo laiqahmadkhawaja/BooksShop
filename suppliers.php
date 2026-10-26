@@ -197,15 +197,15 @@ require_once __DIR__ . '/includes/header.php';
                     <!-- Action Buttons -->
                     <div class="d-flex flex-wrap gap-2 mt-3 pt-3 border-top">
                         <!-- Pay Supplier -->
-                        <button type="button" class="btn btn-danger btn-sm" onclick="openPaySupplierModal(<?= $currentSupplier['id'] ?>, '<?= htmlspecialchars(addslashes($currentSupplier['name'])) ?>', <?= (float)$currentSupplier['current_balance'] ?>)">
+                        <a href="supplier_payment.php?supplier_id=<?= $currentSupplier['id'] ?>" class="btn btn-danger btn-sm">
                             <i class="fa-solid fa-money-bill-transfer me-1"></i> Make Payment to Supplier
-                        </button>
+                        </a>
                         <a href="purchases.php?action=new&supplier_id=<?= $currentSupplier['id'] ?>" class="btn btn-success btn-sm">
                             <i class="fa-solid fa-cart-plus me-1"></i> Record Inward Purchase
                         </a>
-                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick='openEditSupplierModal(<?= json_encode($currentSupplier) ?>)'>
+                        <a href="supplier_form.php?id=<?= $currentSupplier['id'] ?>" class="btn btn-outline-secondary btn-sm">
                             <i class="fa-solid fa-pen-to-square me-1"></i> Edit Supplier
-                        </button>
+                        </a>
                         <a href="print_report.php?report=supplier_statement&supplier_id=<?= $selectedSupplierId ?>" target="_blank" class="btn btn-outline-dark btn-sm">
                             <i class="fa-solid fa-print me-1"></i> Print Supplier Ledger (New Page)
                         </a>

@@ -400,13 +400,13 @@ require_once __DIR__ . '/includes/header.php';
                                             <i class="fa-solid fa-pen-to-square"></i>
                                         </a>
                                         <!-- Adjust Stock -->
-                                        <button type="button" class="btn btn-outline-info" onclick="openStockAdjustModal(<?= $p['id'] ?>, '<?= htmlspecialchars(addslashes($p['title'])) ?>', <?= (float)$p['current_stock'] ?>)" title="Adjust Stock">
+                                        <a href="stock_adjust.php?id=<?= $p['id'] ?>" class="btn btn-outline-info" title="Adjust Stock">
                                             <i class="fa-solid fa-sliders"></i>
-                                        </button>
+                                        </a>
                                         <!-- Barcode Print Preview -->
-                                        <button type="button" class="btn btn-outline-dark" onclick="openBarcodeModal('<?= htmlspecialchars($p['barcode'] ?: $p['product_code']) ?>', '<?= htmlspecialchars(addslashes($p['title'])) ?>', '<?= formatCurrency($p['retail_price']) ?>')" title="Print Barcode Sticker">
+                                        <a href="print_barcode.php?id=<?= $p['id'] ?>" class="btn btn-outline-dark" title="Print Barcode Sticker">
                                             <i class="fa-solid fa-barcode"></i>
-                                        </button>
+                                        </a>
                                     </div>
                                 </td>
                             </tr>

@@ -201,9 +201,9 @@ require_once __DIR__ . '/includes/header.php';
                     <!-- Action Buttons -->
                     <div class="d-flex flex-wrap gap-2 mt-3 pt-3 border-top">
                         <!-- Receive Payment -->
-                        <button type="button" class="btn btn-success btn-sm" onclick="openReceivePaymentModal(<?= $currentCustomer['id'] ?>, '<?= htmlspecialchars(addslashes($currentCustomer['name'])) ?>', <?= (float)$currentCustomer['current_balance'] ?>)">
+                        <a href="customer_payment.php?customer_id=<?= $currentCustomer['id'] ?>" class="btn btn-success btn-sm">
                             <i class="fa-solid fa-hand-holding-dollar me-1"></i> Receive Payment
-                        </button>
+                        </a>
 
                         <!-- WhatsApp Reminder Button -->
                         <?php if ($currentCustomer['phone'] && $currentCustomer['current_balance'] > 0): ?>
@@ -220,9 +220,9 @@ require_once __DIR__ . '/includes/header.php';
                             </a>
                         <?php endif; ?>
 
-                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick='openEditCustomerModal(<?= json_encode($currentCustomer) ?>)'>
+                        <a href="customer_form.php?id=<?= $currentCustomer['id'] ?>" class="btn btn-outline-secondary btn-sm">
                             <i class="fa-solid fa-pen-to-square me-1"></i> Edit Profile
-                        </button>
+                        </a>
                         <a href="print_report.php?report=customer_statement&customer_id=<?= $selectedCustomerId ?>" target="_blank" class="btn btn-outline-dark btn-sm">
                             <i class="fa-solid fa-print me-1"></i> Print Khata Statement (New Page)
                         </a>

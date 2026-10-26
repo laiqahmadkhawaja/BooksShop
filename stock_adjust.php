@@ -3,7 +3,7 @@
 require_once __DIR__ . '/config/app.php';
 requireAuth();
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
     if (isset($_POST['adjust_stock_quick'])) {
         $pId = (int)$_POST['product_id'];
         $adjType = $_POST['adjustment_type']; // 'add' or 'subtract'
@@ -14,10 +14,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $product = dbFetchOne("SELECT * FROM products WHERE id = ?", [$pId]);
             if ($product) {
                 $changeQty = ($adjType === 'add') ? $qty : -$qty;
-                $newStock = $product['stock'] + $changeQty;
-                dbQuery("UPDATE products SET stock = ? WHERE id = ?", [$newStock, $pId]);
+                $newStock = $product['current_stock'] + $changeQty;
+                dbQuery("UPDATE products SET current_stock = ? WHERE id = ?", [$newStock, $pId]);
                 recordStockMovement($pId, 'adjustment_' . ($adjType === 'add' ? 'in' : 'out'), null, $qty, $reason, $product['purchase_price']);
-                setFlash('success', "Stock for '{$product['title']}' updated from {$product['stock']} to $newStock.");
+                setFlash('success', "Stock for '{$product['title']}' updated from {$product['current_stock']} to $newStock.");
             }
         }
         header("Location: books.php");
@@ -31,7 +31,7 @@ if ($productId > 0) {
     $selectedProduct = dbFetchOne("SELECT * FROM products WHERE id = ?", [$productId]);
 }
 
-$allProducts = dbFetchAll("SELECT id, title, product_code, stock, unit, purchase_price, retail_price FROM products ORDER BY title ASC");
+$allProducts = dbFetchAll("SELECT id, title, product_code, current_stock, unit, purchase_price, retail_price FROM products ORDER BY title ASC");
 
 $pageTitle = 'Stock Adjustment';
 require_once __DIR__ . '/includes/header.php';
@@ -74,10 +74,10 @@ require_once __DIR__ . '/includes/header.php';
                             <option value="">-- Choose Product --</option>
                             <?php foreach ($allProducts as $p): ?>
                                 <option value="<?= $p['id'] ?>"
-                                        data-stock="<?= (float)$p['stock'] ?>"
+                                        data-stock="<?= (float)$p['current_stock'] ?>"
                                         data-unit="<?= htmlspecialchars($p['unit'] ?: 'Piece') ?>"
                                         <?= ($selectedProduct && $selectedProduct['id'] == $p['id']) ? 'selected' : '' ?>>
-                                    <?= htmlspecialchars($p['title']) ?> (Code: <?= htmlspecialchars($p['product_code']) ?> | Stock: <?= (float)$p['stock'] ?>)
+                                    <?= htmlspecialchars($p['title']) ?> (Code: <?= htmlspecialchars($p['product_code']) ?> | Stock: <?= (float)$p['current_stock'] ?>)
                                 </option>
                             <?php endforeach; ?>
                         </select>
@@ -87,7 +87,7 @@ require_once __DIR__ . '/includes/header.php';
                     <div class="alert alert-light border py-2 mb-3 d-flex justify-content-between align-items-center">
                         <span class="text-muted small">Current System Stock:</span>
                         <span class="fw-bold fs-6 text-primary" id="disp_current_stock">
-                            <?= $selectedProduct ? (float)$selectedProduct['stock'] . ' ' . htmlspecialchars($selectedProduct['unit'] ?: 'Piece') : 'Select product' ?>
+                            <?= $selectedProduct ? (float)$selectedProduct['current_stock'] . ' ' . htmlspecialchars($selectedProduct['unit'] ?: 'Piece') : 'Select product' ?>
                         </span>
                     </div>
 

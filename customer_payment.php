@@ -5,7 +5,7 @@ requireAuth();
 
 $selectedCustomerId = (int)($_GET['customer_id'] ?? 0);
 $customers = dbFetchAll("SELECT id, name, phone, current_balance FROM customers ORDER BY name ASC");
-$accounts = dbFetchAll("SELECT id, account_name, current_balance FROM financial_accounts WHERE is_active = 1 ORDER BY account_name ASC");
+$accounts = dbFetchAll("SELECT id, account_name, balance FROM accounts WHERE status = 1 ORDER BY account_name ASC");
 
 $pageTitle = 'Receive Customer Payment';
 require_once __DIR__ . '/includes/header.php';
@@ -73,7 +73,7 @@ require_once __DIR__ . '/includes/header.php';
                         <select name="account_id" class="form-select" required>
                             <?php foreach ($accounts as $acc): ?>
                                 <option value="<?= $acc['id'] ?>">
-                                    <?= htmlspecialchars($acc['account_name']) ?> (Bal: <?= formatCurrency($acc['current_balance']) ?>)
+                                    <?= htmlspecialchars($acc['account_name']) ?> (Bal: <?= formatCurrency($acc['balance']) ?>)
                                 </option>
                             <?php endforeach; ?>
                         </select>

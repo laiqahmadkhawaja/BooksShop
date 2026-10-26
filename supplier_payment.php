@@ -5,7 +5,7 @@ requireAuth();
 
 $selectedSupplierId = (int)($_GET['supplier_id'] ?? 0);
 $suppliers = dbFetchAll("SELECT id, name, company_name, current_balance FROM suppliers ORDER BY name ASC");
-$accounts = dbFetchAll("SELECT id, account_name, current_balance FROM financial_accounts WHERE is_active = 1 ORDER BY account_name ASC");
+$accounts = dbFetchAll("SELECT id, account_name, balance FROM accounts WHERE status = 1 ORDER BY account_name ASC");
 
 $pageTitle = 'Pay Supplier Voucher';
 require_once __DIR__ . '/includes/header.php';
@@ -73,7 +73,7 @@ require_once __DIR__ . '/includes/header.php';
                         <select name="account_id" class="form-select" required>
                             <?php foreach ($accounts as $acc): ?>
                                 <option value="<?= $acc['id'] ?>">
-                                    <?= htmlspecialchars($acc['account_name']) ?> (Bal: <?= formatCurrency($acc['current_balance']) ?>)
+                                    <?= htmlspecialchars($acc['account_name']) ?> (Bal: <?= formatCurrency($acc['balance']) ?>)
                                 </option>
                             <?php endforeach; ?>
                         </select>

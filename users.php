@@ -101,9 +101,9 @@ require_once __DIR__ . '/includes/header.php';
                             </td>
                             <td><?= date('d M, Y', strtotime($u['created_at'])) ?></td>
                             <td class="text-end">
-                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick='openEditUserModal(<?= json_encode($u) ?>)'>
+                                <a href="user_form.php?id=<?= $u['id'] ?>" class="btn btn-outline-secondary btn-sm">
                                     <i class="fa-solid fa-pen-to-square me-1"></i> Edit
-                                </button>
+                                </a>
                             </td>
                         </tr>
                     <?php endforeach; ?>
