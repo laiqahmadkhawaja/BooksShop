@@ -109,6 +109,11 @@ class MainActivity : AppCompatActivity() {
             web.scrollY > 0
         }
 
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+            WebView.setWebContentsDebuggingEnabled(true)
+        }
+        web.clearCache(true)
+
         web.settings.apply {
             javaScriptEnabled = true
             domStorageEnabled = true
@@ -439,6 +444,13 @@ class MainActivity : AppCompatActivity() {
         @JavascriptInterface
         fun openShareDialog(url: String?, title: String?, text: String?) {
             sharePageAsImage(title ?: web.title)
+        }
+
+        @JavascriptInterface
+        fun setSwipeEnabled(enabled: Boolean) {
+            runOnUiThread {
+                swipeRefresh.isEnabled = enabled
+            }
         }
     }
 

@@ -78,6 +78,18 @@
         reparentModals();
     }
 
+    // Disable Android SwipeRefreshLayout while modal is open so it cannot steal touch events
+    document.addEventListener('show.bs.modal', function() {
+        if (window.AndroidPrinter && typeof window.AndroidPrinter.setSwipeEnabled === 'function') {
+            window.AndroidPrinter.setSwipeEnabled(false);
+        }
+    });
+    document.addEventListener('hidden.bs.modal', function() {
+        if (window.AndroidPrinter && typeof window.AndroidPrinter.setSwipeEnabled === 'function') {
+            window.AndroidPrinter.setSwipeEnabled(true);
+        }
+    });
+
     // Android APK Native Share / Print Interceptor
     var originalWindowPrint = window.print;
     window.print = function() {
