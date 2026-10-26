@@ -578,22 +578,33 @@ body.lang-ur .stat-card .stat-icon {
     color: #475569;
 }
 
-/* Universal Modal Scroll, Viewport & Mobile Layering Fixes */
+/* =====================================================================
+   Universal Modal Fix — Android WebView + Bootstrap 5
+   Grey-line symptom = .modal-content collapses to 0 height.
+   Root causes in WebView:
+     (a) .fade transition prevents transitionend → Bootstrap stuck
+     (b) flex chain has no intrinsic height anchor → children = 0
+   Fix: disable fade transition; use viewport units as height anchor.
+   ===================================================================== */
+
+/* Disable Bootstrap fade transition on modals — prevents WebView lock */
+.modal.fade { transition: none !important; }
+.modal.fade .modal-dialog { transform: none !important; transition: none !important; }
+.modal-backdrop.fade { transition: none !important; }
+
 .modal {
     position: fixed !important;
     top: 0 !important;
     left: 0 !important;
-    width: 100% !important;
-    height: 100% !important;
+    width: 100vw !important;
+    height: 100vh !important;
     z-index: 1060 !important;
     overflow-x: hidden;
     overflow-y: auto !important;
     -webkit-overflow-scrolling: touch;
 }
 
-.modal.show {
-    display: block !important;
-}
+.modal.show { display: block !important; opacity: 1 !important; }
 
 .modal-backdrop {
     position: fixed !important;
@@ -603,42 +614,40 @@ body.lang-ur .stat-card .stat-icon {
     height: 100vh !important;
     z-index: 1050 !important;
 }
+.modal-backdrop.show { opacity: 0.5 !important; }
 
-.modal-backdrop.show {
-    opacity: 0.5 !important;
-}
-
+/* modal-dialog: viewport-anchored min-height breaks the flex-chain collapse */
 .modal-dialog {
     position: relative;
     max-width: 95%;
+    min-height: 200px;
     margin: 1.75rem auto;
     pointer-events: auto;
 }
 
+/* modal-content: flex column with explicit min-height */
 .modal-content {
     position: relative;
-    display: flex;
-    flex-direction: column;
+    display: flex !important;
+    flex-direction: column !important;
     width: 100%;
-    background-color: #fff;
+    min-height: 200px;
+    background-color: #fff !important;
     border-radius: 0.75rem;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
     outline: 0;
 }
 
-/* Ensure forms inside modals preserve natural flex flow */
+/* Forms inside modals: full flex column */
 .modal-content > form {
     display: flex;
     flex-direction: column;
     flex: 1 1 auto;
     width: 100%;
+    min-height: 0;
 }
 
-/*
- * CRITICAL — Do NOT use height: calc(100% - 3.5rem) on .modal-dialog-scrollable.
- * In Android WebView the .modal container has no intrinsic height, so 100% resolves
- * to 0 and the dialog collapses. Use max-height on .modal-content instead.
- */
+/* Scrollable dialogs: bound by viewport, scroll inside body */
 .modal-dialog-scrollable .modal-content {
     max-height: calc(100vh - 3.5rem);
     overflow: hidden;
@@ -650,6 +659,7 @@ body.lang-ur .stat-card .stat-icon {
     -webkit-overflow-scrolling: touch;
     max-height: calc(100vh - 200px);
     padding: 1.25rem;
+    /* Do NOT use flex: 1 1 auto here — no intrinsic parent height in WebView */
 }
 
 .modal-header,
@@ -657,14 +667,13 @@ body.lang-ur .stat-card .stat-icon {
     flex-shrink: 0;
 }
 
-/* Mobile: prevent vertical centering from pushing dialog down off-screen */
+/* Mobile overrides */
 @media (max-width: 768px) {
-    .modal-dialog-centered {
-        align-items: flex-start !important;
-    }
+    .modal-dialog-centered { align-items: flex-start !important; }
     .modal-dialog {
         max-width: 96% !important;
         margin: 10px auto !important;
+        min-height: 150px;
     }
     .modal-dialog-scrollable .modal-content {
         max-height: calc(100vh - 20px) !important;

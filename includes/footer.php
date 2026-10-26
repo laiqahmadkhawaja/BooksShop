@@ -76,6 +76,46 @@
         reparentModals();
     }
 
+    // Android WebView: Bootstrap's .fade transition can get stuck, leaving modal
+    // invisible (the grey-line symptom). This listener fires AFTER Bootstrap's
+    // shown.bs.modal event completes and force-paints the modal visible.
+    // NOTE: we use shown (not show) to avoid interfering with Bootstrap's transition FSM.
+    document.addEventListener('shown.bs.modal', function(e) {
+        var modal = e.target;
+        var dialog = modal.querySelector('.modal-dialog');
+        var content = modal.querySelector('.modal-content');
+        // Force visibility — these are additive overrides, not replacing Bootstrap classes
+        modal.style.cssText += '; display:block !important; opacity:1 !important;';
+        if (dialog) {
+            dialog.style.cssText += '; opacity:1 !important; transform:none !important;';
+        }
+        if (content) {
+            // If content collapsed to 0, give it a floor so it becomes visible
+            var h = content.getBoundingClientRect().height;
+            if (h < 50) {
+                content.style.cssText += '; min-height:250px !important;';
+            }
+        }
+    });
+
+    // Also patch Bootstrap's _isTransitioning flag reset on show.bs.modal
+    // to handle cases where transitionend never fires in WebView
+    document.addEventListener('show.bs.modal', function(e) {
+        var modal = e.target;
+        // Force-clear _isTransitioning after a safe delay so Bootstrap doesn't stay locked
+        setTimeout(function() {
+            try {
+                var bsModal = bootstrap.Modal.getInstance(modal);
+                if (bsModal && bsModal._isTransitioning) {
+                    bsModal._isTransitioning = false;
+                }
+            } catch(err) {}
+            // Also force-show
+            modal.style.display = 'block';
+            modal.style.opacity = '1';
+        }, 350);
+    });
+
     // Android APK Native Share / Print Interceptor
     var originalWindowPrint = window.print;
     window.print = function() {
