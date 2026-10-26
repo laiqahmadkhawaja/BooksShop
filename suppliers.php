@@ -88,15 +88,15 @@ require_once __DIR__ . '/includes/header.php';
 
 <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
     <div>
-        <h4 class="fw-bold mb-0 text-dark"><i class="fa-solid fa-truck-field text-primary me-2"></i> Supplier & Publisher Ledgers</h4>
-        <small class="text-muted">Manage book publishers, stationery manufacturers, invoices & payment vouchers</small>
+        <h4 class="fw-bold mb-0 text-dark"><i class="fa-solid fa-truck-field text-primary me-2"></i> Supplier & Vendor Ledgers</h4>
+        <small class="text-muted">Manage vendors, manufacturers, invoices & payment vouchers</small>
     </div>
     <div class="d-flex gap-2">
         <a href="supplier_payment.php<?= $selectedSupplierId ? '?supplier_id=' . $selectedSupplierId : '' ?>" class="btn btn-outline-danger btn-sm">
             <i class="fa-solid fa-money-bill-transfer me-1"></i> Pay Supplier Voucher
         </a>
         <a href="supplier_form.php" class="btn btn-primary btn-sm shadow-sm">
-            <i class="fa-solid fa-plus-circle me-1"></i> Add Supplier / Publisher
+            <i class="fa-solid fa-plus-circle me-1"></i> Add Supplier / Vendor
         </a>
     </div>
 </div>

@@ -21,7 +21,7 @@ if ($schoolId > 0) {
     }
 }
 
-$pageTitle = ($schoolId > 0 ? 'Edit' : 'Add') . ' School Profile';
+$pageTitle = ($schoolId > 0 ? 'Edit' : 'Add') . ' Organization / Group';
 require_once __DIR__ . '/includes/header.php';
 ?>
 
@@ -30,11 +30,11 @@ require_once __DIR__ . '/includes/header.php';
         <div class="d-flex align-items-center justify-content-between mb-3">
             <div>
                 <a href="schools.php" class="btn btn-outline-secondary btn-sm mb-2">
-                    <i class="fa-solid fa-arrow-left me-1"></i> Back to School Packages
+                    <i class="fa-solid fa-arrow-left me-1"></i> Back to Packages & Bundles
                 </a>
                 <h4 class="fw-bold mb-0 text-dark">
-                    <i class="fa-solid fa-school text-primary me-2"></i>
-                    <?= $schoolId > 0 ? 'Edit School Profile' : 'Add New School / College' ?>
+                    <i class="fa-solid fa-building text-primary me-2"></i>
+                    <?= $schoolId > 0 ? 'Edit Organization / Group' : 'Add Organization / Group' ?>
                 </h4>
             </div>
         </div>
@@ -46,10 +46,10 @@ require_once __DIR__ . '/includes/header.php';
                     <input type="hidden" name="school_id" value="<?= $school['id'] ?>">
 
                     <div class="mb-3">
-                        <label class="form-label fw-bold">School / College / Institution Name <span class="text-danger">*</span></label>
+                        <label class="form-label fw-bold">Organization / Group Name <span class="text-danger">*</span></label>
                         <input type="text" name="name" class="form-control form-control-lg" required 
                                value="<?= htmlspecialchars($school['name']) ?>"
-                               placeholder="e.g. Lahore Grammar School, Army Public School">
+                               placeholder="e.g. Corporate Division, Central Branch, City Academy">
                     </div>
 
                     <div class="row g-3 mb-3">

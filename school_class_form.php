@@ -23,7 +23,7 @@ if ($classId > 0) {
 
 $schools = dbFetchAll("SELECT * FROM schools WHERE status = 1 ORDER BY name ASC");
 
-$pageTitle = ($classId > 0 ? 'Edit' : 'Create') . ' Class Syllabus Package';
+$pageTitle = ($classId > 0 ? 'Edit' : 'Create') . ' Package / Bundle';
 require_once __DIR__ . '/includes/header.php';
 ?>
 
@@ -32,11 +32,11 @@ require_once __DIR__ . '/includes/header.php';
         <div class="d-flex align-items-center justify-content-between mb-3">
             <div>
                 <a href="schools.php<?= $classId > 0 ? '?class_id=' . $classId : '' ?>" class="btn btn-outline-secondary btn-sm mb-2">
-                    <i class="fa-solid fa-arrow-left me-1"></i> Back to School Packages
+                    <i class="fa-solid fa-arrow-left me-1"></i> Back to Packages & Bundles
                 </a>
                 <h4 class="fw-bold mb-0 text-dark">
-                    <i class="fa-solid fa-graduation-cap text-info me-2"></i>
-                    <?= $classId > 0 ? 'Edit Class Package' : 'Create Class Syllabus Package' ?>
+                    <i class="fa-solid fa-boxes-packing text-info me-2"></i>
+                    <?= $classId > 0 ? 'Edit Package / Bundle' : 'Create Package / Bundle' ?>
                 </h4>
             </div>
         </div>
@@ -48,9 +48,9 @@ require_once __DIR__ . '/includes/header.php';
                     <input type="hidden" name="class_id" value="<?= $classData['id'] ?>">
 
                     <div class="mb-3">
-                        <label class="form-label fw-bold">Select School / College <span class="text-danger">*</span></label>
+                        <label class="form-label fw-bold">Select Organization / Institution / Group <span class="text-danger">*</span></label>
                         <select name="school_id" class="form-select form-select-lg" required>
-                            <option value="">-- Choose School --</option>
+                            <option value="">-- Choose Organization / Group --</option>
                             <?php foreach ($schools as $s): ?>
                                 <option value="<?= $s['id'] ?>" <?= $classData['school_id'] == $s['id'] ? 'selected' : '' ?>>
                                     <?= htmlspecialchars($s['name']) ?>
@@ -60,14 +60,14 @@ require_once __DIR__ . '/includes/header.php';
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label fw-bold">Class Name / Grade / Section <span class="text-danger">*</span></label>
+                        <label class="form-label fw-bold">Package Name / Bundle Title <span class="text-danger">*</span></label>
                         <input type="text" name="class_name" class="form-control form-control-lg" required
                                value="<?= htmlspecialchars($classData['class_name']) ?>"
-                               placeholder="e.g. Grade 5, Class 9 (Computer Science), Prep Rose">
+                               placeholder="e.g. Starter Kit, Grade 5 Bundle, Executive Set">
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label fw-bold">Academic Session</label>
+                        <label class="form-label fw-bold">Batch / Session / Code</label>
                         <input type="text" name="academic_session" class="form-control" 
                                value="<?= htmlspecialchars($classData['academic_session']) ?>"
                                placeholder="e.g. 2026-2027">
@@ -75,7 +75,7 @@ require_once __DIR__ . '/includes/header.php';
 
                     <div class="mb-4">
                         <label class="form-label fw-bold">Package Notes / Instructions</label>
-                        <textarea name="notes" class="form-control" rows="3" placeholder="Syllabus edition, notes for parents..."><?= htmlspecialchars($classData['notes']) ?></textarea>
+                        <textarea name="notes" class="form-control" rows="3" placeholder="Package description, notes for buyers..."><?= htmlspecialchars($classData['notes']) ?></textarea>
                     </div>
 
                     <div class="d-flex justify-content-end gap-2">

@@ -32,8 +32,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$shopName = getSetting('shop_name', 'Kitab Ghar & Stationery');
-$shopNameUrdu = getSetting('shop_name_urdu', 'کتاب گھر اینڈ اسٹیشنری مارٹ');
+$shopName = getSetting('shop_name', 'Retail & Wholesale Mart');
+$shopNameUrdu = getSetting('shop_name_urdu', 'ریٹیل اینڈ ہول سیل مارٹ');
 ?>
 <!DOCTYPE html>
 <html lang="en">

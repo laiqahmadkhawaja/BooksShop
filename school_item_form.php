@@ -25,7 +25,7 @@ $allProducts = dbFetchAll("SELECT id, title, product_code, barcode, product_type
                            WHERE status = 1 
                            ORDER BY title ASC");
 
-$pageTitle = 'Add Item to Syllabus - ' . htmlspecialchars($currentClass['class_name']);
+$pageTitle = 'Add Item to Package - ' . htmlspecialchars($currentClass['class_name']);
 require_once __DIR__ . '/includes/header.php';
 ?>
 
@@ -37,7 +37,7 @@ require_once __DIR__ . '/includes/header.php';
                     <i class="fa-solid fa-arrow-left me-1"></i> Back to <?= htmlspecialchars($currentClass['class_name']) ?>
                 </a>
                 <h4 class="fw-bold mb-0 text-dark">
-                    <i class="fa-solid fa-plus-circle text-primary me-2"></i> Add Item to Syllabus
+                    <i class="fa-solid fa-plus-circle text-primary me-2"></i> Add Item to Package
                 </h4>
                 <div class="text-muted small">
                     <?= htmlspecialchars($currentClass['school_name']) ?> &bull; <strong><?= htmlspecialchars($currentClass['class_name']) ?></strong> (<?= htmlspecialchars($currentClass['academic_session']) ?>)
@@ -52,7 +52,7 @@ require_once __DIR__ . '/includes/header.php';
                     <input type="hidden" name="school_class_id" value="<?= $classId ?>">
 
                     <div class="mb-3">
-                        <label class="form-label fw-bold">Select Book or Stationery Product <span class="text-danger">*</span></label>
+                        <label class="form-label fw-bold">Select Product <span class="text-danger">*</span></label>
                         <select name="product_id" id="syllabusProductSelect" class="form-select form-select-lg" required>
                             <option value="">-- Choose from Inventory --</option>
                             <?php foreach ($allProducts as $p): ?>
@@ -89,7 +89,7 @@ require_once __DIR__ . '/includes/header.php';
                     <div class="d-flex justify-content-end gap-2">
                         <a href="schools.php?class_id=<?= $classId ?>" class="btn btn-light px-4">Cancel</a>
                         <button type="submit" class="btn btn-primary px-4">
-                            <i class="fa-solid fa-plus me-1"></i> Add to Syllabus
+                            <i class="fa-solid fa-plus me-1"></i> Add to Package
                         </button>
                     </div>
                 </form>

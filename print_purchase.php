@@ -31,9 +31,9 @@ $items = dbFetchAll("SELECT pi.*, p.title, p.product_code, p.barcode, p.unit, p.
                      WHERE pi.purchase_id = ?
                      ORDER BY pi.id ASC", [$purchaseId]);
 
-$shopName = getSetting('shop_name', 'Kitab Ghar & Stationery');
-$shopNameUrdu = getSetting('shop_name_urdu', 'کتاب گھر اینڈ اسٹیشنری مارٹ');
-$shopTagline = getSetting('shop_tagline', 'Complete Textbooks, General Books & Quality Stationery');
+$shopName = getSetting('shop_name', 'Retail & Wholesale Mart');
+$shopNameUrdu = getSetting('shop_name_urdu', 'ریٹیل اینڈ ہول سیل مارٹ');
+$shopTagline = getSetting('shop_tagline', 'Complete Retail & Wholesale Inventory POS Solution');
 $shopAddress = getSetting('shop_address', 'Shop # 14-18, Urdu Bazaar, Lahore, Pakistan');
 $shopPhone = getSetting('shop_phone', '+92 300 1234567 / 042-37210000');
 ?>

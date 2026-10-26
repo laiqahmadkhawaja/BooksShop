@@ -31,17 +31,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // Current settings values
-$shopName = getSetting('shop_name', 'Kitab Ghar & Stationery');
-$shopNameUrdu = getSetting('shop_name_urdu', 'کتاب گھر اینڈ اسٹیشنری مارٹ');
-$shopTagline = getSetting('shop_tagline', 'Complete Textbooks, General Books & Quality Stationery');
+$shopName = getSetting('shop_name', 'Retail & Wholesale Mart');
+$shopNameUrdu = getSetting('shop_name_urdu', 'ریٹیل اینڈ ہول سیل مارٹ');
+$shopTagline = getSetting('shop_tagline', 'Complete Retail & Wholesale Inventory POS Solution');
 $shopAddress = getSetting('shop_address', 'Shop # 14-18, Urdu Bazaar, Lahore, Pakistan');
 $shopPhone = getSetting('shop_phone', '+92 300 1234567 / 042-37210000');
 $shopEmail = getSetting('shop_email', 'sales@kitabghar.pk');
 $currSymbol = getSetting('currency_symbol', 'Rs. ');
 $currCode = getSetting('currency_code', 'PKR');
 $taxRate = getSetting('tax_percent', '0.00');
-$footerNote = getSetting('receipt_footer', 'Thank you for shopping with us! Books once sold cannot be returned without receipt.');
-$footerNoteUrdu = getSetting('receipt_footer_urdu', 'خریداری کا شکریہ! خریدی گئی کتب 7 دن کے اندر اصل رسید کے ہمراہ تبدیل کی جا سکتی ہیں۔');
+$footerNote = getSetting('receipt_footer', 'Thank you for shopping with us! Items once sold cannot be returned without receipt.');
+$footerNoteUrdu = getSetting('receipt_footer_urdu', 'خریداری کا شکریہ! اشیاء 7 دن کے اندر اصل رسید کے ساتھ تبدیل کی جا سکتی ہیں۔');
 
 $pageTitle = 'Settings';
 require_once __DIR__ . '/includes/header.php';
@@ -167,7 +167,7 @@ require_once __DIR__ . '/includes/header.php';
                 <h6 class="mb-0 fw-bold text-warning-emphasis"><i class="fa-solid fa-rotate-right me-2"></i> Restore Sample Data</h6>
             </div>
             <div class="card-body">
-                <p class="small text-muted mb-3">Re-initializes sample Oxford syllabus textbooks, Punjab Board matric books, Urdu literature, stationery items, and sample schools.</p>
+                <p class="small text-muted mb-3">Re-initializes sample catalog items, standard packages, inventory supplies, and sample accounts.</p>
                 <form method="POST" action="settings.php" onsubmit="return confirm('Restore all default sample data? Existing customized tables will be updated.')">
                     <input type="hidden" name="reseed_data" value="1">
                     <button type="submit" class="btn btn-outline-warning text-dark w-100 fw-semibold btn-sm">

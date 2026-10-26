@@ -27,13 +27,13 @@ $items = dbFetchAll("SELECT si.*, p.title, p.product_code, p.barcode, p.unit, p.
                      JOIN products p ON p.id = si.product_id
                      WHERE si.sale_id = ?", [$saleId]);
 
-$shopName = getSetting('shop_name', 'Kitab Ghar & Stationery');
-$shopNameUrdu = getSetting('shop_name_urdu', 'کتاب گھر اینڈ اسٹیشنری مارٹ');
-$shopTagline = getSetting('shop_tagline', 'Complete Textbooks, General Books & Quality Stationery');
+$shopName = getSetting('shop_name', 'Retail & Wholesale Mart');
+$shopNameUrdu = getSetting('shop_name_urdu', 'ریٹیل اینڈ ہول سیل مارٹ');
+$shopTagline = getSetting('shop_tagline', 'Complete Retail & Wholesale Inventory POS Solution');
 $shopAddress = getSetting('shop_address', 'Shop # 14-18, Urdu Bazaar, Lahore, Pakistan');
 $shopPhone = getSetting('shop_phone', '+92 300 1234567 / 042-37210000');
-$receiptFooter = getSetting('receipt_footer', 'Thank you for shopping with us! Books once sold cannot be returned without receipt.');
-$receiptFooterUrdu = getSetting('receipt_footer_urdu', 'خریداری کا شکریہ! خریدی گئی کتب 7 دن کے اندر اصل رسید کے ہمراہ تبدیل کی جا سکتی ہیں۔');
+$receiptFooter = getSetting('receipt_footer', 'Thank you for shopping with us! Items once sold cannot be returned without receipt.');
+$receiptFooterUrdu = getSetting('receipt_footer_urdu', 'خریداری کا شکریہ! اشیاء 7 دن کے اندر اصل رسید کے ساتھ تبدیل کی جا سکتی ہیں۔');
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -261,7 +261,7 @@ $receiptFooterUrdu = getSetting('receipt_footer_urdu', 'خریداری کا شک
         </div>
         <div class="small mt-1 text-muted" style="font-size: 11px;"><?= htmlspecialchars($receiptFooter) ?></div>
         <div class="font-urdu mt-2 text-center" style="font-size: 11px; line-height: 2.3 !important; direction: rtl;"><?= htmlspecialchars($receiptFooterUrdu) ?></div>
-        <div class="small text-muted mt-2" style="font-size: 9px; opacity: 0.7;">Software by Kitab Ghar POS System</div>
+        <div class="small text-muted mt-2" style="font-size: 9px; opacity: 0.7;">Software by Retail & Wholesale POS System</div>
     </div>
 </div>
 

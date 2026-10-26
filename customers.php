@@ -92,7 +92,7 @@ require_once __DIR__ . '/includes/header.php';
 <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
     <div>
         <h4 class="fw-bold mb-0 text-dark"><i class="fa-solid fa-users text-primary me-2"></i> Customer Management & Khata Ledger</h4>
-        <small class="text-muted">Manage regular clients, schools, credit balances & WhatsApp payment reminders</small>
+        <small class="text-muted">Manage regular clients, credit accounts, balances & WhatsApp payment reminders</small>
     </div>
     <div class="d-flex gap-2">
         <a href="customer_payment.php<?= $selectedCustomerId ? '?customer_id=' . $selectedCustomerId : '' ?>" class="btn btn-outline-success btn-sm">
@@ -110,7 +110,7 @@ require_once __DIR__ . '/includes/header.php';
         <div class="card p-3 border-start border-danger border-4 shadow-sm bg-white">
             <div class="small text-muted fw-bold">TOTAL OUTSTANDING CUSTOMER RECEIVABLES (KHATA)</div>
             <h3 class="fw-bold text-danger mb-0 mt-1"><?= formatCurrency($totalReceivables) ?></h3>
-            <span class="small text-muted">Total amount to be collected from customers & schools</span>
+            <span class="small text-muted">Total amount to be collected from credit accounts</span>
         </div>
     </div>
     <div class="col-md-6">

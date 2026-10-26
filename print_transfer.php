@@ -28,8 +28,8 @@ $items = dbFetchAll("SELECT wti.*, p.title, p.product_code, p.barcode, p.unit, p
                      WHERE wti.transfer_id = ?
                      ORDER BY wti.id ASC", [$transferId]);
 
-$shopName = getSetting('shop_name', 'Kitab Ghar & Stationery');
-$shopNameUrdu = getSetting('shop_name_urdu', 'کتاب گھر اینڈ اسٹیشنری مارٹ');
+$shopName = getSetting('shop_name', 'Retail & Wholesale Mart');
+$shopNameUrdu = getSetting('shop_name_urdu', 'ریٹیل اینڈ ہول سیل مارٹ');
 $shopAddress = getSetting('shop_address', 'Shop # 14-18, Urdu Bazaar, Lahore, Pakistan');
 $shopPhone = getSetting('shop_phone', '+92 300 1234567 / 042-37210000');
 

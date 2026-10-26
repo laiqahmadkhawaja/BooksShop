@@ -12,8 +12,8 @@ if (isset($_GET['set_lang'])) {
 
 $user = authUser();
 $currentLang = getLanguage();
-$shopName = getSetting('shop_name', 'Kitab Ghar & Stationery');
-$shopNameUrdu = getSetting('shop_name_urdu', 'کتاب گھر اینڈ اسٹیشنری مارٹ');
+$shopName = getSetting('shop_name', 'Retail & Wholesale Mart');
+$shopNameUrdu = getSetting('shop_name_urdu', 'ریٹیل اینڈ ہول سیل مارٹ');
 $flash = getFlash();
 
 // Low stock counter for header bell

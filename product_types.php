@@ -122,7 +122,7 @@ require_once __DIR__ . '/includes/header.php';
                     <div class="mb-3">
                         <label class="form-label small fw-bold">Department / Type Name *</label>
                         <input type="text" name="type_name" id="type_name" class="form-control" required
-                               value="<?= htmlspecialchars($editType['name'] ?? '') ?>" placeholder="e.g. Toys & Games, Books, Stationery, Uniforms"
+                               value="<?= htmlspecialchars($editType['name'] ?? '') ?>" placeholder="e.g. Electronics, Apparel, General Merchandise, Supplies"
                                oninput="autoGenerateCode(this.value)">
                     </div>
 

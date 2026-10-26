@@ -57,7 +57,7 @@ $schoolClasses = dbFetchAll("SELECT sc.id, sc.class_name, sc.academic_session, s
                 <!-- School Package 1-Click Bundle Loader -->
                 <div class="d-flex align-items-center gap-2">
                     <button type="button" class="btn btn-outline-info btn-sm" onclick="showSchoolPackagesView()">
-                        <i class="fa-solid fa-graduation-cap me-1"></i> <strong>Load School Book Bundle</strong>
+                        <i class="fa-solid fa-boxes-packing me-1"></i> <strong>Load Package / Bundle</strong>
                     </button>
                     <button type="button" class="btn btn-outline-warning btn-sm" onclick="openHeldBillsModal()">
                         <i class="fa-solid fa-pause me-1"></i> Held Bills <span id="heldBillsBadge" class="badge bg-warning text-dark ms-1">0</span>
@@ -255,19 +255,19 @@ $schoolClasses = dbFetchAll("SELECT sc.id, sc.class_name, sc.academic_session, s
 
 </div><!-- /#posViewRegister -->
 
-<!-- IN-PAGE VIEW: School Book Package / Syllabus Bundle -->
+<!-- IN-PAGE VIEW: Product Package / Bundle -->
 <div id="posViewSchoolPackages" style="display: none;">
     <div class="card shadow-sm border-0 mb-4">
         <div class="card-header bg-info-subtle py-3 d-flex justify-content-between align-items-center">
             <h5 class="fw-bold text-info-emphasis mb-0">
-                <i class="fa-solid fa-graduation-cap me-2"></i> Select Class Syllabus Book Package
+                <i class="fa-solid fa-boxes-packing me-2"></i> Select Package / Bundle
             </h5>
             <button type="button" class="btn btn-outline-secondary btn-sm" onclick="hideSchoolPackagesView()">
                 <i class="fa-solid fa-arrow-left me-1"></i> Back to POS Register
             </button>
         </div>
         <div class="card-body p-4">
-            <p class="text-muted small">Choose an educational institution and class level to load the entire approved textbook & stationery set directly into this POS cart.</p>
+            <p class="text-muted small">Choose a package to load all its items directly into this POS cart.</p>
             <div class="row g-3">
                 <?php foreach ($schoolClasses as $sc): ?>
                     <div class="col-md-6 col-lg-4">

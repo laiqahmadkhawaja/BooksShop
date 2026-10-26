@@ -16,7 +16,7 @@ if ($isEdit) {
     }
     $pageTitle = 'Edit Supplier: ' . $supplier['name'];
 } else {
-    $pageTitle = 'Add New Supplier / Publisher';
+    $pageTitle = 'Add New Supplier / Vendor';
     $supplier = [
         'id' => 0,
         'name' => '',
@@ -36,7 +36,7 @@ require_once __DIR__ . '/includes/header.php';
     <div class="col-12 col-md-6 mb-2 mb-md-0">
         <h4 class="fw-bold mb-1">
             <i class="fa-solid <?= $isEdit ? 'fa-pen-to-square text-secondary' : 'fa-truck-field text-primary' ?> me-2"></i>
-            <?= $isEdit ? 'Edit Supplier / Publisher' : 'Add New Supplier / Publisher' ?>
+            <?= $isEdit ? 'Edit Supplier / Vendor' : 'Add New Supplier / Vendor' ?>
         </h4>
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb mb-0 small">
@@ -58,7 +58,7 @@ require_once __DIR__ . '/includes/header.php';
         <div class="card border-0 shadow-sm">
             <div class="card-header bg-white py-3 border-bottom">
                 <h6 class="fw-bold mb-0 text-primary">
-                    <i class="fa-solid fa-building me-2"></i> Supplier / Publisher Details
+                    <i class="fa-solid fa-building me-2"></i> Supplier / Vendor Details
                 </h6>
             </div>
             <div class="card-body p-4">
@@ -69,13 +69,13 @@ require_once __DIR__ . '/includes/header.php';
                     <div class="mb-3">
                         <label class="form-label small fw-bold">Supplier / Contact Name *</label>
                         <input type="text" name="name" class="form-control" required
-                               value="<?= htmlspecialchars($supplier['name']) ?>" placeholder="e.g. Oxford University Press, PCTB, Tariq Book Store">
+                               value="<?= htmlspecialchars($supplier['name']) ?>" placeholder="e.g. Al-Madina Traders, Global Wholesale Ltd.">
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label small fw-bold">Company / Publishing House</label>
+                        <label class="form-label small fw-bold">Company / Enterprise Name</label>
                         <input type="text" name="company_name" class="form-control"
-                               value="<?= htmlspecialchars($supplier['company_name'] ?? '') ?>" placeholder="e.g. OUP Pakistan or Paramount Books">
+                               value="<?= htmlspecialchars($supplier['company_name'] ?? '') ?>" placeholder="e.g. Acme Corporation, Metro Wholesale">
                     </div>
 
                     <div class="row g-3 mb-3">
@@ -87,14 +87,14 @@ require_once __DIR__ . '/includes/header.php';
                         <div class="col-12 col-sm-6">
                             <label class="form-label small fw-bold">Email Address</label>
                             <input type="email" name="email" class="form-control"
-                                   value="<?= htmlspecialchars($supplier['email']) ?>" placeholder="orders@publisher.com">
+                                   value="<?= htmlspecialchars($supplier['email']) ?>" placeholder="orders@supplier.com">
                         </div>
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label small fw-bold">Office Address / Warehouse</label>
                         <textarea name="address" class="form-control" rows="2"
-                                  placeholder="Complete address or book market location"><?= htmlspecialchars($supplier['address']) ?></textarea>
+                                  placeholder="Complete office or warehouse address"><?= htmlspecialchars($supplier['address']) ?></textarea>
                     </div>
 
                     <div class="mb-3">

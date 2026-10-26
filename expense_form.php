@@ -59,7 +59,7 @@ require_once __DIR__ . '/includes/header.php';
                             <option value="Electricity Bill">Electricity Bill</option>
                             <option value="Staff Salaries">Staff Salaries</option>
                             <option value="Tea / Refreshment">Tea / Refreshment</option>
-                            <option value="Stationery Packaging / Bags">Stationery Packaging / Bags</option>
+                            <option value="Packaging & Bags">Packaging & Bags</option>
                             <option value="Freight / Delivery">Freight / Delivery</option>
                             <option value="General Maintenance">General Maintenance</option>
                             <option value="Other Expense">Other Expense</option>

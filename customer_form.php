@@ -68,9 +68,9 @@ require_once __DIR__ . '/includes/header.php';
                     <input type="hidden" name="customer_id" value="<?= (int)$customer['id'] ?>">
 
                     <div class="mb-3">
-                        <label class="form-label small fw-bold">Customer / School Name *</label>
+                        <label class="form-label small fw-bold">Customer / Client Name *</label>
                         <input type="text" name="name" class="form-control" required
-                               value="<?= htmlspecialchars($customer['name']) ?>" placeholder="e.g. Beaconhouse, City School, Tariq Ahmed">
+                               value="<?= htmlspecialchars($customer['name']) ?>" placeholder="e.g. Al-Rehman Traders, Muhammad Ali, Metro Corp">
                     </div>
 
                     <div class="row g-3 mb-3">
@@ -80,7 +80,7 @@ require_once __DIR__ . '/includes/header.php';
                                 <option value="regular" <?= ($customer['customer_type'] === 'regular') ? 'selected' : '' ?>>Regular Customer</option>
                                 <option value="walkin" <?= ($customer['customer_type'] === 'walkin') ? 'selected' : '' ?>>Walk-in</option>
                                 <option value="wholesale" <?= ($customer['customer_type'] === 'wholesale') ? 'selected' : '' ?>>Wholesale Dealer</option>
-                                <option value="school" <?= ($customer['customer_type'] === 'school') ? 'selected' : '' ?>>School / Academy</option>
+                                <option value="school" <?= ($customer['customer_type'] === 'school') ? 'selected' : '' ?>>Corporate / Institutional</option>
                                 <option value="teacher" <?= ($customer['customer_type'] === 'teacher') ? 'selected' : '' ?>>Teacher / Staff</option>
                                 <option value="student" <?= ($customer['customer_type'] === 'student') ? 'selected' : '' ?>>Student</option>
                             </select>

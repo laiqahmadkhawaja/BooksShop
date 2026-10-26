@@ -133,7 +133,7 @@ require_once __DIR__ . '/includes/header.php';
                         <div class="col-12">
                             <label class="form-label fw-bold">Reason for Return <span class="text-danger">*</span></label>
                             <input type="text" name="return_reason" class="form-control" required
-                                   placeholder="e.g. Wrong class syllabus purchased, defective binding, customer exchange">
+                                   placeholder="e.g. Defective item, customer exchange, wrong size or model">
                         </div>
                     </div>
                 </div>
