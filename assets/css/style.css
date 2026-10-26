@@ -313,9 +313,7 @@ body.lang-ur .sidebar .nav-link.active {
     transition: margin-left 0.3s ease;
 }
 
-body.modal-open .main-content {
-    z-index: 1055;
-}
+/* body.modal-open .main-content z-index removed: created stacking context trapping modals */
 
 /* Sidebar Backdrop Overlay on Mobile */
 .sidebar-backdrop {
