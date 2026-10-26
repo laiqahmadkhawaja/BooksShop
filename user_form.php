@@ -15,6 +15,9 @@ if ($isEdit) {
         header('Location: users.php');
         exit;
     }
+    foreach ($user as $k => $v) {
+        $user[$k] = $v ?? '';
+    }
     $pageTitle = 'Edit User: ' . $user['name'];
 } else {
     $pageTitle = 'Add New System User';

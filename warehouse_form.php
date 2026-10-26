@@ -21,6 +21,9 @@ if ($id > 0) {
     $existing = dbFetchOne("SELECT * FROM warehouses WHERE id = ?", [$id]);
     if ($existing) {
         $warehouse = $existing;
+        foreach ($warehouse as $k => $v) {
+            $warehouse[$k] = $v ?? '';
+        }
     } else {
         setFlash('danger', 'Warehouse not found.');
         redirect('warehouses.php');

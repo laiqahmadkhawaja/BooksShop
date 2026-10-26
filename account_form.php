@@ -14,6 +14,12 @@ if ($isEdit) {
         header('Location: accounting.php');
         exit;
     }
+    $account['account_name'] = $account['account_name'] ?? '';
+    $account['bank_name'] = $account['bank_name'] ?? '';
+    $account['account_type'] = $account['account_type'] ?? 'cash';
+    $account['account_number'] = $account['account_number'] ?? '';
+    $account['branch_name'] = $account['branch_name'] ?? '';
+    $account['notes'] = $account['notes'] ?? '';
     $pageTitle = 'Edit Account: ' . $account['account_name'];
 } else {
     $pageTitle = 'Add New Account';
@@ -69,7 +75,7 @@ require_once __DIR__ . '/includes/header.php';
                     <div class="mb-3">
                         <label class="form-label small fw-bold">Account Name *</label>
                         <input type="text" name="account_name" class="form-control" required
-                               value="<?= htmlspecialchars($account['account_name']) ?>" placeholder="e.g. Main Cash Drawer, Meezan Bank, HBL Current">
+                               value="<?= htmlspecialchars($account['account_name'] ?? '') ?>" placeholder="e.g. Main Cash Drawer, Meezan Bank, HBL Current">
                     </div>
 
                     <div class="row g-3 mb-3">
@@ -85,7 +91,7 @@ require_once __DIR__ . '/includes/header.php';
                         <div class="col-12 col-sm-6">
                             <label class="form-label small fw-bold">Bank Name (if applicable)</label>
                             <input type="text" name="bank_name" class="form-control"
-                                   value="<?= htmlspecialchars($account['bank_name']) ?>" placeholder="e.g. Meezan Bank">
+                                   value="<?= htmlspecialchars($account['bank_name'] ?? '') ?>" placeholder="e.g. Meezan Bank">
                         </div>
                     </div>
 
@@ -93,12 +99,12 @@ require_once __DIR__ . '/includes/header.php';
                         <div class="col-12 col-sm-6">
                             <label class="form-label small fw-bold">Account / IBAN Number</label>
                             <input type="text" name="account_number" class="form-control"
-                                   value="<?= htmlspecialchars($account['account_number']) ?>" placeholder="e.g. 0101-0102030405">
+                                   value="<?= htmlspecialchars($account['account_number'] ?? '') ?>" placeholder="e.g. 0101-0102030405">
                         </div>
                         <div class="col-12 col-sm-6">
                             <label class="form-label small fw-bold">Branch Name / Code</label>
                             <input type="text" name="branch_name" class="form-control"
-                                   value="<?= htmlspecialchars($account['branch_name']) ?>" placeholder="e.g. Main Market Branch">
+                                   value="<?= htmlspecialchars($account['branch_name'] ?? '') ?>" placeholder="e.g. Main Market Branch">
                         </div>
                     </div>
 
@@ -117,7 +123,7 @@ require_once __DIR__ . '/includes/header.php';
                     <div class="mb-4">
                         <label class="form-label small fw-bold">Notes</label>
                         <textarea name="notes" class="form-control" rows="2"
-                                  placeholder="Signatory information, online banking credentials notes"><?= htmlspecialchars($account['notes']) ?></textarea>
+                                  placeholder="Signatory information, online banking credentials notes"><?= htmlspecialchars($account['notes'] ?? '') ?></textarea>
                     </div>
 
                     <div class="d-flex justify-content-between align-items-center">

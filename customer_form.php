@@ -14,6 +14,9 @@ if ($isEdit) {
         header('Location: customers.php');
         exit;
     }
+    foreach (['name', 'customer_type', 'phone', 'email', 'address', 'notes'] as $k) {
+        $customer[$k] = $customer[$k] ?? '';
+    }
     $pageTitle = 'Edit Customer: ' . $customer['name'];
 } else {
     $pageTitle = 'Add New Customer';

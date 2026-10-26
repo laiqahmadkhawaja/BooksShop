@@ -14,6 +14,9 @@ if ($isEdit) {
         header('Location: suppliers.php');
         exit;
     }
+    foreach (['name', 'company_name', 'phone', 'email', 'address', 'notes'] as $k) {
+        $supplier[$k] = $supplier[$k] ?? '';
+    }
     $pageTitle = 'Edit Supplier: ' . $supplier['name'];
 } else {
     $pageTitle = 'Add New Supplier / Vendor';
