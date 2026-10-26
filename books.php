@@ -189,6 +189,7 @@ if (isset($_GET['export_csv'])) {
 // Fetch categories and product types
 $categories = dbFetchAll("SELECT * FROM categories ORDER BY name ASC");
 $productTypes = getProductTypes();
+$typeMap = array_column($productTypes, 'name', 'code');
 
 // Build query
 $where = ["p.status = 1"];
@@ -296,7 +297,7 @@ require_once __DIR__ . '/includes/header.php';
                     <option value="">-- All Categories --</option>
                     <?php foreach ($categories as $cat): ?>
                         <option value="<?= $cat['id'] ?>" <?= $categoryFilter == $cat['id'] ? 'selected' : '' ?>>
-                            <?= htmlspecialchars($cat['name']) ?> (<?= ucfirst($cat['type']) ?>)
+                            <?= htmlspecialchars($cat['name']) ?> (<?= htmlspecialchars($typeMap[$cat['type']] ?? ucfirst($cat['type'])) ?>)
                         </option>
                     <?php endforeach; ?>
                 </select>

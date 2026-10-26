@@ -49,6 +49,7 @@ if ($isEdit) {
 
 $categories = dbFetchAll("SELECT * FROM categories ORDER BY name ASC");
 $productTypes = getProductTypes();
+$typeMap = array_column($productTypes, 'name', 'code');
 
 require_once __DIR__ . '/includes/header.php';
 ?>
@@ -139,7 +140,7 @@ require_once __DIR__ . '/includes/header.php';
                         <option value="">-- No Category --</option>
                         <?php foreach ($categories as $cat): ?>
                             <option value="<?= $cat['id'] ?>" <?= ((int)$product['category_id'] === (int)$cat['id']) ? 'selected' : '' ?>>
-                                <?= htmlspecialchars($cat['name']) ?> (<?= ucfirst($cat['type']) ?>)
+                                <?= htmlspecialchars($cat['name']) ?> (<?= htmlspecialchars($typeMap[$cat['type']] ?? ucfirst($cat['type'])) ?>)
                             </option>
                         <?php endforeach; ?>
                     </select>

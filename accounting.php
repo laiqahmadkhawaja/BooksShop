@@ -180,9 +180,9 @@ require_once __DIR__ . '/includes/header.php';
                         </div>
                     </div>
                     <div class="text-end">
-                        <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 border-0 mb-2" onclick='editAccount(<?= json_encode($acc, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>)' title="Edit Account Details">
+                        <a href="account_form.php?id=<?= $acc['id'] ?>" class="btn btn-sm btn-outline-secondary py-0 px-2 border-0 mb-2" title="Edit Account Details">
                             <i class="fa-solid fa-pen-to-square text-secondary"></i>
-                        </button>
+                        </a>
                         <h5 class="fw-bold <?= $acc['balance'] >= 0 ? 'text-success' : 'text-danger' ?> mb-0">
                             <?= formatCurrency($acc['balance']) ?>
                         </h5>
