@@ -1,9 +1,11 @@
 package io.darearqamgrw.mobile.app
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.ContentValues
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Color
 import android.net.Uri
 import android.os.Build
@@ -11,8 +13,13 @@ import android.os.Bundle
 import android.os.Environment
 import android.provider.MediaStore
 import android.util.Base64
+import android.util.Log
 import android.view.ViewGroup
+import android.webkit.ConsoleMessage
 import android.webkit.JavascriptInterface
+import android.webkit.JsPromptResult
+import android.webkit.JsResult
+import android.webkit.PermissionRequest
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
@@ -20,14 +27,14 @@ import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.WindowInsetsControllerCompat
+import androidx.core.content.ContextCompat
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import java.io.File
 import java.io.FileOutputStream
@@ -37,6 +44,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var web: WebView
     private lateinit var swipeRefresh: SwipeRefreshLayout
     private var fileCallback: ValueCallback<Array<Uri>>? = null
+    private var pendingPermissionRequest: PermissionRequest? = null
 
     private val startUrl = "https://mobile.darearqamgrw.io/Books/"
     private val allowedHost = "mobile.darearqamgrw.io"
@@ -60,6 +68,16 @@ class MainActivity : AppCompatActivity() {
         fileCallback = null
     }
 
+    private val cameraPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
+        if (isGranted) {
+            pendingPermissionRequest?.grant(arrayOf(PermissionRequest.RESOURCE_VIDEO_CAPTURE))
+        } else {
+            pendingPermissionRequest?.deny()
+            Toast.makeText(this, "Camera permission is required for barcode scanning", Toast.LENGTH_SHORT).show()
+        }
+        pendingPermissionRequest = null
+    }
+
     private fun isInternal(host: String?): Boolean {
         if (host == null) return false
         return host == allowedHost || host.endsWith("." + allowedHost)
@@ -79,20 +97,27 @@ class MainActivity : AppCompatActivity() {
 
         setContentView(rootLayout)
 
+        // Prevent SwipeRefresh from stealing click/touch events when scrolling or interacting
+        swipeRefresh.setOnChildScrollUpCallback { _, _ ->
+            web.scrollY > 0
+        }
+
         web.settings.apply {
             javaScriptEnabled = true
             domStorageEnabled = true
+            databaseEnabled = true
             allowFileAccess = true
             allowContentAccess = true
             allowFileAccessFromFileURLs = true
             allowUniversalAccessFromFileURLs = true
+            javaScriptCanOpenWindowsAutomatically = true
             setSupportMultipleWindows(false)
-            mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
+            mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
             
             useWideViewPort = true
             loadWithOverviewMode = true
             mediaPlaybackRequiresUserGesture = false
-            userAgentString = userAgentString.replace("Android", "Mobile")
+            cacheMode = WebSettings.LOAD_DEFAULT
         }
 
         web.addJavascriptInterface(WebAppInterface(), "AndroidDownloader")
@@ -108,10 +133,25 @@ class MainActivity : AppCompatActivity() {
         web.webViewClient = object : WebViewClient() {
             override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
                 val uri = request.url
-                val scheme = uri.scheme
-                if (scheme == "http" || scheme == "https") {
-                    if (keepInsideApp || isInternal(uri.host)) return false
+                val scheme = uri.scheme?.lowercase() ?: ""
+                
+                // Keep javascript:, data:, blob:, about: inside WebView
+                if (scheme == "javascript" || scheme == "data" || scheme == "blob" || scheme == "about") {
+                    return false
                 }
+                
+                val host = uri.host
+                // If relative path or hash link (#modal, etc.), keep inside WebView
+                if (host.isNullOrEmpty()) {
+                    return false
+                }
+
+                if (scheme == "http" || scheme == "https") {
+                    if (keepInsideApp || isInternal(host)) {
+                        return false
+                    }
+                }
+                
                 try {
                     startActivity(Intent(Intent.ACTION_VIEW, uri))
                 } catch (e: Exception) {}
@@ -136,7 +176,7 @@ class MainActivity : AppCompatActivity() {
                                         var reader = new FileReader();
                                         reader.onload = function() {
                                             var base64 = reader.result.split(',')[1];
-                                            var filename = target.getAttribute('download') || 'tooldeck_download';
+                                            var filename = target.getAttribute('download') || 'download';
                                             AndroidDownloader.downloadBase64(filename, base64);
                                         };
                                         reader.readAsDataURL(blob);
@@ -155,6 +195,23 @@ class MainActivity : AppCompatActivity() {
         }
 
         web.webChromeClient = object : WebChromeClient() {
+            // Handle Camera & Media Permissions for Barcode Scanning
+            override fun onPermissionRequest(request: PermissionRequest) {
+                runOnUiThread {
+                    val resources = request.resources
+                    if (resources.contains(PermissionRequest.RESOURCE_VIDEO_CAPTURE)) {
+                        if (ContextCompat.checkSelfPermission(this@MainActivity, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
+                            request.grant(arrayOf(PermissionRequest.RESOURCE_VIDEO_CAPTURE))
+                        } else {
+                            pendingPermissionRequest = request
+                            cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                        }
+                    } else {
+                        request.grant(resources)
+                    }
+                }
+            }
+
             override fun onShowFileChooser(
                 webView: WebView,
                 filePathCallback: ValueCallback<Array<Uri>>,
@@ -180,6 +237,47 @@ class MainActivity : AppCompatActivity() {
                     fileCallback = null
                     false
                 }
+            }
+
+            // JavaScript Dialogs & Console Logging
+            override fun onConsoleMessage(consoleMessage: ConsoleMessage): Boolean {
+                Log.d("WebViewConsole", "${consoleMessage.message()} -- From line ${consoleMessage.lineNumber()} of ${consoleMessage.sourceId()}")
+                return true
+            }
+
+            override fun onJsAlert(view: WebView?, url: String?, message: String?, result: JsResult?): Boolean {
+                AlertDialog.Builder(this@MainActivity)
+                    .setTitle("Alert")
+                    .setMessage(message ?: "")
+                    .setPositiveButton(android.R.string.ok) { _, _ -> result?.confirm() }
+                    .setOnCancelListener { result?.cancel() }
+                    .show()
+                return true
+            }
+
+            override fun onJsConfirm(view: WebView?, url: String?, message: String?, result: JsResult?): Boolean {
+                AlertDialog.Builder(this@MainActivity)
+                    .setTitle("Confirmation")
+                    .setMessage(message ?: "")
+                    .setPositiveButton(android.R.string.ok) { _, _ -> result?.confirm() }
+                    .setNegativeButton(android.R.string.cancel) { _, _ -> result?.cancel() }
+                    .setOnCancelListener { result?.cancel() }
+                    .show()
+                return true
+            }
+
+            override fun onJsPrompt(view: WebView?, url: String?, message: String?, defaultValue: String?, result: JsPromptResult?): Boolean {
+                val input = EditText(this@MainActivity)
+                input.setText(defaultValue ?: "")
+                AlertDialog.Builder(this@MainActivity)
+                    .setTitle("Prompt")
+                    .setMessage(message ?: "")
+                    .setView(input)
+                    .setPositiveButton(android.R.string.ok) { _, _ -> result?.confirm(input.text.toString()) }
+                    .setNegativeButton(android.R.string.cancel) { _, _ -> result?.cancel() }
+                    .setOnCancelListener { result?.cancel() }
+                    .show()
+                return true
             }
         }
 
