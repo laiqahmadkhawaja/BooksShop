@@ -17,7 +17,21 @@ function getDB() {
                 PDO::ATTR_EMULATE_PREPARES => false,
             ]);
         } catch (PDOException $e) {
-            die("Database Connection Error: " . htmlspecialchars($e->getMessage()));
+            if ($e->getCode() == 1049) {
+                try {
+                    $tmp = new PDO("mysql:host=" . DB_HOST . ";port=" . DB_PORT . ";charset=utf8mb4", DB_USER, DB_PASS);
+                    $tmp->exec("CREATE DATABASE IF NOT EXISTS `" . DB_NAME . "` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+                    $pdo = new PDO("mysql:host=" . DB_HOST . ";port=" . DB_PORT . ";dbname=" . DB_NAME . ";charset=utf8mb4", DB_USER, DB_PASS, [
+                        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                        PDO::ATTR_EMULATE_PREPARES => false,
+                    ]);
+                } catch (Exception $e2) {
+                    die("Database Connection Error: " . htmlspecialchars($e2->getMessage()));
+                }
+            } else {
+                die("Database Connection Error: " . htmlspecialchars($e->getMessage()));
+            }
         }
     }
     return $pdo;

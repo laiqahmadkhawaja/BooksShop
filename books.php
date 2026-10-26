@@ -90,6 +90,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
+    // Product Type Add / Edit POST
+    if (isset($_POST['save_product_type'])) {
+        $tId = (int)($_POST['type_id'] ?? 0);
+        $tName = trim($_POST['type_name'] ?? '');
+        $tCode = trim($_POST['type_code'] ?? '');
+        $tDesc = trim($_POST['type_description'] ?? '');
+        $isAjax = !empty($_POST['ajax']) || (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest');
+
+        $res = saveProductType($tName, $tCode, $tDesc, $tId);
+
+        if ($isAjax) {
+            header('Content-Type: application/json');
+            echo json_encode($res);
+            exit;
+        }
+
+        if ($res['success']) {
+            setFlash('success', $res['message']);
+        } else {
+            setFlash('danger', $res['message']);
+        }
+        header("Location: books.php");
+        exit;
+    }
+
+    // Product Type Delete POST
+    if (isset($_POST['delete_product_type'])) {
+        $delId = (int)$_POST['type_id'];
+        $isAjax = !empty($_POST['ajax']);
+        $res = deleteProductType($delId);
+
+        if ($isAjax) {
+            header('Content-Type: application/json');
+            echo json_encode($res);
+            exit;
+        }
+
+        if ($res['success']) {
+            setFlash('success', $res['message']);
+        } else {
+            setFlash('danger', $res['message']);
+        }
+        header("Location: books.php");
+        exit;
+    }
+
     // Category Add / Edit POST
     if (isset($_POST['save_category'])) {
         $cId = (int)($_POST['category_id'] ?? 0);
@@ -140,19 +186,23 @@ if (isset($_GET['export_csv'])) {
     exit;
 }
 
-// Fetch categories
+// Fetch categories and product types
 $categories = dbFetchAll("SELECT * FROM categories ORDER BY name ASC");
+$productTypes = getProductTypes();
 
 // Build query
 $where = ["p.status = 1"];
 $params = [];
 
-if ($tab === 'books') {
+if ($tab === 'books' || $tab === 'book') {
     $where[] = "p.product_type = 'book'";
 } elseif ($tab === 'stationery') {
     $where[] = "p.product_type = 'stationery'";
 } elseif ($tab === 'low_stock') {
     $where[] = "p.current_stock <= p.min_stock_alert";
+} elseif ($tab !== 'all' && !empty($tab)) {
+    $where[] = "p.product_type = ?";
+    $params[] = $tab;
 }
 
 if ($categoryFilter) {
@@ -171,7 +221,7 @@ $products = dbFetchAll("SELECT p.*, c.name as category_name
     FROM products p 
     LEFT JOIN categories c ON c.id = p.category_id 
     WHERE $whereClause 
-    ORDER BY p.id DESC");
+    ORDER BY p.id DESC", $params);
 
 $pageTitle = 'Books & Products';
 require_once __DIR__ . '/includes/header.php';
@@ -183,6 +233,9 @@ require_once __DIR__ . '/includes/header.php';
         <small class="text-muted">Manage textbook syllabus, general books, barcodes, and stationery items</small>
     </div>
     <div class="d-flex gap-2">
+        <button type="button" class="btn btn-outline-secondary btn-sm shadow-sm" data-bs-toggle="modal" data-bs-target="#productTypeManageModal">
+            <i class="fa-solid fa-layer-group me-1"></i> Manage Types
+        </button>
         <button type="button" class="btn btn-outline-primary btn-sm shadow-sm" data-bs-toggle="modal" data-bs-target="#categoryManageModal">
             <i class="fa-solid fa-tags me-1"></i> Manage Categories
         </button>
@@ -204,16 +257,24 @@ require_once __DIR__ . '/includes/header.php';
                     <i class="fa-solid fa-list me-1"></i> All Products (<?= dbFetchOne("SELECT COUNT(*) as c FROM products WHERE status=1")['c'] ?>)
                 </a>
             </li>
-            <li class="nav-item">
-                <a class="nav-link text-nowrap <?= $tab === 'books' ? 'active fw-bold text-primary' : '' ?>" href="books.php?tab=books">
-                    <i class="fa-solid fa-book me-1"></i> Books & Syllabus (<?= dbFetchOne("SELECT COUNT(*) as c FROM products WHERE product_type='book' AND status=1")['c'] ?>)
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link text-nowrap <?= $tab === 'stationery' ? 'active fw-bold text-warning' : '' ?>" href="books.php?tab=stationery">
-                    <i class="fa-solid fa-pencil me-1"></i> Stationery (<?= dbFetchOne("SELECT COUNT(*) as c FROM products WHERE product_type='stationery' AND status=1")['c'] ?>)
-                </a>
-            </li>
+            <?php foreach ($productTypes as $pt): ?>
+                <?php
+                    $pCode = $pt['code'];
+                    $isActive = ($tab === $pCode || ($tab === 'books' && $pCode === 'book'));
+                    $icon = 'fa-tag';
+                    $textColor = 'text-dark';
+                    if ($pCode === 'book') { $icon = 'fa-book'; $textColor = 'text-primary'; }
+                    elseif ($pCode === 'stationery') { $icon = 'fa-pencil'; $textColor = 'text-warning'; }
+                    elseif ($pCode === 'toys') { $icon = 'fa-puzzle-piece'; $textColor = 'text-info'; }
+                    
+                    $tCount = dbFetchOne("SELECT COUNT(*) as c FROM products WHERE product_type=? AND status=1", [$pCode])['c'] ?? 0;
+                ?>
+                <li class="nav-item">
+                    <a class="nav-link text-nowrap <?= $isActive ? 'active fw-bold ' . $textColor : '' ?>" href="books.php?tab=<?= urlencode($pCode) ?>">
+                        <i class="fa-solid <?= $icon ?> me-1"></i> <?= htmlspecialchars($pt['name']) ?> (<?= $tCount ?>)
+                    </a>
+                </li>
+            <?php endforeach; ?>
             <li class="nav-item">
                 <a class="nav-link text-nowrap <?= $tab === 'low_stock' ? 'active fw-bold text-danger' : '' ?>" href="books.php?tab=low_stock">
                     <i class="fa-solid fa-triangle-exclamation me-1"></i> Low Stock Alert (<?= dbFetchOne("SELECT COUNT(*) as c FROM products WHERE current_stock <= min_stock_alert AND status=1")['c'] ?>)
@@ -293,7 +354,14 @@ require_once __DIR__ . '/includes/header.php';
                                     </div>
                                 </td>
                                 <td>
-                                    <span class="badge <?= $p['product_type'] === 'book' ? 'bg-primary' : 'bg-warning text-dark' ?>">
+                                    <?php 
+                                        $ptCode = $p['product_type'];
+                                        $badgeCls = 'bg-secondary';
+                                        if ($ptCode === 'book') $badgeCls = 'bg-primary';
+                                        elseif ($ptCode === 'stationery') $badgeCls = 'bg-warning text-dark';
+                                        elseif ($ptCode === 'toys') $badgeCls = 'bg-info text-dark';
+                                    ?>
+                                    <span class="badge <?= $badgeCls ?>">
                                         <?= ucfirst($p['product_type']) ?>
                                     </span>
                                     <div class="small text-muted mt-1"><?= htmlspecialchars($p['category_name'] ?? 'General') ?></div>
@@ -367,10 +435,14 @@ require_once __DIR__ . '/includes/header.php';
                     <div class="row g-3">
                         <!-- Product Type & Code -->
                         <div class="col-md-4">
-                            <label class="form-label small fw-bold">Product Type *</label>
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <label class="form-label small fw-bold mb-0">Product Type *</label>
+                                <a href="javascript:void(0)" class="small text-decoration-none fw-bold text-primary" data-bs-toggle="modal" data-bs-target="#productTypeManageModal">+ Add Type</a>
+                            </div>
                             <select name="product_type" id="prod_type" class="form-select" onchange="toggleProductTypeFields()">
-                                <option value="book">Book / Textbook / Novel</option>
-                                <option value="stationery">Stationery / Office Supply</option>
+                                <?php foreach ($productTypes as $pt): ?>
+                                    <option value="<?= htmlspecialchars($pt['code']) ?>"><?= htmlspecialchars($pt['name']) ?></option>
+                                <?php endforeach; ?>
                             </select>
                         </div>
                         <div class="col-md-4">
@@ -592,8 +664,9 @@ require_once __DIR__ . '/includes/header.php';
                             <div class="col-md-3">
                                 <label class="form-label small fw-bold">Category Type</label>
                                 <select name="cat_type" id="edit_cat_type" class="form-select form-select-sm">
-                                    <option value="book">Book / Syllabus</option>
-                                    <option value="stationery">Stationery</option>
+                                    <?php foreach ($productTypes as $pt): ?>
+                                        <option value="<?= htmlspecialchars($pt['code']) ?>"><?= htmlspecialchars($pt['name']) ?></option>
+                                    <?php endforeach; ?>
                                     <option value="general">General Merchandise</option>
                                 </select>
                             </div>
@@ -667,10 +740,99 @@ require_once __DIR__ . '/includes/header.php';
         </div>
     </div>
 </div>
+
+<!-- Modal: Manage & Add Product Types -->
+<div class="modal fade" id="productTypeManageModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title fw-bold"><i class="fa-solid fa-layer-group me-2 text-warning"></i> Product Types Manager</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-dark" onclick="window.print()"><i class="fa-solid fa-print me-1"></i> Print Sticker</button>
+            <div class="modal-body p-4">
+                <!-- Add / Edit Product Type Form -->
+                <div class="card bg-light border p-3 mb-4">
+                    <h6 class="fw-bold mb-3 text-dark" id="typeFormTitle"><i class="fa-solid fa-plus-circle text-primary me-1"></i> Add New Product Type</h6>
+                    <form method="POST" action="books.php" id="formProductType">
+                        <input type="hidden" name="save_product_type" value="1">
+                        <input type="hidden" name="type_id" id="edit_type_id" value="0">
+                        <div class="row g-2">
+                            <div class="col-md-5">
+                                <label class="form-label small fw-bold">Type Name *</label>
+                                <input type="text" name="type_name" id="edit_type_name" class="form-control form-control-sm" required placeholder="e.g. Toys, Uniform, Bags" oninput="autoGenerateTypeCode(this.value)">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small fw-bold">Code / Slug *</label>
+                                <input type="text" name="type_code" id="edit_type_code" class="form-control form-control-sm" required placeholder="e.g. toys">
+                            </div>
+                            <div class="col-md-3 d-flex align-items-end">
+                                <button type="submit" class="btn btn-primary btn-sm w-100 fw-bold">
+                                    <i class="fa-solid fa-save me-1"></i> Save Type
+                                </button>
+                            </div>
+                            <div class="col-12 mt-2">
+                                <input type="text" name="type_description" id="edit_type_desc" class="form-control form-control-sm" placeholder="Optional notes (e.g. Educational toys, games, novelty items)">
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Existing Product Types Table -->
+                <h6 class="fw-bold text-dark mb-2"><i class="fa-solid fa-list me-1"></i> Existing Product Types (<?= count($productTypes) ?>)</h6>
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover align-middle mb-0 small">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Type Name</th>
+                                <th>Code / Key</th>
+                                <th>Description</th>
+                                <th class="text-center">Products Linked</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($productTypes as $pt): ?>
+                                <?php 
+                                    $pCount = dbFetchOne("SELECT COUNT(*) as cnt FROM products WHERE product_type = ?", [$pt['code']])['cnt'] ?? 0;
+                                ?>
+                                <tr>
+                                    <td>
+                                        <strong><?= htmlspecialchars($pt['name']) ?></strong>
+                                        <?php if (!empty($pt['is_system'])): ?>
+                                            <span class="badge bg-secondary-subtle text-secondary ms-1">System Default</span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>
+                                        <code><?= htmlspecialchars($pt['code']) ?></code>
+                                    </td>
+                                    <td class="text-muted"><?= htmlspecialchars($pt['description'] ?: '-') ?></td>
+                                    <td class="text-center fw-bold text-primary"><?= $pCount ?> items</td>
+                                    <td class="text-end">
+                                        <?php if (empty($pt['is_system'])): ?>
+                                            <div class="btn-group btn-group-sm">
+                                                <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2" onclick='editProductTypeRow(<?= json_encode($pt) ?>)' title="Edit Type">
+                                                    <i class="fa-solid fa-pen-to-square"></i>
+                                                </button>
+                                                <form method="POST" action="books.php" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete product type \'<?= htmlspecialchars(addslashes($pt['name'])) ?>\'?')">
+                                                    <input type="hidden" name="delete_product_type" value="1">
+                                                    <input type="hidden" name="type_id" value="<?= $pt['id'] ?>">
+                                                    <button type="submit" class="btn btn-outline-danger btn-sm py-0 px-2" title="Delete Type" <?= $pCount > 0 ? 'disabled' : '' ?>>
+                                                        <i class="fa-solid fa-trash-can"></i>
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        <?php else: ?>
+                                            <span class="text-muted small fst-italic">Protected</span>
+                                        <?php endif; ?>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
@@ -683,10 +845,10 @@ require_once __DIR__ . '/includes/header.php';
 function toggleProductTypeFields() {
     const type = document.getElementById('prod_type').value;
     const bookFields = document.getElementById('bookSpecificFields');
-    if (type === 'stationery') {
-        bookFields.style.display = 'none';
-    } else {
+    if (type === 'book') {
         bookFields.style.display = 'flex';
+    } else {
+        bookFields.style.display = 'none';
     }
 }
 
@@ -774,6 +936,78 @@ function editCategoryRow(c) {
     document.getElementById('edit_cat_desc').value = c.description || '';
     document.getElementById('edit_cat_name').focus();
 }
+
+function autoGenerateTypeCode(val) {
+    if (document.getElementById('edit_type_id').value == '0') {
+        const code = val.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+        document.getElementById('edit_type_code').value = code;
+    }
+}
+
+function editProductTypeRow(pt) {
+    document.getElementById('typeFormTitle').innerHTML = '<i class="fa-solid fa-pen-to-square text-secondary me-1"></i> Edit Product Type: ' + pt.name;
+    document.getElementById('edit_type_id').value = pt.id;
+    document.getElementById('edit_type_name').value = pt.name;
+    document.getElementById('edit_type_code').value = pt.code;
+    document.getElementById('edit_type_desc').value = pt.description || '';
+    document.getElementById('edit_type_name').focus();
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const typeForm = document.getElementById('formProductType');
+    if (typeForm) {
+        typeForm.addEventListener('submit', function(e) {
+            const productModal = document.getElementById('productModal');
+            const isProductModalOpen = productModal && productModal.classList.contains('show');
+
+            if (isProductModalOpen) {
+                e.preventDefault();
+                const formData = new FormData(this);
+                formData.append('ajax', '1');
+
+                fetch('books.php', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        const sel = document.getElementById('prod_type');
+                        let opt = sel.querySelector(`option[value="${data.code}"]`);
+                        if (!opt) {
+                            opt = document.createElement('option');
+                            opt.value = data.code;
+                            opt.textContent = data.name;
+                            sel.appendChild(opt);
+                        } else {
+                            opt.textContent = data.name;
+                        }
+                        sel.value = data.code;
+                        toggleProductTypeFields();
+
+                        // Close productTypeManageModal
+                        const modalEl = document.getElementById('productTypeManageModal');
+                        const modalInstance = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+                        if (modalInstance) modalInstance.hide();
+
+                        // Reset form
+                        document.getElementById('edit_type_id').value = '0';
+                        document.getElementById('edit_type_name').value = '';
+                        document.getElementById('edit_type_code').value = '';
+                        document.getElementById('edit_type_desc').value = '';
+                        document.getElementById('typeFormTitle').innerHTML = '<i class="fa-solid fa-plus-circle text-primary me-1"></i> Add New Product Type';
+                    } else {
+                        alert(data.message || 'Error saving product type');
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    typeForm.submit();
+                });
+            }
+        });
+    }
+});
 </script>
 
 <?php require_once __DIR__ . '/includes/footer.php'; ?>

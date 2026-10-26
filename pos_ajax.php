@@ -279,5 +279,43 @@ if ($action === 'get_sale_items') {
     exit;
 }
 
+// 8. Get Purchase Details & Items
+if ($action === 'get_purchase_details') {
+    $purchaseId = (int)($_REQUEST['purchase_id'] ?? 0);
+    if (!$purchaseId) {
+        echo json_encode(['success' => false, 'message' => 'Invalid purchase ID']);
+        exit;
+    }
+
+    $purchase = dbFetchOne("SELECT p.*, s.name as supplier_name, s.company_name, s.phone as supplier_phone,
+                                   s.current_balance as supplier_balance,
+                                   u.full_name as creator_name,
+                                   a.account_name
+                            FROM purchases p
+                            JOIN suppliers s ON s.id = p.supplier_id
+                            LEFT JOIN users u ON u.id = p.created_by
+                            LEFT JOIN accounts a ON a.id = p.payment_account_id
+                            WHERE p.id = ?", [$purchaseId]);
+
+    if (!$purchase) {
+        echo json_encode(['success' => false, 'message' => 'Purchase order not found']);
+        exit;
+    }
+
+    $items = dbFetchAll("SELECT pi.*, p.title, p.product_code, p.barcode, p.unit, p.product_type,
+                                p.author, p.publisher, p.class_grade
+                         FROM purchase_items pi
+                         JOIN products p ON p.id = pi.product_id
+                         WHERE pi.purchase_id = ?
+                         ORDER BY pi.id ASC", [$purchaseId]);
+
+    echo json_encode([
+        'success' => true,
+        'purchase' => $purchase,
+        'items' => $items
+    ]);
+    exit;
+}
+
 echo json_encode(['success' => false, 'message' => 'Invalid action']);
 exit;

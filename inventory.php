@@ -1,7 +1,7 @@
 <?php
 // inventory.php - Stock Management, Valuation & Movement Ledger
-$pageTitle = 'Inventory & Stock';
-require_once __DIR__ . '/includes/header.php';
+require_once __DIR__ . '/config/app.php';
+requireAuth();
 
 $filter = $_GET['filter'] ?? 'all';
 $category = (int)($_GET['category'] ?? 0);
@@ -22,8 +22,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_stock_adjustment
         recordStockMovement($productId, $mType, null, $qtyChange, $reason, $cost);
         setFlash('success', "Stock adjustment successfully recorded.");
     }
-    header("Location: inventory.php?tab=stock");
-    exit;
+    redirect("inventory.php?tab=stock");
 }
 
 // Valuation Summaries
@@ -51,10 +50,13 @@ if ($filter === 'low_stock') {
     $where[] = "p.current_stock <= p.min_stock_alert AND p.current_stock > 0";
 } elseif ($filter === 'out_of_stock') {
     $where[] = "p.current_stock <= 0";
-} elseif ($filter === 'books') {
+} elseif ($filter === 'books' || $filter === 'book') {
     $where[] = "p.product_type = 'book'";
 } elseif ($filter === 'stationery') {
     $where[] = "p.product_type = 'stationery'";
+} elseif (!empty($filter) && $filter !== 'all') {
+    $where[] = "p.product_type = ?";
+    $params[] = $filter;
 }
 
 if ($category > 0) {
@@ -85,7 +87,11 @@ if ($activeTab === 'movements') {
 }
 
 $categories = dbFetchAll("SELECT * FROM categories ORDER BY name ASC");
+$productTypes = getProductTypes();
 $allProducts = dbFetchAll("SELECT id, title, product_code, current_stock, purchase_price FROM products WHERE status = 1 ORDER BY title ASC");
+
+$pageTitle = 'Inventory & Stock';
+require_once __DIR__ . '/includes/header.php';
 ?>
 
 <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
@@ -165,8 +171,11 @@ $allProducts = dbFetchAll("SELECT id, title, product_code, current_stock, purcha
                         <option value="all" <?= $filter === 'all' ? 'selected' : '' ?>>All Inventory</option>
                         <option value="low_stock" <?= $filter === 'low_stock' ? 'selected' : '' ?>>Low Stock Alert Only</option>
                         <option value="out_of_stock" <?= $filter === 'out_of_stock' ? 'selected' : '' ?>>Out of Stock (Zero)</option>
-                        <option value="books" <?= $filter === 'books' ? 'selected' : '' ?>>Books Only</option>
-                        <option value="stationery" <?= $filter === 'stationery' ? 'selected' : '' ?>>Stationery Only</option>
+                        <?php foreach ($productTypes as $pt): ?>
+                            <option value="<?= htmlspecialchars($pt['code']) ?>" <?= ($filter === $pt['code'] || ($filter === 'books' && $pt['code'] === 'book')) ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($pt['name']) ?> Only
+                            </option>
+                        <?php endforeach; ?>
                     </select>
                 </div>
                 <div class="col-md-3">

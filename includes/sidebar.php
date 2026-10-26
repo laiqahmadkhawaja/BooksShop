@@ -100,7 +100,7 @@ $userRole = $_SESSION['user']['role'] ?? '';
         <?php endif; ?>
 
         <div class="pt-3 pb-4">
-            <a href="logout.php" class="nav-link text-danger-emphasis">
+            <a href="logout.php" class="nav-link text-danger-emphasis bg-light">
                 <i class="fa-solid fa-power-off text-danger"></i>
                 <span><?= __t('logout') ?></span>
             </a>

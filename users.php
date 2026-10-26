@@ -1,7 +1,7 @@
 <?php
 // users.php - User Accounts & Role Permissions Management
-$pageTitle = 'Users & Roles';
-require_once __DIR__ . '/includes/header.php';
+require_once __DIR__ . '/config/app.php';
+requireAuth();
 requireRole('admin');
 
 // Handle POST
@@ -36,12 +36,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 setFlash('success', "User '$fullname' created successfully.");
             }
         }
-        header("Location: users.php");
-        exit;
+        redirect("users.php");
     }
 }
 
 $users = dbFetchAll("SELECT * FROM users ORDER BY id ASC");
+
+$pageTitle = 'Users & Roles';
+require_once __DIR__ . '/includes/header.php';
 ?>
 
 <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">

@@ -1,7 +1,7 @@
 <?php
 // sales.php - Sales Invoices & Sales Returns Management
-$pageTitle = 'Sales & Invoices';
-require_once __DIR__ . '/includes/header.php';
+require_once __DIR__ . '/config/app.php';
+requireAuth();
 
 $search = trim($_GET['search'] ?? '');
 $customerFilter = (int)($_GET['customer'] ?? 0);
@@ -79,8 +79,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['process_sales_return'
             setFlash('warning', "No valid items selected for return.");
         }
     }
-    header("Location: sales.php");
-    exit;
+    redirect("sales.php");
 }
 
 // Build query
@@ -127,6 +126,9 @@ $sales = dbFetchAll("SELECT s.*, c.name as customer_name, c.phone as customer_ph
 
 $customers = dbFetchAll("SELECT id, name FROM customers ORDER BY name ASC");
 $accounts = dbFetchAll("SELECT id, account_name, balance FROM accounts WHERE status = 1");
+
+$pageTitle = 'Sales & Invoices';
+require_once __DIR__ . '/includes/header.php';
 ?>
 
 <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">

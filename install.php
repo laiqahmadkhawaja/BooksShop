@@ -36,10 +36,23 @@ function runInstallation() {
         `id` INT AUTO_INCREMENT PRIMARY KEY,
         `name` VARCHAR(100) NOT NULL,
         `urdu_name` VARCHAR(100),
-        `type` ENUM('book', 'stationery', 'general') DEFAULT 'book',
+        `type` VARCHAR(50) DEFAULT 'book',
         `description` VARCHAR(255),
         `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+    // 3b. Product Types Table
+    $db->exec("CREATE TABLE IF NOT EXISTS `product_types` (
+        `id` INT AUTO_INCREMENT PRIMARY KEY,
+        `code` VARCHAR(50) UNIQUE NOT NULL,
+        `name` VARCHAR(100) NOT NULL,
+        `description` VARCHAR(255),
+        `is_system` TINYINT(1) DEFAULT 0,
+        `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    $db->exec("INSERT IGNORE INTO `product_types` (`code`, `name`, `is_system`) VALUES 
+        ('book', 'Book / Textbook / Novel', 1),
+        ('stationery', 'Stationery / Office Supply', 1)");
 
     // 4. Products Table
     $db->exec("CREATE TABLE IF NOT EXISTS `products` (
@@ -48,7 +61,7 @@ function runInstallation() {
         `barcode` VARCHAR(50) UNIQUE,
         `title` VARCHAR(200) NOT NULL,
         `urdu_title` VARCHAR(200),
-        `product_type` ENUM('book', 'stationery') DEFAULT 'book',
+        `product_type` VARCHAR(50) DEFAULT 'book',
         `category_id` INT,
         `isbn` VARCHAR(30),
         `author` VARCHAR(150),

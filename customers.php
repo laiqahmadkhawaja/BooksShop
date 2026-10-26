@@ -1,7 +1,7 @@
 <?php
 // customers.php - Customer Profiles & Khata (Ledger) Management
-$pageTitle = 'Customers & Khata';
-require_once __DIR__ . '/includes/header.php';
+require_once __DIR__ . '/config/app.php';
+requireAuth();
 
 $action = $_GET['action'] ?? '';
 $selectedCustomerId = (int)($_GET['customer_id'] ?? 0);
@@ -38,8 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $selectedCustomerId = $newId;
             }
         }
-        header("Location: customers.php?customer_id=" . ($id ?: $selectedCustomerId));
-        exit;
+        redirect("customers.php?customer_id=" . ($id ?: $selectedCustomerId));
     }
 
     // 2. Receive Customer Payment Voucher
@@ -58,8 +57,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             recordCashTransaction('customer_payment', $accountId, $amount, 'Customer Payment', $refNo, "Payment from {$cust['name']} - $notes");
             setFlash('success', "Payment of " . formatCurrency($amount) . " received successfully from {$cust['name']}!");
         }
-        header("Location: customers.php?customer_id=$customerId");
-        exit;
+        redirect("customers.php?customer_id=$customerId");
     }
 }
 
@@ -86,6 +84,9 @@ if ($selectedCustomerId) {
 
 $accounts = dbFetchAll("SELECT id, account_name, balance FROM accounts WHERE status = 1");
 $shopName = getSetting('shop_name', 'Kitab Ghar');
+
+$pageTitle = 'Customers & Khata';
+require_once __DIR__ . '/includes/header.php';
 ?>
 
 <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">

@@ -1,7 +1,7 @@
 <?php
 // suppliers.php - Suppliers, Publishers & Payables Management
-$pageTitle = 'Suppliers & Publishers';
-require_once __DIR__ . '/includes/header.php';
+require_once __DIR__ . '/config/app.php';
+requireAuth();
 
 $selectedSupplierId = (int)($_GET['supplier_id'] ?? 0);
 $filterDueOnly = isset($_GET['filter']) && $_GET['filter'] === 'due';
@@ -36,8 +36,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $selectedSupplierId = $newId;
             }
         }
-        header("Location: suppliers.php?supplier_id=" . ($id ?: $selectedSupplierId));
-        exit;
+        redirect("suppliers.php?supplier_id=" . ($id ?: $selectedSupplierId));
     }
 
     // 2. Pay Supplier Voucher
@@ -56,8 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             recordCashTransaction('supplier_payment', $accountId, $amount, 'Supplier Payment', $refNo, "Payment to {$supp['name']} - $notes");
             setFlash('success', "Payment voucher of " . formatCurrency($amount) . " to {$supp['name']} saved successfully!");
         }
-        header("Location: suppliers.php?supplier_id=$supplierId");
-        exit;
+        redirect("suppliers.php?supplier_id=$supplierId");
     }
 }
 
@@ -83,6 +81,9 @@ if ($selectedSupplierId) {
 }
 
 $accounts = dbFetchAll("SELECT id, account_name, balance FROM accounts WHERE status = 1");
+
+$pageTitle = 'Suppliers & Publishers';
+require_once __DIR__ . '/includes/header.php';
 ?>
 
 <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">

@@ -18,13 +18,14 @@ $schoolClasses = dbFetchAll("SELECT sc.id, sc.class_name, sc.academic_session, s
         <div class="card p-2 bg-white shadow-sm border-0">
             <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
                 <!-- Customer Selection -->
-                <div class="d-flex align-items-center gap-2" style="min-width: 320px;">
+                <div class="d-flex align-items-center gap-2" style="min-width: 300px;">
                     <span class="text-secondary small fw-bold"><i class="fa-solid fa-user me-1 text-primary"></i> Customer:</span>
                     <select id="posCustomerSelect" class="form-select form-select-sm" onchange="onCustomerChange()">
                         <?php foreach ($customers as $c): ?>
                             <option value="<?= $c['id'] ?>" 
                                     data-balance="<?= (float)$c['current_balance'] ?>" 
                                     data-limit="<?= (float)$c['credit_limit'] ?>"
+                                    data-type="<?= htmlspecialchars($c['customer_type'] ?? 'walkin') ?>"
                                     data-name="<?= htmlspecialchars($c['name']) ?>"
                                     data-phone="<?= htmlspecialchars($c['phone'] ?? '') ?>">
                                 <?= htmlspecialchars($c['name']) ?> 
@@ -37,6 +38,19 @@ $schoolClasses = dbFetchAll("SELECT sc.id, sc.class_name, sc.academic_session, s
                 <!-- Customer Balance Info Pill -->
                 <div id="customerBalPill" class="d-none small badge bg-light text-dark border p-2">
                     <span id="custBalLabel">Balance: </span> <strong id="custBalVal" class="text-danger ms-1">Rs. 0.00</strong>
+                </div>
+
+                <!-- Rate Switcher: Retail vs Wholesale -->
+                <div class="d-flex align-items-center gap-1">
+                    <span class="text-secondary small fw-bold d-none d-md-inline"><i class="fa-solid fa-scale-balanced me-1 text-secondary"></i> Rate:</span>
+                    <div class="btn-group btn-group-sm shadow-xs" role="group" aria-label="POS Rate Mode">
+                        <button type="button" class="btn btn-primary fw-bold px-3" id="btnRateRetail" onclick="switchRateMode('retail')" title="Retail Rate Mode (Press F6)">
+                            <i class="fa-solid fa-tag me-1"></i> Retail
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary fw-semibold px-3" id="btnRateWholesale" onclick="switchRateMode('wholesale')" title="Wholesale Rate Mode (Press F6)">
+                            <i class="fa-solid fa-boxes-packing me-1"></i> Wholesale
+                        </button>
+                    </div>
                 </div>
 
                 <!-- School Package 1-Click Bundle Loader -->
@@ -83,7 +97,10 @@ $schoolClasses = dbFetchAll("SELECT sc.id, sc.class_name, sc.academic_session, s
                     <thead class="table-light sticky-top small text-uppercase">
                         <tr>
                             <th style="min-width: 140px; width: 40%;">Item / Book</th>
-                            <th style="min-width: 85px; width: 20%;">Price</th>
+                            <th style="min-width: 85px; width: 20%;">
+                                Price
+                                <span id="rateBadgeInCart" class="badge bg-primary ms-1" style="font-size: 0.65rem;">RETAIL</span>
+                            </th>
                             <th style="min-width: 95px; width: 18%;" class="text-center">Qty</th>
                             <th style="min-width: 85px; width: 15%;" class="text-end">Total</th>
                             <th style="min-width: 35px; width: 7%;" class="text-center"></th>
@@ -436,6 +453,62 @@ let allCatalogProducts = [];
 let productsMap = {};
 let searchDebounceTimer = null;
 let activeDropdownIndex = -1;
+let posRateMode = 'retail'; // 'retail' or 'wholesale'
+
+function switchRateMode(mode, updateCart = true) {
+    if (mode !== 'retail' && mode !== 'wholesale') return;
+    posRateMode = mode;
+
+    const btnRetail = document.getElementById('btnRateRetail');
+    const btnWholesale = document.getElementById('btnRateWholesale');
+    const badge = document.getElementById('rateBadgeInCart');
+
+    if (posRateMode === 'wholesale') {
+        if (btnRetail) {
+            btnRetail.className = 'btn btn-outline-secondary fw-semibold px-3';
+        }
+        if (btnWholesale) {
+            btnWholesale.className = 'btn btn-warning text-dark fw-bold px-3 shadow-sm';
+        }
+        if (badge) {
+            badge.className = 'badge bg-warning text-dark ms-1';
+            badge.textContent = 'WHOLESALE';
+        }
+    } else {
+        if (btnRetail) {
+            btnRetail.className = 'btn btn-primary fw-bold px-3 shadow-sm';
+        }
+        if (btnWholesale) {
+            btnWholesale.className = 'btn btn-outline-secondary fw-semibold px-3';
+        }
+        if (badge) {
+            badge.className = 'badge bg-primary ms-1';
+            badge.textContent = 'RETAIL';
+        }
+    }
+
+    // Recalculate existing items in cart if any
+    if (updateCart && cartItems.length > 0) {
+        cartItems.forEach(item => {
+            const rt = parseFloat(item.retail_price) || 0;
+            const ws = parseFloat(item.wholesale_price) || 0;
+            if (posRateMode === 'wholesale') {
+                item.price = (ws > 0) ? ws : rt;
+            } else {
+                item.price = rt;
+            }
+            item.line_total = (item.qty * item.price) - (item.discount || 0);
+        });
+        renderCart();
+    }
+
+    // Refresh catalog cards if loaded
+    if (allCatalogProducts && allCatalogProducts.length > 0) {
+        filterCatalogItems();
+    }
+
+    playBeep();
+}
 
 // Synthesize pleasant checkout / add beep using Web Audio API
 function playBeep() {
@@ -511,7 +584,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // POS Hotkeys (F3 = Camera Scan, F4 = Hold, F8 = Checkout, F7 = Held Bills)
+    // POS Hotkeys (F3 = Camera Scan, F4 = Hold, F6 = Switch Rate, F8 = Checkout, F7 = Held Bills)
     document.addEventListener('keydown', function(e) {
         if (e.key === 'F3' || (e.altKey && (e.key === 's' || e.key === 'S'))) {
             e.preventDefault();
@@ -519,6 +592,9 @@ document.addEventListener('DOMContentLoaded', function() {
         } else if (e.key === 'F4') {
             e.preventDefault();
             holdCurrentBill();
+        } else if (e.key === 'F6') {
+            e.preventDefault();
+            switchRateMode(posRateMode === 'retail' ? 'wholesale' : 'retail');
         } else if (e.key === 'F8') {
             e.preventDefault();
             openCheckoutModal();
@@ -613,6 +689,11 @@ function renderLiveSearchDropdown(products, term) {
                           (isLow ? `<span class="badge bg-warning text-dark">Stock: ${p.current_stock}</span>` : 
                                    `<span class="badge bg-success">In Stock (${p.current_stock})</span>`);
 
+        const rt = parseFloat(p.retail_price) || 0;
+        const ws = parseFloat(p.wholesale_price) || 0;
+        const activePrice = (posRateMode === 'wholesale' && ws > 0) ? ws : rt;
+        const rateTag = (posRateMode === 'wholesale') ? '<span class="badge bg-warning text-dark ms-1" style="font-size: 0.62rem;">WS</span>' : '';
+
         html += `
             <a href="javascript:void(0)" class="list-group-item list-group-item-action live-search-item py-2 px-3 border-bottom d-flex justify-content-between align-items-center" data-id="${p.id}" onclick="addProductToCartById(${p.id})">
                 <div style="max-width: 65%;">
@@ -624,7 +705,8 @@ function renderLiveSearchDropdown(products, term) {
                     </div>
                 </div>
                 <div class="text-end">
-                    <div class="fw-bold text-primary fs-6">Rs. ${parseFloat(p.retail_price).toFixed(2)}</div>
+                    <div class="fw-bold text-primary fs-6">Rs. ${activePrice.toFixed(2)} ${rateTag}</div>
+                    ${posRateMode === 'wholesale' && ws > 0 ? `<div class="text-muted small" style="font-size: 0.65rem;">Retail: Rs. ${rt.toFixed(2)}</div>` : ''}
                     <div>${stockBadge}</div>
                 </div>
             </a>
@@ -681,7 +763,27 @@ function renderCatalog(products) {
                         <div class="text-secondary font-monospace" style="font-size: 0.68rem;">${p.barcode || p.product_code}</div>
                     </div>
                     <div class="d-flex justify-content-between align-items-center mt-2 pt-1 border-top">
-                        <span class="fw-bold text-success small">Rs. ${parseFloat(p.retail_price).toFixed(2)}</span>
+                        ${(() => {
+                            const rt = parseFloat(p.retail_price) || 0;
+                            const ws = parseFloat(p.wholesale_price) || 0;
+                            if (posRateMode === 'wholesale') {
+                                const activeP = (ws > 0) ? ws : rt;
+                                return `
+                                    <div>
+                                        <span class="fw-bold text-dark small">Rs. ${activeP.toFixed(2)}</span>
+                                        <span class="badge bg-warning text-dark ms-1" style="font-size: 0.6rem;">WS</span>
+                                        ${ws > 0 ? `<div class="text-muted" style="font-size: 0.65rem;">Retail: Rs. ${rt.toFixed(2)}</div>` : ''}
+                                    </div>
+                                `;
+                            } else {
+                                return `
+                                    <div>
+                                        <span class="fw-bold text-success small">Rs. ${rt.toFixed(2)}</span>
+                                        ${ws > 0 ? `<div class="text-muted" style="font-size: 0.65rem;">WS: Rs. ${ws.toFixed(2)}</div>` : ''}
+                                    </div>
+                                `;
+                            }
+                        })()}
                         <span class="btn btn-sm btn-outline-primary py-0 px-2" style="font-size: 0.72rem;"><i class="fa-solid fa-plus"></i></span>
                     </div>
                 </div>
@@ -738,12 +840,15 @@ function addProductToCart(product, qty = 1) {
     playBeep();
     hideLiveSearchDropdown();
 
+    const rt = parseFloat(product.retail_price) || 0;
+    const ws = parseFloat(product.wholesale_price) || 0;
+    const price = (posRateMode === 'wholesale' && ws > 0) ? ws : rt;
+
     const existingIndex = cartItems.findIndex(item => item.product_id == product.id);
     if (existingIndex > -1) {
         cartItems[existingIndex].qty += qty;
         cartItems[existingIndex].line_total = (cartItems[existingIndex].qty * cartItems[existingIndex].price) - cartItems[existingIndex].discount;
     } else {
-        const price = parseFloat(product.retail_price) || 0;
         cartItems.push({
             product_id: product.id,
             product_code: product.product_code,
@@ -751,6 +856,8 @@ function addProductToCart(product, qty = 1) {
             title: product.title,
             urdu_title: product.urdu_title,
             unit: product.unit || 'Piece',
+            retail_price: rt,
+            wholesale_price: ws,
             price: price,
             qty: qty,
             discount: 0,
@@ -829,23 +936,37 @@ function renderCart() {
 
     let html = '';
     cartItems.forEach((item, index) => {
+        const rt = parseFloat(item.retail_price) || 0;
+        const ws = parseFloat(item.wholesale_price) || 0;
+        const isWs = (ws > 0 && Math.abs(item.price - ws) < 0.01);
+
         html += `
             <tr>
                 <td>
                     <div class="fw-bold small text-dark">${item.title}</div>
-                    <div class="text-muted" style="font-size: 0.7rem;">${item.product_code} &bull; ${item.unit}</div>
+                    <div class="text-muted d-flex align-items-center gap-1 flex-wrap mt-1" style="font-size: 0.7rem;">
+                        <span class="font-monospace">${item.product_code} &bull; ${item.unit}</span>
+                        ${ws > 0 ? `
+                            <span class="badge ${isWs ? 'bg-warning text-dark' : 'bg-light text-secondary border'}" style="font-size: 0.65rem; cursor: pointer;" title="Click to use Wholesale price (Rs. ${ws.toFixed(2)})" onclick="applyItemRate(${index}, 'wholesale')">
+                                WS: Rs. ${ws.toFixed(2)}
+                            </span>
+                            <span class="badge ${!isWs ? 'bg-primary-subtle text-primary border' : 'bg-light text-secondary border'}" style="font-size: 0.65rem; cursor: pointer;" title="Click to use Retail price (Rs. ${rt.toFixed(2)})" onclick="applyItemRate(${index}, 'retail')">
+                                RT: Rs. ${rt.toFixed(2)}
+                            </span>
+                        ` : ''}
+                    </div>
                 </td>
                 <td>
-                    <input type="number" step="0.01" class="form-control form-control-sm" value="${item.price.toFixed(2)}" onchange="updateItemPrice(${index}, this.value)">
+                    <input type="number" step="0.01" class="form-control form-control-sm font-monospace" value="${item.price.toFixed(2)}" onchange="updateItemPrice(${index}, this.value)">
                 </td>
                 <td class="text-center">
                     <div class="input-group input-group-sm justify-content-center" style="width: 100px; margin: 0 auto;">
                         <button class="btn btn-outline-secondary" type="button" onclick="changeQty(${index}, -1)">-</button>
-                        <input type="number" step="1" class="form-control text-center p-0" value="${item.qty}" min="1" onchange="updateItemQty(${index}, this.value)">
+                        <input type="number" step="1" class="form-control text-center p-0 font-monospace" value="${item.qty}" min="1" onchange="updateItemQty(${index}, this.value)">
                         <button class="btn btn-outline-secondary" type="button" onclick="changeQty(${index}, 1)">+</button>
                     </div>
                 </td>
-                <td class="text-end fw-bold text-dark">
+                <td class="text-end fw-bold text-dark font-monospace">
                     Rs. ${item.line_total.toFixed(2)}
                 </td>
                 <td class="text-center">
@@ -858,6 +979,19 @@ function renderCart() {
     });
     tbody.innerHTML = html;
     recalculateTotals();
+}
+
+function applyItemRate(index, mode) {
+    if (!cartItems[index]) return;
+    const rt = parseFloat(cartItems[index].retail_price) || 0;
+    const ws = parseFloat(cartItems[index].wholesale_price) || 0;
+    if (mode === 'wholesale' && ws > 0) {
+        cartItems[index].price = ws;
+    } else {
+        cartItems[index].price = rt;
+    }
+    cartItems[index].line_total = (cartItems[index].qty * cartItems[index].price) - (cartItems[index].discount || 0);
+    renderCart();
 }
 
 function changeQty(index, delta) {
@@ -921,6 +1055,7 @@ function onCustomerChange() {
     const sel = document.getElementById('posCustomerSelect');
     const opt = sel.options[sel.selectedIndex];
     const bal = parseFloat(opt.getAttribute('data-balance')) || 0;
+    const custType = opt.getAttribute('data-type') || 'walkin';
     const pill = document.getElementById('customerBalPill');
     const val = document.getElementById('custBalVal');
 
@@ -929,6 +1064,11 @@ function onCustomerChange() {
         val.innerText = 'Rs. ' + bal.toFixed(2);
     } else {
         pill.classList.add('d-none');
+    }
+
+    // Auto-switch to wholesale rate mode if customer is wholesale
+    if (custType === 'wholesale') {
+        switchRateMode('wholesale');
     }
 }
 
@@ -1181,7 +1321,7 @@ function processCheckout() {
         payment_method: method,
         account_id: accountId,
         notes: notes,
-        sale_type: 'pos'
+        sale_type: posRateMode === 'wholesale' ? 'wholesale' : 'pos'
     };
 
     fetch('pos_ajax.php?action=checkout', {
@@ -1692,8 +1832,12 @@ function showScannerFeedbackToast(product) {
 
     if (toast && titleEl && detailsEl) {
         titleEl.textContent = product.title;
-        const totalItems = cartItems.reduce((sum, item) => sum + item.quantity, 0);
-        detailsEl.innerHTML = `Rs. ${parseFloat(product.retail_price).toFixed(2)} &bull; Added! Cart: ${totalItems} items`;
+        const totalItems = cartItems.reduce((sum, item) => sum + item.qty, 0);
+        const rt = parseFloat(product.retail_price) || 0;
+        const ws = parseFloat(product.wholesale_price) || 0;
+        const activeP = (posRateMode === 'wholesale' && ws > 0) ? ws : rt;
+        const rateTag = (posRateMode === 'wholesale') ? ' [WS]' : '';
+        detailsEl.innerHTML = `Rs. ${activeP.toFixed(2)}${rateTag} &bull; Added! Cart: ${totalItems} items`;
         toast.classList.remove('d-none');
 
         clearTimeout(scannerToastTimer);

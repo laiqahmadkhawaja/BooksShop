@@ -1,7 +1,7 @@
 <?php
 // purchases.php - Purchase Invoices & Goods Receiving
-$pageTitle = 'Purchases & Inward';
-require_once __DIR__ . '/includes/header.php';
+require_once __DIR__ . '/config/app.php';
+requireAuth();
 
 $action = $_GET['action'] ?? '';
 $supplierFilter = (int)($_GET['supplier'] ?? 0);
@@ -86,8 +86,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_purchase'])) {
 
         $db->commit();
         setFlash('success', "Purchase invoice $purchaseNo recorded and inventory stock increased!");
-        header("Location: purchases.php");
-        exit;
+        redirect("purchases.php");
     } else {
         setFlash('danger', "Please select a supplier and add at least one product.");
     }
@@ -110,6 +109,9 @@ $purchases = dbFetchAll("SELECT p.*, s.name as supplier_name, s.company_name, u.
 $suppliers = dbFetchAll("SELECT id, name, company_name, current_balance FROM suppliers WHERE status = 1 ORDER BY name ASC");
 $products = dbFetchAll("SELECT id, title, product_code, purchase_price, current_stock FROM products WHERE status = 1 ORDER BY title ASC");
 $accounts = dbFetchAll("SELECT id, account_name, balance FROM accounts WHERE status = 1");
+
+$pageTitle = 'Purchases & Inward';
+require_once __DIR__ . '/includes/header.php';
 ?>
 
 <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
@@ -179,9 +181,14 @@ $accounts = dbFetchAll("SELECT id, account_name, balance FROM accounts WHERE sta
                                     <?php endif; ?>
                                 </td>
                                 <td class="text-end">
-                                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="viewPurchaseItems(<?= $p['id'] ?>)">
-                                        <i class="fa-solid fa-list me-1"></i> View Items
-                                    </button>
+                                    <div class="btn-group btn-group-sm shadow-sm">
+                                        <a href="print_purchase.php?id=<?= $p['id'] ?>" target="_blank" class="btn btn-outline-dark" title="Print Purchase Invoice">
+                                            <i class="fa-solid fa-print me-1"></i> Print
+                                        </a>
+                                        <button type="button" class="btn btn-outline-secondary" onclick="viewPurchaseItems(<?= $p['id'] ?>)" title="View Order Details">
+                                            <i class="fa-solid fa-list me-1"></i> View Items
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -281,9 +288,17 @@ $accounts = dbFetchAll("SELECT id, account_name, balance FROM accounts WHERE sta
                                     <span class="fw-bold">Grand Total:</span>
                                     <strong class="text-primary fs-5" id="purchaseGrandTotalDisplay">Rs. 0.00</strong>
                                 </div>
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <span class="small fw-bold">Amount Paid:</span>
-                                    <input type="number" step="0.01" name="paid_amount" id="purchasePaid" class="form-control form-control-sm text-end fw-bold text-success" style="width: 110px;" value="0.00">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <div class="d-flex align-items-center gap-1">
+                                        <span class="small fw-bold">Amount Paid:</span>
+                                        <button type="button" class="btn btn-outline-success py-0 px-1" style="font-size: 0.68rem;" onclick="setPaidInFull()" title="Match Grand Total">
+                                            Full Paid
+                                        </button>
+                                        <button type="button" class="btn btn-outline-secondary py-0 px-1" style="font-size: 0.68rem;" onclick="setPaidZero()" title="Set to 0 (Full Due)">
+                                            Due
+                                        </button>
+                                    </div>
+                                    <input type="number" step="0.01" name="paid_amount" id="purchasePaid" class="form-control form-control-sm text-end fw-bold text-success" style="width: 120px;" value="0.00" oninput="onPaidManualInput()">
                                 </div>
                             </div>
                         </div>
@@ -295,6 +310,137 @@ $accounts = dbFetchAll("SELECT id, account_name, balance FROM accounts WHERE sta
                     <button type="submit" class="btn btn-success"><i class="fa-solid fa-save me-1"></i> Save Purchase & Increase Stock</button>
                 </div>
             </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: View Purchase Order & Items -->
+<div class="modal fade" id="viewPurchaseModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content shadow-lg border-0">
+            <div class="modal-header bg-dark text-white">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="fa-solid fa-file-invoice text-warning fs-5"></i>
+                    <div>
+                        <h5 class="modal-title fw-bold mb-0">Purchase Order: <span id="vpModalPurchaseNo" class="text-warning"></span></h5>
+                        <small class="text-white-50">Detailed Purchase Receipt & Inward Stock List</small>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <span id="vpPaymentStatusBadge" class="badge"></span>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+            </div>
+
+            <div class="modal-body p-4">
+                <!-- Loading Spinner -->
+                <div id="vpLoading" class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <div class="text-muted small mt-2">Loading purchase details...</div>
+                </div>
+
+                <!-- Error Alert -->
+                <div id="vpError" class="alert alert-danger d-none" role="alert"></div>
+
+                <!-- Printable Content Area -->
+                <div id="vpContent" class="d-none">
+                    <div id="viewPurchaseModalPrintArea">
+                        <!-- Header / Meta Info -->
+                        <div class="row g-3 mb-3 p-3 bg-light rounded-3 border">
+                            <div class="col-sm-6 col-md-4">
+                                <small class="text-muted d-block text-uppercase fw-semibold" style="font-size: 0.72rem;">Supplier / Publisher</small>
+                                <span class="fw-bold text-dark fs-6" id="vpSupplierName"></span>
+                                <div class="small text-muted" id="vpSupplierCompany"></div>
+                                <div class="small text-muted"><i class="fa-solid fa-phone me-1 small"></i><span id="vpSupplierPhone"></span></div>
+                            </div>
+                            <div class="col-sm-6 col-md-4 border-start-md">
+                                <small class="text-muted d-block text-uppercase fw-semibold" style="font-size: 0.72rem;">Order & Invoice Info</small>
+                                <div><strong class="text-secondary small">Inv / Bill #:</strong> <span class="fw-semibold text-dark" id="vpInvoiceNo"></span></div>
+                                <div><strong class="text-secondary small">Date:</strong> <span class="fw-semibold text-dark" id="vpPurchaseDate"></span></div>
+                                <div><strong class="text-secondary small">Recorded By:</strong> <span class="fw-semibold text-dark" id="vpCreatorName"></span></div>
+                            </div>
+                            <div class="col-sm-6 col-md-4 border-start-md">
+                                <small class="text-muted d-block text-uppercase fw-semibold" style="font-size: 0.72rem;">Payment Account</small>
+                                <div class="fw-semibold text-dark"><i class="fa-solid fa-building-columns text-primary me-1"></i><span id="vpAccountName"></span></div>
+                            </div>
+                        </div>
+
+                        <!-- Items Table -->
+                        <div class="table-responsive mb-3 border rounded-3">
+                            <table class="table table-sm table-hover align-middle mb-0">
+                                <thead class="table-light text-secondary small text-uppercase">
+                                    <tr>
+                                        <th class="text-center" style="width: 40px;">#</th>
+                                        <th>Product / Item Description</th>
+                                        <th class="text-center" style="width: 100px;">Type</th>
+                                        <th class="text-end" style="width: 110px;">Unit Cost</th>
+                                        <th class="text-center" style="width: 90px;">Qty</th>
+                                        <th class="text-end" style="width: 120px;">Total Cost</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="vpItemsTableBody"></tbody>
+                                <tfoot class="table-light fw-bold border-top">
+                                    <tr>
+                                        <td colspan="4" class="text-end">Total Items / Quantity:</td>
+                                        <td class="text-center text-primary" id="vpTotalQty">0</td>
+                                        <td class="text-end text-dark" id="vpItemsSubtotalSummary"></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+
+                        <!-- Financials & Notes -->
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div id="vpNotesContainer" class="p-3 bg-light rounded-3 border h-100 d-none">
+                                    <small class="text-muted d-block fw-bold text-uppercase mb-1" style="font-size: 0.72rem;"><i class="fa-solid fa-note-sticky text-warning me-1"></i> Notes & Remarks</small>
+                                    <p class="small text-dark mb-0 fst-italic" id="vpNotes"></p>
+                                </div>
+                            </div>
+                            <div class="col-md-6 ms-auto">
+                                <div class="p-3 bg-light rounded-3 border">
+                                    <div class="d-flex justify-content-between mb-1 small">
+                                        <span class="text-muted">Subtotal:</span>
+                                        <span class="fw-semibold" id="vpSubtotal">Rs. 0.00</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between mb-1 small">
+                                        <span class="text-muted">Discount:</span>
+                                        <span class="text-success fw-semibold" id="vpDiscount">Rs. 0.00</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between mb-1 small">
+                                        <span class="text-muted">Shipping / Freight:</span>
+                                        <span class="fw-semibold" id="vpShipping">Rs. 0.00</span>
+                                    </div>
+                                    <hr class="my-2">
+                                    <div class="d-flex justify-content-between mb-1">
+                                        <span class="fw-bold text-dark">Grand Total:</span>
+                                        <span class="fw-bold text-dark fs-6" id="vpGrandTotal">Rs. 0.00</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between mb-1 small">
+                                        <span class="text-success fw-bold">Amount Paid:</span>
+                                        <span class="text-success fw-bold" id="vpPaidAmount">Rs. 0.00</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between">
+                                        <span class="fw-bold text-secondary">Balance Due:</span>
+                                        <span id="vpDueAmount" class="fw-bold">Rs. 0.00</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer bg-light d-flex justify-content-between">
+                <div class="d-flex gap-2">
+                    <a id="vpPrintFullBtn" href="#" target="_blank" class="btn btn-success btn-sm shadow-sm fw-bold">
+                        <i class="fa-solid fa-print me-1"></i> Print Invoice (Software Format)
+                    </a>
+                </div>
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+            </div>
         </div>
     </div>
 </div>
@@ -366,6 +512,22 @@ function removePurchaseRow(id) {
     calcPurchaseTotal();
 }
 
+let isPaidManuallyEdited = false;
+
+function onPaidManualInput() {
+    isPaidManuallyEdited = true;
+}
+
+function setPaidInFull() {
+    isPaidManuallyEdited = false;
+    calcPurchaseTotal();
+}
+
+function setPaidZero() {
+    isPaidManuallyEdited = true;
+    document.getElementById('purchasePaid').value = '0.00';
+}
+
 function calcPurchaseTotal() {
     let subtotal = 0;
     document.querySelectorAll('#purchaseItemsBody tr').forEach(tr => {
@@ -382,8 +544,9 @@ function calcPurchaseTotal() {
     document.getElementById('purchaseSubtotalDisplay').innerText = 'Rs. ' + subtotal.toFixed(2);
     document.getElementById('purchaseGrandTotalDisplay').innerText = 'Rs. ' + grand.toFixed(2);
 
-    if (parseFloat(document.getElementById('purchasePaid').value) === 0) {
-        document.getElementById('purchasePaid').value = grand.toFixed(2);
+    const paidInput = document.getElementById('purchasePaid');
+    if (!isPaidManuallyEdited) {
+        paidInput.value = grand.toFixed(2);
     }
 }
 
@@ -393,10 +556,193 @@ document.addEventListener('DOMContentLoaded', function() {
     <?php if ($action === 'new'): ?>
         new bootstrap.Modal(document.getElementById('newPurchaseModal')).show();
     <?php endif; ?>
+
+    const modalEl = document.getElementById('newPurchaseModal');
+    if (modalEl) {
+        modalEl.addEventListener('show.bs.modal', function() {
+            isPaidManuallyEdited = false;
+            calcPurchaseTotal();
+        });
+    }
 });
 
+let viewPurchaseModalInstance = null;
+
 function viewPurchaseItems(pId) {
-    alert('Purchase #' + pId + ' details view');
+    const modalEl = document.getElementById('viewPurchaseModal');
+    if (!viewPurchaseModalInstance) {
+        viewPurchaseModalInstance = new bootstrap.Modal(modalEl);
+    }
+    
+    // Reset and show loading state
+    document.getElementById('vpLoading').classList.remove('d-none');
+    document.getElementById('vpContent').classList.add('d-none');
+    document.getElementById('vpError').classList.add('d-none');
+    viewPurchaseModalInstance.show();
+
+    fetch('pos_ajax.php?action=get_purchase_details&purchase_id=' + encodeURIComponent(pId))
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            document.getElementById('vpLoading').classList.add('d-none');
+            if (!data.success) {
+                document.getElementById('vpError').textContent = data.message || 'Failed to load purchase details';
+                document.getElementById('vpError').classList.remove('d-none');
+                return;
+            }
+
+            const p = data.purchase;
+            const items = data.items || [];
+
+            // Populate header & info
+            document.getElementById('vpPrintFullBtn').href = 'print_purchase.php?id=' + encodeURIComponent(pId);
+            document.getElementById('vpModalPurchaseNo').textContent = p.purchase_no || ('#' + p.id);
+            document.getElementById('vpInvoiceNo').textContent = p.invoice_no || p.purchase_no || '-';
+            document.getElementById('vpPurchaseDate').textContent = p.purchase_date || '-';
+            document.getElementById('vpSupplierName').textContent = p.supplier_name || '-';
+            document.getElementById('vpSupplierCompany').textContent = p.company_name ? ('(' + p.company_name + ')') : '';
+            document.getElementById('vpSupplierPhone').textContent = p.supplier_phone || '-';
+            document.getElementById('vpCreatorName').textContent = p.creator_name || 'System';
+            document.getElementById('vpAccountName').textContent = p.account_name || 'Counter Cash';
+
+            // Payment status badge
+            const statusBadge = document.getElementById('vpPaymentStatusBadge');
+            if (p.payment_status === 'paid') {
+                statusBadge.className = 'badge bg-success';
+                statusBadge.textContent = 'PAID';
+            } else if (p.payment_status === 'partial') {
+                statusBadge.className = 'badge bg-warning text-dark';
+                statusBadge.textContent = 'PARTIAL';
+            } else {
+                statusBadge.className = 'badge bg-danger';
+                statusBadge.textContent = 'DUE';
+            }
+
+            // Populate items table
+            const tbody = document.getElementById('vpItemsTableBody');
+            tbody.innerHTML = '';
+            let totalQty = 0;
+            let itemsSubtotal = 0;
+
+            if (items.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-3">No items recorded in this purchase order.</td></tr>';
+            } else {
+                items.forEach((item, index) => {
+                    const qty = parseFloat(item.quantity) || 0;
+                    const cost = parseFloat(item.unit_cost) || 0;
+                    const total = parseFloat(item.total_cost) || (qty * cost);
+                    totalQty += qty;
+                    itemsSubtotal += total;
+
+                    let subtitle = [];
+                    if (item.author) subtitle.push('Author: ' + item.author);
+                    if (item.publisher) subtitle.push('Pub: ' + item.publisher);
+                    if (item.class_grade) subtitle.push('Grade: ' + item.class_grade);
+
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td class="text-center text-muted small">${index + 1}</td>
+                        <td>
+                            <div class="fw-bold text-dark">${escapeVpHtml(item.title)}</div>
+                            <div class="small text-muted">
+                                <span class="badge bg-light text-secondary border me-1">${escapeVpHtml(item.product_code || '')}</span>
+                                ${item.barcode ? `<span class="badge bg-light text-dark border me-1"><i class="fa fa-barcode me-1"></i>${escapeVpHtml(item.barcode)}</span>` : ''}
+                                ${subtitle.length ? `<span class="fst-italic">${escapeVpHtml(subtitle.join(' | '))}</span>` : ''}
+                            </div>
+                        </td>
+                        <td class="text-center">
+                            <span class="badge bg-info-subtle text-info border">${escapeVpHtml(item.product_type ? item.product_type.toUpperCase() : 'PRODUCT')}</span>
+                        </td>
+                        <td class="text-end fw-semibold">Rs. ${cost.toFixed(2)}</td>
+                        <td class="text-center fw-bold">${qty} <span class="small text-muted">${escapeVpHtml(item.unit || '')}</span></td>
+                        <td class="text-end fw-bold text-dark">Rs. ${total.toFixed(2)}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            }
+
+            document.getElementById('vpTotalQty').textContent = totalQty;
+            document.getElementById('vpItemsSubtotalSummary').textContent = 'Rs. ' + itemsSubtotal.toFixed(2);
+            document.getElementById('vpSubtotal').textContent = 'Rs. ' + (parseFloat(p.subtotal) || itemsSubtotal).toFixed(2);
+            document.getElementById('vpDiscount').textContent = 'Rs. ' + (parseFloat(p.discount_amount) || 0).toFixed(2);
+            document.getElementById('vpShipping').textContent = 'Rs. ' + (parseFloat(p.shipping_cost) || 0).toFixed(2);
+            document.getElementById('vpGrandTotal').textContent = 'Rs. ' + (parseFloat(p.grand_total) || itemsSubtotal).toFixed(2);
+            document.getElementById('vpPaidAmount').textContent = 'Rs. ' + (parseFloat(p.paid_amount) || 0).toFixed(2);
+            
+            const due = parseFloat(p.due_amount) || 0;
+            const dueEl = document.getElementById('vpDueAmount');
+            dueEl.textContent = 'Rs. ' + due.toFixed(2);
+            if (due > 0) {
+                dueEl.className = 'text-danger fw-bold fs-6';
+            } else {
+                dueEl.className = 'text-success fw-bold fs-6';
+            }
+
+            // Notes
+            const notesEl = document.getElementById('vpNotesContainer');
+            if (p.notes && p.notes.trim()) {
+                document.getElementById('vpNotes').textContent = p.notes;
+                notesEl.classList.remove('d-none');
+            } else {
+                notesEl.classList.add('d-none');
+            }
+
+            document.getElementById('vpContent').classList.remove('d-none');
+        })
+        .catch(err => {
+            console.error(err);
+            document.getElementById('vpLoading').classList.add('d-none');
+            document.getElementById('vpError').textContent = 'An error occurred while loading purchase items.';
+            document.getElementById('vpError').classList.remove('d-none');
+        });
+}
+
+function escapeVpHtml(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+function printPurchaseDetails() {
+    const printContent = document.getElementById('viewPurchaseModalPrintArea').innerHTML;
+    const printWin = window.open('', '_blank', 'width=850,height=750');
+    printWin.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Purchase Order Receipt</title>
+            <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+            <style>
+                body { padding: 30px; font-family: system-ui, -apple-system, sans-serif; background: #fff; color: #111; }
+                .table { border: 1px solid #dee2e6; }
+                @media print {
+                    .no-print { display: none !important; }
+                    body { padding: 0; }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="d-flex justify-content-between align-items-center mb-4 no-print pb-2 border-bottom">
+                <button onclick="window.print()" class="btn btn-primary btn-sm"><i class="fa fa-print me-1"></i> Print Receipt</button>
+                <button onclick="window.close()" class="btn btn-secondary btn-sm">Close Window</button>
+            </div>
+            ${printContent}
+            <script>
+                window.onload = function() {
+                    window.focus();
+                    window.print();
+                };
+            <\/script>
+        </body>
+        </html>
+    `);
+    printWin.document.close();
 }
 </script>
 

@@ -1,7 +1,7 @@
 <?php
 // schools.php - School, College & Academic Book Lists & Packages
-$pageTitle = 'School Book Lists & Packages';
-require_once __DIR__ . '/includes/header.php';
+require_once __DIR__ . '/config/app.php';
+requireAuth();
 
 $action = $_GET['action'] ?? '';
 $selectedClassId = (int)($_GET['class_id'] ?? 0);
@@ -29,8 +29,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 setFlash('success', "School profile created successfully.");
             }
         }
-        header("Location: schools.php");
-        exit;
+        redirect("schools.php");
     }
 
     // 2. Add / Edit Class Syllabus Package
@@ -52,8 +51,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $classId = dbInsertId();
                 setFlash('success', "Class package created. Now add syllabus books and stationery.");
             }
-            header("Location: schools.php?class_id=$classId");
-            exit;
+            redirect("schools.php?class_id=$classId");
         }
     }
 
@@ -72,8 +70,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                      [$classId, $productId, $isMandatory, $qty, $customPrice]);
             setFlash('success', "Item added to class syllabus package.");
         }
-        header("Location: schools.php?class_id=$classId");
-        exit;
+        redirect("schools.php?class_id=$classId");
     }
 
     // 4. Remove Item from Syllabus
@@ -82,8 +79,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $classId = (int)$_POST['class_id'];
         dbQuery("DELETE FROM school_class_items WHERE id = ?", [$itemId]);
         setFlash('success', "Item removed from syllabus.");
-        header("Location: schools.php?class_id=$classId");
-        exit;
+        redirect("schools.php?class_id=$classId");
     }
 }
 
@@ -127,6 +123,9 @@ if ($selectedClassId) {
 
 // All products list for the syllabus item selector
 $allProducts = dbFetchAll("SELECT id, title, product_code, product_type, retail_price, current_stock FROM products WHERE status = 1 ORDER BY title ASC");
+
+$pageTitle = 'School Book Lists & Packages';
+require_once __DIR__ . '/includes/header.php';
 ?>
 
 <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">

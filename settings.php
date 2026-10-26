@@ -1,7 +1,7 @@
 <?php
 // settings.php - System Configuration & Store Settings
-$pageTitle = 'Settings';
-require_once __DIR__ . '/includes/header.php';
+require_once __DIR__ . '/config/app.php';
+requireAuth();
 requireRole('admin');
 
 // Handle POST Settings
@@ -18,8 +18,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
         setFlash('success', 'System settings saved successfully.');
-        header("Location: settings.php");
-        exit;
+        redirect("settings.php");
     }
 
     // Reset Sample Data
@@ -27,8 +26,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         require_once __DIR__ . '/install.php';
         runInstallation();
         setFlash('success', 'Database sample data successfully restored to defaults.');
-        header("Location: settings.php");
-        exit;
+        redirect("settings.php");
     }
 }
 
@@ -44,6 +42,9 @@ $currCode = getSetting('currency_code', 'PKR');
 $taxRate = getSetting('tax_percent', '0.00');
 $footerNote = getSetting('receipt_footer', 'Thank you for shopping with us! Books once sold cannot be returned without receipt.');
 $footerNoteUrdu = getSetting('receipt_footer_urdu', 'خریداری کا شکریہ! خریدی گئی کتب 7 دن کے اندر اصل رسید کے ہمراہ تبدیل کی جا سکتی ہیں۔');
+
+$pageTitle = 'Settings';
+require_once __DIR__ . '/includes/header.php';
 ?>
 
 <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">

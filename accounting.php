@@ -1,7 +1,7 @@
 <?php
 // accounting.php - Cash & Bank Accounts, Daily Cashbook, Expenses, and Cash Drawer Closing
-$pageTitle = 'Accounts & Cashbook';
-require_once __DIR__ . '/includes/header.php';
+require_once __DIR__ . '/config/app.php';
+requireAuth();
 
 $selectedDate = $_GET['date'] ?? date('Y-m-d');
 $action = $_GET['action'] ?? '';
@@ -30,8 +30,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
                 setFlash('success', "Account '$name' created successfully.");
             }
         }
-        header("Location: accounting.php");
-        exit;
+        redirect("accounting.php");
     }
 
     // 2. Add / Edit Expense & Income Category
@@ -50,8 +49,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
                 setFlash('success', "Category '$cName' added.");
             }
         }
-        header("Location: accounting.php");
-        exit;
+        redirect("accounting.php");
     }
 
     // Delete Expense Category
@@ -59,8 +57,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
         $delId = (int)$_POST['cat_id'];
         dbQuery("DELETE FROM expense_categories WHERE id = ?", [$delId]);
         setFlash('success', "Category removed successfully.");
-        header("Location: accounting.php");
-        exit;
+        redirect("accounting.php");
     }
 
     // 3. Add Expense Voucher
@@ -75,8 +72,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
             recordCashTransaction('expense', $accountId, $amount, $category, $refNo, $desc);
             setFlash('success', "Expense voucher of " . formatCurrency($amount) . " ($category) recorded.");
         }
-        header("Location: accounting.php?date=$selectedDate");
-        exit;
+        redirect("accounting.php?date=$selectedDate");
     }
 
     // 4. Add Income / Capital Voucher
@@ -91,8 +87,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
             recordCashTransaction('income', $accountId, $amount, $category, $refNo, $desc);
             setFlash('success', "Income voucher of " . formatCurrency($amount) . " recorded.");
         }
-        header("Location: accounting.php?date=$selectedDate");
-        exit;
+        redirect("accounting.php?date=$selectedDate");
     }
 
     // 5. Internal Account Transfer
@@ -109,8 +104,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
         } else {
             setFlash('danger', "Please select two different accounts and valid transfer amount.");
         }
-        header("Location: accounting.php");
-        exit;
+        redirect("accounting.php");
     }
 }
 
@@ -134,6 +128,9 @@ $dayTransactions = dbFetchAll("SELECT ct.*, a.account_name, ta.account_name as t
 // Daily Cash Closing Calculation for Register Drawer (Account ID 1)
 $drawerInflows = dbFetchOne("SELECT SUM(amount) as tot FROM cash_transactions WHERE account_id = 1 AND DATE(transaction_date) = ? AND transaction_type IN ('sale', 'income', 'customer_payment')", [$selectedDate])['tot'] ?? 0;
 $drawerOutflows = dbFetchOne("SELECT SUM(amount) as tot FROM cash_transactions WHERE account_id = 1 AND DATE(transaction_date) = ? AND transaction_type IN ('expense', 'purchase', 'supplier_payment', 'transfer')", [$selectedDate])['tot'] ?? 0;
+
+$pageTitle = 'Accounts & Cashbook';
+require_once __DIR__ . '/includes/header.php';
 ?>
 
 <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
