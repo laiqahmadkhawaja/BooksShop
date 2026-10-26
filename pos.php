@@ -328,7 +328,7 @@ $schoolClasses = dbFetchAll("SELECT sc.id, sc.class_name, sc.academic_session, s
                     <!-- Receiving Account -->
                     <div class="mb-3" id="depositAccountDiv">
                         <label class="form-label small fw-bold">Deposit Into Account</label>
-                        <select id="paymentAccountSelect" class="form-select">
+                        <select id="paymentAccountId" class="form-select">
                             <?php foreach ($accounts as $acc): ?>
                                 <option value="<?= $acc['id'] ?>"><?= htmlspecialchars($acc['account_name']) ?> (<?= htmlspecialchars($acc['account_type']) ?>)</option>
                             <?php endforeach; ?>
@@ -1244,17 +1244,17 @@ function setTenderedAmount(amt) {
 
 function onPaymentMethodChange() {
     const method = document.querySelector('input[name="payMethod"]:checked').value;
-    const cashDiv = document.getElementById('cashTenderedDiv');
+    const cashDiv = document.getElementById('tenderedAmountDiv') || document.getElementById('cashTenderedDiv');
     const depositDiv = document.getElementById('depositAccountDiv');
 
     if (method === 'credit') {
-        cashDiv.style.display = 'none';
-        depositDiv.style.display = 'none';
+        if (cashDiv) cashDiv.style.display = 'none';
+        if (depositDiv) depositDiv.style.display = 'none';
         document.getElementById('tenderedAmountInput').value = 0;
         calculateChange();
     } else {
-        cashDiv.style.display = 'block';
-        depositDiv.style.display = 'block';
+        if (cashDiv) cashDiv.style.display = 'block';
+        if (depositDiv) depositDiv.style.display = 'block';
         if (parseFloat(document.getElementById('tenderedAmountInput').value) <= 0) {
             exactCashTendered();
         }
@@ -1335,7 +1335,8 @@ function processCheckout() {
     const method = document.querySelector('input[name="payMethod"]:checked').value;
     const tenderedInput = document.getElementById('tenderedAmountInput');
     const tendered = parseFloat(tenderedInput.value) || 0;
-    const accountId = document.getElementById('paymentAccountId').value;
+    const accountEl = document.getElementById('paymentAccountId') || document.getElementById('paymentAccountSelect');
+    const accountId = accountEl ? accountEl.value : 1;
     const customerSelect = document.getElementById('posCustomerSelect');
     const customerId = customerSelect.value;
     const customerName = customerSelect.options[customerSelect.selectedIndex]?.text || 'Walk-in Customer';
@@ -1408,7 +1409,11 @@ function processCheckout() {
             showReceiptSuccessView();
 
             // Auto-trigger thermal receipt in background or new window
-            // window.open('print_invoice.php?id=' + data.sale_id + '&type=thermal', '_blank');
+            try {
+                window.open('print_invoice.php?id=' + data.sale_id + '&type=thermal', '_blank');
+            } catch (e) {
+                console.warn('Auto print popup blocked or failed:', e);
+            }
         } else {
             alert('Error processing checkout: ' + (data.message || 'Unknown error'));
         }
