@@ -1048,13 +1048,39 @@ window.onload = function() {
 };
 </script>
 
+<script src="assets/js/html2canvas.min.js"></script>
 <script>
 function triggerShareDialog() {
-    if (window.AndroidPrinter && typeof window.AndroidPrinter.printOrShare === 'function') {
-        window.AndroidPrinter.printOrShare(window.location.href, document.title || 'Document');
-    } else if (window.AndroidShare && typeof window.AndroidShare.openShareDialog === 'function') {
-        window.AndroidShare.openShareDialog(window.location.href, document.title || 'Document', "");
-    } else if (navigator.share) {
+    var captureTarget = document.querySelector('.thermal-wrapper') || document.querySelector('.invoice-box') || document.querySelector('.report-container') || document.body;
+    
+    // In Android APK, share receipt picture/image directly to thermal printer app or share sheet
+    if (window.AndroidPrinter) {
+        if (typeof html2canvas !== 'undefined') {
+            html2canvas(captureTarget, {
+                scale: 2,
+                backgroundColor: '#ffffff',
+                useCORS: true,
+                logging: false
+            }).then(function(canvas) {
+                var base64 = canvas.toDataURL('image/png');
+                if (typeof window.AndroidPrinter.shareBase64Image === 'function') {
+                    window.AndroidPrinter.shareBase64Image(base64, document.title || 'Receipt');
+                } else if (typeof window.AndroidPrinter.sharePageAsImage === 'function') {
+                    window.AndroidPrinter.sharePageAsImage(document.title || 'Receipt');
+                }
+            }).catch(function(err) {
+                if (typeof window.AndroidPrinter.sharePageAsImage === 'function') {
+                    window.AndroidPrinter.sharePageAsImage(document.title || 'Receipt');
+                }
+            });
+            return;
+        } else if (typeof window.AndroidPrinter.sharePageAsImage === 'function') {
+            window.AndroidPrinter.sharePageAsImage(document.title || 'Receipt');
+            return;
+        }
+    }
+
+    if (navigator.share) {
         navigator.share({ title: document.title, url: window.location.href }).catch(function(){});
     } else {
         window.print();
@@ -1064,12 +1090,8 @@ function triggerShareDialog() {
 (function() {
     var originalWindowPrint = window.print;
     window.print = function() {
-        if (window.AndroidPrinter && typeof window.AndroidPrinter.printOrShare === 'function') {
-            window.AndroidPrinter.printOrShare(window.location.href, document.title || 'Document');
-            return;
-        }
-        if (window.AndroidShare && typeof window.AndroidShare.openShareDialog === 'function') {
-            window.AndroidShare.openShareDialog(window.location.href, document.title || 'Document', "");
+        if (window.AndroidPrinter) {
+            triggerShareDialog();
             return;
         }
         if (originalWindowPrint) originalWindowPrint.call(window);

@@ -422,7 +422,7 @@ require_once __DIR__ . '/includes/header.php';
 <div class="modal fade" id="productModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-scrollable">
         <div class="modal-content">
-            <form method="POST" action="books.php" class="d-flex flex-column h-100 overflow-hidden m-0">
+            <form method="POST" action="books.php" class="m-0">
                 <input type="hidden" name="save_product" value="1">
                 <input type="hidden" name="product_id" id="prod_id" value="0">
 
@@ -575,7 +575,7 @@ require_once __DIR__ . '/includes/header.php';
 <div class="modal fade" id="stockAdjustModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-scrollable">
         <div class="modal-content">
-            <form method="POST" action="books.php" class="d-flex flex-column h-100 overflow-hidden m-0">
+            <form method="POST" action="books.php" class="m-0">
                 <input type="hidden" name="adjust_stock_quick" value="1">
                 <input type="hidden" name="product_id" id="adj_prod_id">
                 <div class="modal-header flex-shrink-0">

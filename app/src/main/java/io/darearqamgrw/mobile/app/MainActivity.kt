@@ -8,6 +8,10 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Color
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Canvas
+import androidx.core.content.FileProvider
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -167,35 +171,24 @@ class MainActivity : AppCompatActivity() {
                 super.onPageFinished(view, url)
                 swipeRefresh.isRefreshing = false
                 
-                // Inject print/share interceptor and modal fix
+                // Inject print/share interceptor and downloader
                 web.evaluateJavascript("""
                     (function() {
-                        // Override window.print() to open Android native Share Sheet for printing/sharing
+                        // Override window.print() to trigger receipt image sharing in APK
                         window.print = function() {
-                            if (window.AndroidPrinter && typeof window.AndroidPrinter.printOrShare === 'function') {
-                                window.AndroidPrinter.printOrShare(window.location.href, document.title || 'Document');
-                            } else if (window.AndroidShare && typeof window.AndroidShare.openShareDialog === 'function') {
-                                window.AndroidShare.openShareDialog(window.location.href, document.title || 'Document', "");
+                            if (window.AndroidPrinter && typeof window.AndroidPrinter.sharePageAsImage === 'function') {
+                                window.AndroidPrinter.sharePageAsImage(document.title || 'Receipt');
+                            } else if (window.AndroidPrinter && typeof window.AndroidPrinter.printOrShare === 'function') {
+                                window.AndroidPrinter.printOrShare(window.location.href, document.title || 'Receipt');
                             } else if (navigator.share) {
                                 navigator.share({ title: document.title, url: window.location.href }).catch(function(){});
                             }
                         };
+                    })();
+                """, null)
 
-                        // Reparent modals to body so they are not trapped inside stacking contexts
-                        function reparentModals() {
-                            document.querySelectorAll('.modal').forEach(function(m) {
-                                if (m.parentElement && m.parentElement !== document.body) {
-                                    document.body.appendChild(m);
-                                }
-                            });
-                        }
-                        reparentModals();
-                        document.addEventListener('show.bs.modal', function(e) {
-                            if (e.target && e.target.parentElement !== document.body) {
-                                document.body.appendChild(e.target);
-                            }
-                        });
-
+                web.evaluateJavascript("""
+                    (function() {
                         if (window.hasDownloaderInstalled) return;
                         window.hasDownloaderInstalled = true;
                         document.addEventListener('click', function(e) {
@@ -328,66 +321,118 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    inner class AndroidPrintShareInterface {
+        inner class AndroidPrintShareInterface {
         @JavascriptInterface
-        fun openShareDialog() {
-            openShareDialog(null, null, "")
-        }
-
-        @JavascriptInterface
-        fun openShareDialog(url: String?) {
-            openShareDialog(url, null, "")
-        }
-
-        @JavascriptInterface
-        fun openShareDialog(url: String?, title: String?) {
-            openShareDialog(url, title, "")
-        }
-
-        @JavascriptInterface
-        fun openShareDialog(url: String?, title: String?, text: String?) {
+        fun sharePageAsImage(title: String? = null) {
             runOnUiThread {
                 try {
-                    val shareUrl = if (!url.isNullOrBlank()) url else (web.url ?: "")
-                    val shareTitle = if (!title.isNullOrBlank()) title else (web.title ?: "Document")
-                    val shareBody = if (!text.isNullOrBlank()) "$shareTitle\n$text\n$shareUrl" else "$shareTitle\n$shareUrl"
-
-                    val sendIntent = Intent().apply {
-                        action = Intent.ACTION_SEND
-                        type = "text/plain"
-                        putExtra(Intent.EXTRA_SUBJECT, shareTitle)
-                        putExtra(Intent.EXTRA_TEXT, shareBody)
-                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                    val w = web.width
+                    val h = web.height
+                    if (w <= 0 || h <= 0) {
+                        Toast.makeText(this@MainActivity, "Unable to capture page image", Toast.LENGTH_SHORT).show()
+                        return@runOnUiThread
                     }
-                    val chooser = Intent.createChooser(sendIntent, "Share / Print: $shareTitle")
-                    chooser.flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                    startActivity(chooser)
+                    val bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+                    val canvas = Canvas(bitmap)
+                    web.draw(canvas)
+                    shareBitmap(bitmap, title ?: (web.title ?: "Receipt"))
                 } catch (e: Exception) {
                     e.printStackTrace()
-                    Toast.makeText(this@MainActivity, "Unable to open share sheet", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@MainActivity, "Error capturing receipt: ${e.message}", Toast.LENGTH_SHORT).show()
                 }
             }
         }
 
         @JavascriptInterface
+        fun shareBase64Image(base64Data: String, title: String? = null) {
+            runOnUiThread {
+                try {
+                    val cleanData = if (base64Data.contains(",")) base64Data.substringAfter(",") else base64Data
+                    val bytes = Base64.decode(cleanData, Base64.DEFAULT)
+                    val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                    if (bitmap != null) {
+                        shareBitmap(bitmap, title ?: (web.title ?: "Receipt"))
+                    } else {
+                        sharePageAsImage(title)
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    sharePageAsImage(title)
+                }
+            }
+        }
+
+        private fun shareBitmap(bitmap: Bitmap, title: String) {
+            try {
+                val cachePath = File(cacheDir, "shared_receipts")
+                cachePath.mkdirs()
+                val imageFile = File(cachePath, "receipt_${System.currentTimeMillis()}.png")
+                val outputStream = FileOutputStream(imageFile)
+                bitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream)
+                outputStream.flush()
+                outputStream.close()
+
+                val contentUri = FileProvider.getUriForFile(
+                    this@MainActivity,
+                    "${applicationContext.packageName}.fileprovider",
+                    imageFile
+                )
+
+                val shareIntent = Intent().apply {
+                    action = Intent.ACTION_SEND
+                    type = "image/png"
+                    putExtra(Intent.EXTRA_STREAM, contentUri)
+                    putExtra(Intent.EXTRA_SUBJECT, title)
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                }
+                val chooser = Intent.createChooser(shareIntent, "Share Receipt: $title")
+                chooser.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                startActivity(chooser)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                Toast.makeText(this@MainActivity, "Failed to share receipt image: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        @JavascriptInterface
         fun printDocument() {
-            // User requested opening Android share sheet for printing in APK
-            openShareDialog(web.url, web.title, "")
+            sharePageAsImage(web.title)
         }
 
         @JavascriptInterface
         fun printOrShare() {
-            openShareDialog(web.url, web.title, "")
+            sharePageAsImage(web.title)
         }
 
         @JavascriptInterface
         fun printOrShare(url: String?) {
-            openShareDialog(url, web.title, "")
+            sharePageAsImage(web.title)
         }
 
         @JavascriptInterface
         fun printOrShare(url: String?, title: String?) {
-            openShareDialog(url, title, "")
+            sharePageAsImage(title ?: web.title)
+        }
+
+        @JavascriptInterface
+        fun openShareDialog() {
+            sharePageAsImage(web.title)
+        }
+
+        @JavascriptInterface
+        fun openShareDialog(url: String?) {
+            sharePageAsImage(web.title)
+        }
+
+        @JavascriptInterface
+        fun openShareDialog(url: String?, title: String?) {
+            sharePageAsImage(title ?: web.title)
+        }
+
+        @JavascriptInterface
+        fun openShareDialog(url: String?, title: String?, text: String?) {
+            sharePageAsImage(title ?: web.title)
         }
     }
 
