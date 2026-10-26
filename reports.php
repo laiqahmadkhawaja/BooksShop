@@ -82,6 +82,37 @@ if ($reportType === 'balances') {
     $suppPayables = dbFetchAll("SELECT name, company_name, phone, current_balance FROM suppliers WHERE current_balance > 0 ORDER BY current_balance DESC");
 }
 
+// 4.5. Stock Valuation Report (Shop + Warehouses)
+if ($reportType === 'stock_valuation') {
+    $shopVal = dbFetchOne("SELECT 
+        COUNT(*) as skus,
+        COALESCE(SUM(current_stock), 0) as units,
+        COALESCE(SUM(current_stock * purchase_price), 0) as cost_val,
+        COALESCE(SUM(current_stock * retail_price), 0) as retail_val
+        FROM products WHERE status = 1");
+
+    $warehousesVal = getWarehouses(false);
+
+    $totalCompanyUnits = (float)($shopVal['units'] ?? 0);
+    $totalCompanyCost = (float)($shopVal['cost_val'] ?? 0);
+    $totalCompanyRetail = (float)($shopVal['retail_val'] ?? 0);
+
+    foreach ($warehousesVal as $w) {
+        $totalCompanyUnits += (float)$w['total_units'];
+        $totalCompanyCost += (float)$w['total_cost_value'];
+        $totalCompanyRetail += (float)$w['total_retail_value'];
+    }
+
+    $topStockItems = dbFetchAll("SELECT p.*, c.name as category_name,
+        COALESCE((SELECT SUM(quantity) FROM warehouse_stock WHERE product_id = p.id), 0) as wh_stock,
+        (p.current_stock + COALESCE((SELECT SUM(quantity) FROM warehouse_stock WHERE product_id = p.id), 0)) as total_stock,
+        ((p.current_stock + COALESCE((SELECT SUM(quantity) FROM warehouse_stock WHERE product_id = p.id), 0)) * p.purchase_price) as total_cost_valuation
+        FROM products p
+        LEFT JOIN categories c ON c.id = p.category_id
+        WHERE p.status = 1
+        ORDER BY total_cost_valuation DESC LIMIT 30");
+}
+
 // 5. NEW: Trial Balance Report
 if ($reportType === 'trial_balance') {
     // Current Inventory Valuation at Cost
@@ -241,6 +272,11 @@ if ($reportType === 'cash_closing') {
             <li class="nav-item">
                 <a class="nav-link text-nowrap <?= $reportType === 'balances' ? 'active fw-bold text-danger' : '' ?>" href="reports.php?report=balances">
                     <i class="fa-solid fa-hand-holding-dollar me-1"></i> Receivables & Payables
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link text-nowrap <?= $reportType === 'stock_valuation' ? 'active fw-bold text-success' : '' ?>" href="reports.php?report=stock_valuation">
+                    <i class="fa-solid fa-boxes-stacked me-1"></i> Stock Valuation (Shop & Godowns)
                 </a>
             </li>
         </ul>
@@ -1130,6 +1166,179 @@ function calculatePhysicalCash() {
                     </tbody>
                 </table>
             </div>
+        </div>
+    </div>
+</div>
+
+<?php elseif ($reportType === 'stock_valuation'): ?>
+<!-- ================= STOCK VALUATION (SHOP & WAREHOUSES) ================= -->
+<div class="row g-3 mb-4">
+    <div class="col-xl-3 col-sm-6">
+        <div class="card p-3 border-start border-primary border-4 shadow-sm bg-white h-100">
+            <div class="small text-muted fw-bold">CONSOLIDATED STOCK VALUE (COST)</div>
+            <h4 class="fw-bold text-primary mb-0 mt-1"><?= formatCurrency($totalCompanyCost) ?></h4>
+            <span class="small text-muted">Shop + Godowns Capital Asset</span>
+        </div>
+    </div>
+    <div class="col-xl-3 col-sm-6">
+        <div class="card p-3 border-start border-success border-4 shadow-sm bg-white h-100">
+            <div class="small text-muted fw-bold">TOTAL RETAIL VALUATION</div>
+            <h4 class="fw-bold text-success mb-0 mt-1"><?= formatCurrency($totalCompanyRetail) ?></h4>
+            <span class="small text-muted">Total Potential Gross Sales</span>
+        </div>
+    </div>
+    <div class="col-xl-3 col-sm-6">
+        <div class="card p-3 border-start border-info border-4 shadow-sm bg-white h-100">
+            <div class="small text-muted fw-bold">POTENTIAL GROSS PROFIT</div>
+            <h4 class="fw-bold text-info mb-0 mt-1"><?= formatCurrency($totalCompanyRetail - $totalCompanyCost) ?></h4>
+            <span class="small text-muted"><?= $totalCompanyCost > 0 ? round((($totalCompanyRetail - $totalCompanyCost) / $totalCompanyCost) * 100, 1) : 0 ?>% ROI on Inventory</span>
+        </div>
+    </div>
+    <div class="col-xl-3 col-sm-6">
+        <div class="card p-3 border-start border-warning border-4 shadow-sm bg-white h-100">
+            <div class="small text-muted fw-bold">TOTAL UNITS ACROSS BUSINESS</div>
+            <h4 class="fw-bold text-dark mb-0 mt-1"><?= number_format($totalCompanyUnits, 0) ?> Units</h4>
+            <span class="small text-muted">Shop: <?= number_format((float)$shopVal['units']) ?> | Godowns: <?= number_format($totalCompanyUnits - (float)$shopVal['units']) ?></span>
+        </div>
+    </div>
+</div>
+
+<!-- Location Breakdown Summary Table -->
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+        <h6 class="fw-bold mb-0 text-dark">
+            <i class="fa-solid fa-warehouse text-warning me-2"></i> Location-Wise Valuation Breakdown
+        </h6>
+        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="window.print()">
+            <i class="fa-solid fa-print me-1"></i> Print Report
+        </button>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 small">
+                <thead class="table-light text-uppercase">
+                    <tr>
+                        <th>Storage Facility / Location</th>
+                        <th class="text-center">Stored SKUs</th>
+                        <th class="text-center">Total Units</th>
+                        <th class="text-end">Cost Valuation</th>
+                        <th class="text-end">Retail Valuation</th>
+                        <th class="text-end">Potential Profit</th>
+                        <th class="text-center">Share of Stock</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Main Shop -->
+                    <tr class="table-light-subtle">
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="rounded p-2 bg-light text-primary me-2 border">
+                                    <i class="fa-solid fa-store"></i>
+                                </div>
+                                <div>
+                                    <strong class="text-dark">🏬 Main Shop / Storefront Counter</strong>
+                                    <div class="text-muted" style="font-size: 0.72rem;">Active POS Counter Inventory</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="text-center"><span class="badge bg-light text-dark border"><?= number_format($shopVal['skus']) ?> SKUs</span></td>
+                        <td class="text-center fw-bold fs-6 text-primary"><?= number_format((float)$shopVal['units'], 0) ?></td>
+                        <td class="text-end font-monospace fw-bold text-success"><?= formatCurrency((float)$shopVal['cost_val']) ?></td>
+                        <td class="text-end font-monospace"><?= formatCurrency((float)$shopVal['retail_val']) ?></td>
+                        <td class="text-end font-monospace text-info"><?= formatCurrency((float)$shopVal['retail_val'] - (float)$shopVal['cost_val']) ?></td>
+                        <td class="text-center font-monospace">
+                            <?= $totalCompanyUnits > 0 ? round(((float)$shopVal['units'] / $totalCompanyUnits) * 100, 1) : 0 ?>%
+                        </td>
+                    </tr>
+
+                    <!-- Warehouses -->
+                    <?php foreach ($warehousesVal as $wh): 
+                        $whProfit = (float)$wh['total_retail_value'] - (float)$wh['total_cost_value'];
+                    ?>
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="rounded p-2 bg-light text-warning me-2 border">
+                                        <i class="fa-solid fa-warehouse"></i>
+                                    </div>
+                                    <div>
+                                        <a href="warehouse_view.php?id=<?= $wh['id'] ?>" class="text-decoration-none fw-bold text-dark">
+                                            🏭 <?= htmlspecialchars($wh['name']) ?>
+                                        </a>
+                                        <div class="text-muted font-monospace" style="font-size: 0.72rem;">
+                                            Code: <?= htmlspecialchars($wh['warehouse_code']) ?>
+                                            <?= $wh['manager_name'] ? ' &bull; In-Charge: ' . htmlspecialchars($wh['manager_name']) : '' ?>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="text-center"><span class="badge bg-light text-dark border"><?= number_format($wh['total_skus']) ?> SKUs</span></td>
+                            <td class="text-center fw-bold fs-6 text-primary"><?= number_format((float)$wh['total_units'], 0) ?></td>
+                            <td class="text-end font-monospace fw-bold text-success"><?= formatCurrency((float)$wh['total_cost_value']) ?></td>
+                            <td class="text-end font-monospace"><?= formatCurrency((float)$wh['total_retail_value']) ?></td>
+                            <td class="text-end font-monospace text-info"><?= formatCurrency($whProfit) ?></td>
+                            <td class="text-center font-monospace">
+                                <?= $totalCompanyUnits > 0 ? round(((float)$wh['total_units'] / $totalCompanyUnits) * 100, 1) : 0 ?>%
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+                <tfoot class="table-light fw-bold">
+                    <tr>
+                        <td>TOTAL COMPANY ASSETS (CONSOLIDATED):</td>
+                        <td class="text-center">—</td>
+                        <td class="text-center text-primary fs-6"><?= number_format($totalCompanyUnits, 0) ?></td>
+                        <td class="text-end text-success font-monospace fs-6"><?= formatCurrency($totalCompanyCost) ?></td>
+                        <td class="text-end font-monospace fs-6"><?= formatCurrency($totalCompanyRetail) ?></td>
+                        <td class="text-end text-info font-monospace fs-6"><?= formatCurrency($totalCompanyRetail - $totalCompanyCost) ?></td>
+                        <td class="text-center">100%</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Top Capital Inventory Items -->
+<div class="card shadow-sm border-0">
+    <div class="card-header bg-white py-3 border-bottom">
+        <h6 class="fw-bold mb-0 text-dark">
+            <i class="fa-solid fa-ranking-star text-primary me-2"></i> Highest Valuation Items in Inventory (Top 30)
+        </h6>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 small">
+                <thead class="table-light text-uppercase">
+                    <tr>
+                        <th>Item / Book Title</th>
+                        <th>Category</th>
+                        <th class="text-end">Unit Cost</th>
+                        <th class="text-end">Retail Price</th>
+                        <th class="text-center">Shop Qty</th>
+                        <th class="text-center">Godown Qty</th>
+                        <th class="text-center">Total Qty</th>
+                        <th class="text-end">Total Capital Asset (Cost)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($topStockItems as $item): ?>
+                        <tr>
+                            <td>
+                                <strong class="text-dark"><?= htmlspecialchars($item['title']) ?></strong>
+                                <small class="text-muted font-monospace d-block">Code: <?= htmlspecialchars($item['product_code']) ?></small>
+                            </td>
+                            <td><span class="badge bg-light text-dark border"><?= htmlspecialchars($item['category_name'] ?: 'General') ?></span></td>
+                            <td class="text-end font-monospace"><?= formatCurrency((float)$item['purchase_price']) ?></td>
+                            <td class="text-end font-monospace text-primary fw-semibold"><?= formatCurrency((float)$item['retail_price']) ?></td>
+                            <td class="text-center"><?= number_format((float)$item['current_stock'], 0) ?></td>
+                            <td class="text-center"><?= number_format((float)$item['wh_stock'], 0) ?></td>
+                            <td class="text-center fw-bold text-dark fs-6"><?= number_format((float)$item['total_stock'], 0) ?></td>
+                            <td class="text-end font-monospace fw-bold text-success"><?= formatCurrency((float)$item['total_cost_valuation']) ?></td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
         </div>
     </div>
 </div>

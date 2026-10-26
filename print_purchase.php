@@ -12,11 +12,12 @@ if (!$purchaseId) {
 
 $purchase = dbFetchOne("SELECT p.*, s.name as supplier_name, s.company_name, s.phone as supplier_phone, 
                                s.address as supplier_address, s.current_balance as supplier_balance,
-                               u.full_name as creator_name, a.account_name
+                               u.full_name as creator_name, a.account_name, w.name as warehouse_name, w.warehouse_code
                         FROM purchases p
                         JOIN suppliers s ON s.id = p.supplier_id
                         LEFT JOIN users u ON u.id = p.created_by
                         LEFT JOIN accounts a ON a.id = p.payment_account_id
+                        LEFT JOIN warehouses w ON w.id = p.destination_warehouse_id
                         WHERE p.id = ?", [$purchaseId]);
 
 if (!$purchase) {
@@ -330,6 +331,14 @@ $shopPhone = getSetting('shop_phone', '+92 300 1234567 / 042-37210000');
             </div>
             <div class="small">
                 <strong>Recorded By:</strong> <?= htmlspecialchars($purchase['creator_name'] ?: 'Staff') ?>
+            </div>
+            <div class="small">
+                <strong>Delivered To:</strong> 
+                <?php if ($purchase['destination_type'] === 'warehouse' && !empty($purchase['warehouse_name'])): ?>
+                    <span class="badge bg-warning text-dark border"><?= htmlspecialchars($purchase['warehouse_name']) ?></span>
+                <?php else: ?>
+                    <span class="badge bg-light text-dark border">Main Shop / Counter</span>
+                <?php endif; ?>
             </div>
         </div>
     </div>

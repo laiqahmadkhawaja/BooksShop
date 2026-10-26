@@ -37,7 +37,8 @@ if ($action === 'search_products') {
     $whereSql = implode(" AND ", $where);
     $products = dbFetchAll("SELECT id, product_code, barcode, title, urdu_title, product_type, unit, 
                                    purchase_price, retail_price, wholesale_price, discount_percent, 
-                                   current_stock, min_stock_alert, rack_location, class_grade, author, publisher
+                                   current_stock, min_stock_alert, rack_location, class_grade, author, publisher,
+                                   COALESCE((SELECT SUM(quantity) FROM warehouse_stock WHERE product_id = products.id), 0) as wh_stock
                             FROM products 
                             WHERE $whereSql 
                             ORDER BY (barcode = '$q' OR product_code = '$q') DESC, title ASC LIMIT 30", $params);

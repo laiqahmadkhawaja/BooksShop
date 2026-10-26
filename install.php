@@ -356,7 +356,84 @@ function runInstallation() {
         INDEX (`product_id`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
-    // 22. Seed Settings
+    // 22. Warehouses Master Table
+    $db->exec("CREATE TABLE IF NOT EXISTS `warehouses` (
+        `id` INT AUTO_INCREMENT PRIMARY KEY,
+        `warehouse_code` VARCHAR(50) UNIQUE NOT NULL,
+        `name` VARCHAR(150) NOT NULL,
+        `phone` VARCHAR(50) NULL,
+        `email` VARCHAR(100) NULL,
+        `address` TEXT NULL,
+        `city` VARCHAR(100) NULL,
+        `manager_name` VARCHAR(100) NULL,
+        `is_primary` TINYINT(1) DEFAULT 0,
+        `status` TINYINT(1) DEFAULT 1,
+        `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+    // 23. Warehouse Stock
+    $db->exec("CREATE TABLE IF NOT EXISTS `warehouse_stock` (
+        `id` INT AUTO_INCREMENT PRIMARY KEY,
+        `warehouse_id` INT NOT NULL,
+        `product_id` INT NOT NULL,
+        `quantity` DECIMAL(12,2) DEFAULT 0.00,
+        `rack_shelf` VARCHAR(100) NULL,
+        `min_stock_alert` DECIMAL(12,2) DEFAULT 5.00,
+        `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY `unique_wh_prod` (`warehouse_id`, `product_id`),
+        INDEX `idx_wh` (`warehouse_id`),
+        INDEX `idx_prod` (`product_id`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+    // 24. Warehouse Transfers
+    $db->exec("CREATE TABLE IF NOT EXISTS `warehouse_transfers` (
+        `id` INT AUTO_INCREMENT PRIMARY KEY,
+        `transfer_no` VARCHAR(50) UNIQUE NOT NULL,
+        `transfer_date` DATE NOT NULL,
+        `from_location_type` ENUM('shop', 'warehouse') NOT NULL,
+        `from_warehouse_id` INT NULL,
+        `to_location_type` ENUM('shop', 'warehouse') NOT NULL,
+        `to_warehouse_id` INT NULL,
+        `total_items` INT DEFAULT 0,
+        `total_qty` DECIMAL(12,2) DEFAULT 0.00,
+        `status` ENUM('completed', 'draft', 'cancelled') DEFAULT 'completed',
+        `notes` TEXT NULL,
+        `created_by` INT NULL,
+        `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+    // 25. Warehouse Transfer Items
+    $db->exec("CREATE TABLE IF NOT EXISTS `warehouse_transfer_items` (
+        `id` INT AUTO_INCREMENT PRIMARY KEY,
+        `transfer_id` INT NOT NULL,
+        `product_id` INT NOT NULL,
+        `quantity` DECIMAL(12,2) NOT NULL,
+        `unit_cost` DECIMAL(12,2) DEFAULT 0.00,
+        `total_cost` DECIMAL(12,2) DEFAULT 0.00,
+        INDEX `idx_transfer` (`transfer_id`),
+        INDEX `idx_product` (`product_id`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+    // 26. Warehouse Stock Movements
+    $db->exec("CREATE TABLE IF NOT EXISTS `warehouse_stock_movements` (
+        `id` INT AUTO_INCREMENT PRIMARY KEY,
+        `warehouse_id` INT NOT NULL,
+        `product_id` INT NOT NULL,
+        `movement_date` DATETIME NOT NULL,
+        `movement_type` VARCHAR(50) NOT NULL,
+        `reference_id` INT NULL,
+        `reference_no` VARCHAR(50) NULL,
+        `quantity_change` DECIMAL(12,2) NOT NULL,
+        `previous_stock` DECIMAL(12,2) NOT NULL,
+        `new_stock` DECIMAL(12,2) NOT NULL,
+        `unit_cost` DECIMAL(12,2) DEFAULT 0.00,
+        `notes` TEXT NULL,
+        `created_by` INT NULL,
+        `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX `idx_wh_mov` (`warehouse_id`, `product_id`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+    // 27. Seed Settings
     $defaultSettings = [
         'shop_name' => 'Kitab Ghar & Stationery',
         'shop_name_urdu' => 'کتاب گھر اینڈ اسٹیشنری مارٹ',

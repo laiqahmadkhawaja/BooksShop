@@ -58,6 +58,16 @@ $userRole = $_SESSION['user']['role'] ?? '';
             <span><?= __t('inventory') ?></span>
         </a>
 
+        <a href="warehouses.php" class="nav-link <?= in_array($currentPage, ['warehouses.php', 'warehouse_form.php', 'warehouse_view.php']) ? 'active' : '' ?>">
+            <i class="fa-solid fa-warehouse text-warning"></i>
+            <span><?= __t('warehouses') ?></span>
+        </a>
+
+        <a href="warehouse_transfers.php" class="nav-link <?= in_array($currentPage, ['warehouse_transfers.php', 'warehouse_transfer_form.php']) ? 'active' : '' ?>">
+            <i class="fa-solid fa-truck-ramp-box text-info"></i>
+            <span><?= __t('transfers') ?></span>
+        </a>
+
         <a href="purchases.php" class="nav-link <?= $currentPage === 'purchases.php' ? 'active' : '' ?>">
             <i class="fa-solid fa-cart-flatbed"></i>
             <span><?= __t('purchases') ?></span>

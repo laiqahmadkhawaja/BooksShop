@@ -45,6 +45,8 @@ $TRANSLATIONS = [
         'today_profit' => "Today's Profit",
         'customer_receivables' => 'Customer Receivables',
         'supplier_payables' => 'Supplier Payables',
+        'warehouses' => 'Warehouses',
+        'transfers' => 'Stock Transfers',
     ],
     'ur' => [
         'app_name' => 'بک شاپ مینجمنٹ سسٹم',
@@ -66,6 +68,8 @@ $TRANSLATIONS = [
         'today_profit' => 'آج کا خالص منافع',
         'customer_receivables' => 'گاہکوں کے واجبات (کھاتہ)',
         'supplier_payables' => 'سپلائرز کی ادائیگیاں',
+        'warehouses' => 'گودام و ویئر ہاؤس',
+        'transfers' => 'اسٹاک منتقلی (ٹرانسفر)',
     ]
 ];
 
@@ -336,4 +340,173 @@ function deleteProductType($id) {
 
     dbQuery("DELETE FROM product_types WHERE id = ?", [$id]);
     return ['success' => true, 'message' => "Product type '{$type['name']}' deleted successfully."];
+}
+
+
+// =========================================================================
+// Multi-Warehouse & Multi-Location Stock Management Helpers
+// =========================================================================
+
+function ensureWarehouseSchema() {
+    static $done = false;
+    if ($done) return;
+    $done = true;
+    try {
+        $db = getDB();
+
+        // 1. Warehouses Master Table
+        $db->exec("CREATE TABLE IF NOT EXISTS `warehouses` (
+            `id` INT AUTO_INCREMENT PRIMARY KEY,
+            `warehouse_code` VARCHAR(50) UNIQUE NOT NULL,
+            `name` VARCHAR(150) NOT NULL,
+            `phone` VARCHAR(50) NULL,
+            `email` VARCHAR(100) NULL,
+            `address` TEXT NULL,
+            `city` VARCHAR(100) NULL,
+            `manager_name` VARCHAR(100) NULL,
+            `is_primary` TINYINT(1) DEFAULT 0,
+            `status` TINYINT(1) DEFAULT 1,
+            `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        // 2. Warehouse Stock Table
+        $db->exec("CREATE TABLE IF NOT EXISTS `warehouse_stock` (
+            `id` INT AUTO_INCREMENT PRIMARY KEY,
+            `warehouse_id` INT NOT NULL,
+            `product_id` INT NOT NULL,
+            `quantity` DECIMAL(12,2) DEFAULT 0.00,
+            `rack_shelf` VARCHAR(100) NULL,
+            `min_stock_alert` DECIMAL(12,2) DEFAULT 5.00,
+            `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            UNIQUE KEY `unique_wh_prod` (`warehouse_id`, `product_id`),
+            INDEX `idx_wh` (`warehouse_id`),
+            INDEX `idx_prod` (`product_id`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        // 3. Warehouse Transfers Table
+        $db->exec("CREATE TABLE IF NOT EXISTS `warehouse_transfers` (
+            `id` INT AUTO_INCREMENT PRIMARY KEY,
+            `transfer_no` VARCHAR(50) UNIQUE NOT NULL,
+            `transfer_date` DATE NOT NULL,
+            `from_location_type` ENUM('shop', 'warehouse') NOT NULL,
+            `from_warehouse_id` INT NULL,
+            `to_location_type` ENUM('shop', 'warehouse') NOT NULL,
+            `to_warehouse_id` INT NULL,
+            `total_items` INT DEFAULT 0,
+            `total_qty` DECIMAL(12,2) DEFAULT 0.00,
+            `status` ENUM('completed', 'draft', 'cancelled') DEFAULT 'completed',
+            `notes` TEXT NULL,
+            `created_by` INT NULL,
+            `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        // 4. Warehouse Transfer Items
+        $db->exec("CREATE TABLE IF NOT EXISTS `warehouse_transfer_items` (
+            `id` INT AUTO_INCREMENT PRIMARY KEY,
+            `transfer_id` INT NOT NULL,
+            `product_id` INT NOT NULL,
+            `quantity` DECIMAL(12,2) NOT NULL,
+            `unit_cost` DECIMAL(12,2) DEFAULT 0.00,
+            `total_cost` DECIMAL(12,2) DEFAULT 0.00,
+            INDEX `idx_transfer` (`transfer_id`),
+            INDEX `idx_product` (`product_id`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        // 5. Warehouse Stock Movements Audit Ledger
+        $db->exec("CREATE TABLE IF NOT EXISTS `warehouse_stock_movements` (
+            `id` INT AUTO_INCREMENT PRIMARY KEY,
+            `warehouse_id` INT NOT NULL,
+            `product_id` INT NOT NULL,
+            `movement_date` DATETIME NOT NULL,
+            `movement_type` VARCHAR(50) NOT NULL,
+            `reference_id` INT NULL,
+            `reference_no` VARCHAR(50) NULL,
+            `quantity_change` DECIMAL(12,2) NOT NULL,
+            `previous_stock` DECIMAL(12,2) NOT NULL,
+            `new_stock` DECIMAL(12,2) NOT NULL,
+            `unit_cost` DECIMAL(12,2) DEFAULT 0.00,
+            `notes` TEXT NULL,
+            `created_by` INT NULL,
+            `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX `idx_wh_mov` (`warehouse_id`, `product_id`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        // 6. Ensure purchases table has destination columns
+        $cols = $db->query("SHOW COLUMNS FROM `purchases` LIKE 'destination_type'")->fetchAll();
+        if (empty($cols)) {
+            $db->exec("ALTER TABLE `purchases` 
+                ADD COLUMN `destination_type` ENUM('shop', 'warehouse') DEFAULT 'shop' AFTER `supplier_id`,
+                ADD COLUMN `destination_warehouse_id` INT NULL AFTER `destination_type`");
+        }
+
+        // 7. Insert default warehouse if empty
+        $whCount = dbFetchOne("SELECT COUNT(*) as c FROM warehouses")['c'] ?? 0;
+        if ($whCount == 0) {
+            $db->exec("INSERT INTO warehouses (warehouse_code, name, phone, email, address, city, manager_name, is_primary, status)
+                VALUES ('WH-01', 'Main Central Godown', '', '', 'Main Storage Facility', '', 'Store Incharge', 1, 1)");
+        }
+    } catch (Exception $e) {
+        // Silently continue if already exists
+    }
+}
+
+// Auto-run schema check
+ensureWarehouseSchema();
+
+function getWarehouses($activeOnly = false) {
+    ensureWarehouseSchema();
+    $sql = "SELECT w.*, 
+            COALESCE(SUM(ws.quantity), 0) as total_units,
+            COUNT(DISTINCT ws.product_id) as total_skus,
+            COALESCE(SUM(ws.quantity * p.purchase_price), 0) as total_cost_value,
+            COALESCE(SUM(ws.quantity * p.retail_price), 0) as total_retail_value
+            FROM warehouses w
+            LEFT JOIN warehouse_stock ws ON ws.warehouse_id = w.id
+            LEFT JOIN products p ON p.id = ws.product_id AND p.status = 1";
+    if ($activeOnly) {
+        $sql .= " WHERE w.status = 1";
+    }
+    $sql .= " GROUP BY w.id ORDER BY w.is_primary DESC, w.name ASC";
+    try {
+        return dbFetchAll($sql);
+    } catch (Exception $e) {
+        return [];
+    }
+}
+
+function getWarehouseStock($warehouseId, $productId) {
+    ensureWarehouseSchema();
+    $row = dbFetchOne("SELECT quantity FROM warehouse_stock WHERE warehouse_id = ? AND product_id = ?", [(int)$warehouseId, (int)$productId]);
+    return $row ? (float)$row['quantity'] : 0.0;
+}
+
+function recordWarehouseStockMovement($warehouseId, $productId, $movementType, $refId, $refNo, $qtyChange, $notes = '', $unitCost = 0) {
+    ensureWarehouseSchema();
+    $db = getDB();
+    $warehouseId = (int)$warehouseId;
+    $productId = (int)$productId;
+    $qtyChange = (float)$qtyChange;
+    $userId = $_SESSION['user']['id'] ?? 1;
+
+    $prod = dbFetchOne("SELECT purchase_price FROM products WHERE id = ?", [$productId]);
+    if (!$prod) return false;
+    $cost = $unitCost > 0 ? $unitCost : (float)$prod['purchase_price'];
+
+    // Current warehouse stock
+    $whStock = dbFetchOne("SELECT quantity FROM warehouse_stock WHERE warehouse_id = ? AND product_id = ?", [$warehouseId, $productId]);
+    $prevStock = $whStock ? (float)$whStock['quantity'] : 0.0;
+    $newStock = $prevStock + $qtyChange;
+
+    if ($whStock) {
+        dbQuery("UPDATE warehouse_stock SET quantity = ? WHERE warehouse_id = ? AND product_id = ?", [$newStock, $warehouseId, $productId]);
+    } else {
+        dbQuery("INSERT INTO warehouse_stock (warehouse_id, product_id, quantity) VALUES (?, ?, ?)", [$warehouseId, $productId, $newStock]);
+    }
+
+    // Insert movement log
+    dbQuery("INSERT INTO warehouse_stock_movements (warehouse_id, product_id, movement_date, movement_type, reference_id, reference_no, quantity_change, previous_stock, new_stock, unit_cost, notes, created_by)
+             VALUES (?, ?, NOW(), ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+             [$warehouseId, $productId, $movementType, $refId, $refNo, $qtyChange, $prevStock, $newStock, $cost, $notes, $userId]);
+
+    return true;
 }

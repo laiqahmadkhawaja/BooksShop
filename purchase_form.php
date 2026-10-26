@@ -5,9 +5,11 @@ requireAuth();
 
 $suppliers = dbFetchAll("SELECT * FROM suppliers WHERE status = 1 ORDER BY name ASC");
 $accounts = dbFetchAll("SELECT * FROM accounts WHERE status = 1 ORDER BY account_name ASC");
+$warehouses = getWarehouses(true);
 $products = dbFetchAll("SELECT id, title, product_code, purchase_price, current_stock FROM products WHERE status = 1 ORDER BY title ASC");
 
 $preselectedProductId = (int)($_GET['product_id'] ?? 0);
+$preselectedSupplierId = (int)($_GET['supplier_id'] ?? 0);
 
 $pageTitle = 'Record New Purchase';
 require_once __DIR__ . '/includes/header.php';
@@ -32,22 +34,35 @@ require_once __DIR__ . '/includes/header.php';
                     <input type="hidden" name="save_purchase" value="1">
 
                     <div class="row g-3 mb-4">
-                        <div class="col-md-4">
+                        <div class="col-md-2">
                             <label class="form-label small fw-bold">Supplier / Publisher <span class="text-danger">*</span></label>
                             <select name="supplier_id" class="form-select" required>
                                 <option value="">-- Choose Supplier --</option>
                                 <?php foreach ($suppliers as $s): ?>
-                                    <option value="<?= $s['id'] ?>">
+                                    <option value="<?= $s['id'] ?>" <?= $preselectedSupplierId === (int)$s['id'] ? 'selected' : '' ?>>
                                         <?= htmlspecialchars($s['name']) ?> <?= $s['company_name'] ? '(' . htmlspecialchars($s['company_name']) . ')' : '' ?>
                                     </option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-2">
                             <label class="form-label small fw-bold">Purchase Date <span class="text-danger">*</span></label>
                             <input type="date" name="purchase_date" class="form-control" value="<?= date('Y-m-d') ?>" required>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-2">
+                            <label class="form-label small fw-bold text-primary"><i class="fa-solid fa-boxes-packing me-1"></i> Stock Destination <span class="text-danger">*</span></label>
+                            <select name="stock_destination" class="form-select border-primary" required>
+                                <option value="shop:0">🏬 Main Shop / Storefront Counter</option>
+                                <?php if (!empty($warehouses)): ?>
+                                    <optgroup label="Warehouses & Godowns">
+                                        <?php foreach ($warehouses as $wh): ?>
+                                            <option value="warehouse:<?= $wh['id'] ?>">🏭 <?= htmlspecialchars($wh['name']) ?> (<?= htmlspecialchars($wh['warehouse_code']) ?>)</option>
+                                        <?php endforeach; ?>
+                                    </optgroup>
+                                <?php endif; ?>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
                             <label class="form-label small fw-bold">Supplier Invoice / Bilty #</label>
                             <input type="text" name="invoice_no" class="form-control" placeholder="e.g. OUP-INV-9823">
                         </div>
@@ -90,8 +105,14 @@ require_once __DIR__ . '/includes/header.php';
                     </div>
 
                     <!-- Settlement & Totals -->
-                    <div class="row g-3 justify-content-end mb-4">
-                        <div class="col-md-5 col-lg-4">
+                    <div class="row g-3 justify-content-between mb-4">
+                        <div class="col-md-6 col-lg-7">
+                            <div class="card p-3 bg-light border h-100">
+                                <label class="form-label small fw-bold text-dark"><i class="fa-solid fa-note-sticky text-secondary me-1"></i> Purchase Notes / Bilty Remarks</label>
+                                <textarea name="notes" class="form-control" rows="4" placeholder="Optional notes, bilty/tracking number, parcel condition, payment terms..."></textarea>
+                            </div>
+                        </div>
+                        <div class="col-md-6 col-lg-5 col-xl-4">
                             <div class="card p-3 bg-light border">
                                 <div class="d-flex justify-content-between mb-2">
                                     <span class="small">Items Subtotal:</span>
@@ -276,6 +297,31 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     } else {
         addPurchaseRow();
+    }
+
+    const form = document.getElementById('purchaseForm');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            const rows = document.querySelectorAll('#purchaseItemsBody tr');
+            if (rows.length === 0) {
+                e.preventDefault();
+                alert('Please add at least one product item to the purchase invoice.');
+                return false;
+            }
+            let hasValidItem = false;
+            rows.forEach(r => {
+                const sel = r.querySelector('select');
+                const qty = r.querySelector('input[name*="[quantity]"]');
+                if (sel && sel.value && qty && parseFloat(qty.value) > 0) {
+                    hasValidItem = true;
+                }
+            });
+            if (!hasValidItem) {
+                e.preventDefault();
+                alert('Please select a valid product and set quantity greater than 0.');
+                return false;
+            }
+        });
     }
 });
 </script>

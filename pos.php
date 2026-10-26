@@ -817,7 +817,7 @@ function renderCatalog(products) {
                                 ${(p.product_type || 'BOOK').toUpperCase()}
                             </span>
                             <span class="badge ${isOut ? 'bg-danger' : (isLow ? 'bg-warning text-dark' : 'bg-light text-secondary border')}" style="font-size: 0.68rem;">
-                                Stock: ${p.current_stock}
+                                Shop: ${p.current_stock}</span>${parseFloat(p.wh_stock || 0) > 0 ? ` <span class="badge bg-info-subtle text-info border border-info-subtle" style="font-size: 0.68rem;" title="Godown Stock"><i class="fa-solid fa-warehouse"></i> ${p.wh_stock}` : ''}
                             </span>
                         </div>
                         <div class="fw-bold small text-truncate mt-1" title="${p.title}">${p.title}</div>

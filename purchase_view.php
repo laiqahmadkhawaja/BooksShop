@@ -10,11 +10,12 @@ if ($purchaseId <= 0) {
 }
 
 $purchase = dbFetchOne("SELECT p.*, s.name as supplier_name, s.company_name, s.phone as supplier_phone,
-                               u.name as creator_name, a.account_name
+                               COALESCE(u.full_name, u.username) as creator_name, a.account_name, w.name as warehouse_name, w.warehouse_code
                         FROM purchases p
                         LEFT JOIN suppliers s ON s.id = p.supplier_id
                         LEFT JOIN users u ON u.id = p.created_by
                         LEFT JOIN accounts a ON a.id = p.payment_account_id
+                        LEFT JOIN warehouses w ON w.id = p.destination_warehouse_id
                         WHERE p.id = ?", [$purchaseId]);
 
 if (!$purchase) {
@@ -85,6 +86,14 @@ require_once __DIR__ . '/includes/header.php';
                             <?php endif; ?>
                         </div>
                         <div class="fw-semibold text-dark"><i class="fa-solid fa-building-columns text-primary me-1"></i><?= htmlspecialchars($purchase['account_name'] ?: 'Default Account') ?></div>
+                        <div class="mt-2 small">
+                            <strong class="text-secondary">Delivered To:</strong>
+                            <?php if ($purchase['destination_type'] === 'warehouse' && !empty($purchase['warehouse_name'])): ?>
+                                <span class="badge bg-warning bg-opacity-25 text-dark border border-warning"><i class="fa-solid fa-warehouse me-1"></i> <?= htmlspecialchars($purchase['warehouse_name']) ?></span>
+                            <?php else: ?>
+                                <span class="badge bg-light text-secondary border"><i class="fa-solid fa-store me-1"></i> Shop Counter</span>
+                            <?php endif; ?>
+                        </div>
                     </div>
                 </div>
 
