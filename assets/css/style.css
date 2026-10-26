@@ -815,3 +815,78 @@ body, html {
 .table-responsive {
     -webkit-overflow-scrolling: touch;
 }
+
+
+/* ===================================================
+   SMOOTH UI ANIMATIONS (NATIVE CSS / PONYTAIL)
+   =================================================== */
+
+/* Page Switching Entrance Animation */
+@keyframes pageFadeSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.main-content {
+    animation: pageFadeSlideIn 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Tactile Button Feedback */
+.btn {
+    transition: transform 0.1s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+}
+
+.btn:active {
+    transform: scale(0.97);
+}
+
+/* Card & Interactive Row Hover */
+.card {
+    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.table-hover tbody tr {
+    transition: background-color 0.15s ease;
+}
+
+.list-group-item {
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+/* Alert Slide-Down Animation */
+@keyframes alertSlideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.alert {
+    animation: alertSlideDown 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* POS Cart Row Highlight on Add/Update */
+@keyframes cartRowFlash {
+    0% { background-color: rgba(13, 110, 253, 0.18); }
+    100% { background-color: transparent; }
+}
+
+.cart-row-flash {
+    animation: cartRowFlash 0.5s ease-out;
+}
+
+/* Submit Saving State */
+button[type="submit"]:disabled {
+    cursor: wait;
+    opacity: 0.85;
+}

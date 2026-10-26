@@ -130,6 +130,19 @@
         window.print();
     };
 
+    // Native form saving visual feedback
+    document.addEventListener('submit', function(e) {
+        const form = e.target;
+        if (!form || form.getAttribute('method')?.toUpperCase() !== 'POST') return;
+        const btn = form.querySelector('button[type="submit"]:not(.no-spin)');
+        if (btn && form.checkValidity()) {
+            setTimeout(function() {
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Saving...';
+            }, 50);
+        }
+    });
+
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape') {
             closeSidebar();

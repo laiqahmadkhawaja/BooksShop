@@ -80,7 +80,7 @@ $schoolClasses = dbFetchAll("SELECT sc.id, sc.class_name, sc.academic_session, s
             <div class="p-3 bg-light border-bottom position-relative">
                 <div class="input-group">
                     <span class="input-group-text bg-primary text-white"><i class="fa-solid fa-barcode"></i></span>
-                    <input type="text" id="barcodeSearchInput" class="form-control form-control-lg" placeholder="Scan Barcode or Search Book Title, ISBN, Author (Press Enter)..." autofocus autocomplete="off">
+                    <input type="text" id="barcodeSearchInput" class="form-control form-control-lg" placeholder="Scan Barcode or Search Book Title, ISBN, Author (Press Enter)..." autocomplete="off">
                     <button class="btn btn-warning text-dark fw-bold px-3 d-flex align-items-center gap-1" type="button" onclick="toggleInlineCameraScanner()" title="Scan Barcode via Camera (Alt+S or F3)">
                         <i class="fa-solid fa-camera"></i> <span class="d-none d-sm-inline">Scan</span>
                     </button>
@@ -463,7 +463,7 @@ function hideCheckoutView() {
     showPosView('posViewRegister');
     setTimeout(() => {
         const input = document.getElementById('barcodeSearchInput');
-        if (input) input.focus();
+        // Do not auto-focus on mobile devices
     }, 100);
 }
 
@@ -929,8 +929,7 @@ function addProductToCart(product, qty = 1) {
     renderCart();
 
     const input = document.getElementById('barcodeSearchInput');
-    input.value = '';
-    input.focus();
+    input.value = ''; // Auto-focus omitted on mobile
 }
 
 // Barcode Lookup / Enter trigger
@@ -1427,7 +1426,6 @@ function startNewSale() {
     document.getElementById('posCustomerSelect').value = '1';
     renderCart();
     hideReceiptSuccessView();
-    document.getElementById('barcodeSearchInput').focus();
     loadCatalog(); // Refresh stock counts in background
 }
 
@@ -1801,7 +1799,6 @@ function stopCameraScanner() {
         torchBtn.classList.add('btn-outline-light');
     }
     const input = document.getElementById('barcodeSearchInput');
-    if (input) input.focus();
 }
 
 function onBarcodeSuccess(decodedText, decodedResult) {
