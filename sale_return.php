@@ -94,7 +94,7 @@ require_once __DIR__ . '/includes/header.php';
                                             </td>
                                             <td>
                                                 <select name="condition[<?= $it['product_id'] ?>]" class="form-select form-select-sm">
-                                                    <option value="restockable">Good / Restockable (Add to inventory)</option>
+                                                    <option value="restockable">Good / Restockable (Restore stock & recalculate Weighted Average Cost)</option>
                                                     <option value="damaged">Damaged / Defective (Do not restock)</option>
                                                 </select>
                                             </td>
@@ -119,7 +119,9 @@ require_once __DIR__ . '/includes/header.php';
                             <label class="form-label fw-bold">Refund Method <span class="text-danger">*</span></label>
                             <select name="refund_method" class="form-select form-select-lg" required>
                                 <option value="cash">Cash / Bank Refund to Customer</option>
-                                <option value="credit">Credit / Adjust Customer Khata</option>
+                                <?php if ($sale['customer_id'] > 1): ?>
+                                <option value="credit">Credit / Adjust Customer Khata (Store Balance)</option>
+                                <?php endif; ?>
                             </select>
                         </div>
                         <div class="col-md-6">

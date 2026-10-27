@@ -104,7 +104,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_purchase'])) {
                 $itemStmt->execute([$purchaseId, $it['product_id'], $it['qty'], $it['cost'], $it['total']]);
                 
                 // Update product purchase cost and increase stock
-                dbQuery("UPDATE products SET purchase_price = ? WHERE id = ?", [$it['cost'], $it['product_id']]);
+                // Recalculate moving weighted average cost (AVCO) before adding new stock
+                updateProductWeightedAverageCost($it['product_id'], $it['qty'], $it['cost']);
                 if ($destType === 'warehouse' && $destWhId > 0) {
                     recordWarehouseStockMovement($destWhId, $it['product_id'], 'purchase_in', $purchaseId, $purchaseNo, $it['qty'], "Supplier Purchase #$purchaseNo", $it['cost']);
                 } else {

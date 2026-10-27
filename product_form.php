@@ -234,12 +234,13 @@ require_once __DIR__ . '/includes/header.php';
         <div class="card-body p-4">
             <div class="row g-3">
                 <div class="col-12 col-md-4">
-                    <label class="form-label small fw-bold">Purchase Cost Price (Rs.) *</label>
+                    <label class="form-label small fw-bold">Unit Cost Price (AVCO) (Rs.) *</label>
                     <div class="input-group">
                         <span class="input-group-text">Rs.</span>
                         <input type="number" step="0.01" min="0" name="purchase_price" id="prod_cost" class="form-control" required
                                value="<?= htmlspecialchars($product['purchase_price']) ?>">
                     </div>
+                    <div class="form-text text-muted" style="font-size: 0.75rem;">Moving Weighted Average Cost (Auto-updated on purchase/return)</div>
                 </div>
                 <div class="col-12 col-md-4">
                     <label class="form-label small fw-bold">Retail / Selling Price (Rs.) *</label>

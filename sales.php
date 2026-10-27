@@ -31,10 +31,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['process_sales_return'
                 if ($saleItem) {
                     $itemTotal = $qty * (float)$saleItem['unit_price'];
                     $totalReturnAmount += $itemTotal;
+                    $itemCost = (float)($saleItem['cost_price'] ?? 0);
+                    if ($itemCost <= 0) {
+                        $pRow = dbFetchOne("SELECT purchase_price FROM products WHERE id = ?", [$prodId]);
+                        $itemCost = $pRow ? (float)$pRow['purchase_price'] : 0.0;
+                    }
                     $returnItemsData[] = [
                         'product_id' => $prodId,
                         'qty' => $qty,
                         'unit_price' => (float)$saleItem['unit_price'],
+                        'cost_price' => $itemCost,
                         'total' => $itemTotal,
                         'condition' => $returnCondition[$prodId] ?? 'restockable'
                     ];
@@ -52,15 +58,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['process_sales_return'
             $stmt->execute([$returnNo, $saleId, $sale['customer_id'], $totalReturnAmount, $refundMethod, $refundAccountId, $reason, $userId]);
             $returnId = $db->lastInsertId();
 
-            $rItemStmt = $db->prepare("INSERT INTO return_items (return_id, product_id, quantity, unit_price, total_amount, condition_status)
-                                       VALUES (?, ?, ?, ?, ?, ?)");
+            $rItemStmt = $db->prepare("INSERT INTO return_items (return_id, product_id, quantity, unit_price, cost_price, total_amount, condition_status)
+                                       VALUES (?, ?, ?, ?, ?, ?, ?)");
 
             foreach ($returnItemsData as $ri) {
-                $rItemStmt->execute([$returnId, $ri['product_id'], $ri['qty'], $ri['unit_price'], $ri['total'], $ri['condition']]);
+                $rItemStmt->execute([$returnId, $ri['product_id'], $ri['qty'], $ri['unit_price'], $ri['cost_price'], $ri['total'], $ri['condition']]);
                 
-                // If restockable, add back to inventory
+                // If restockable, recalculate weighted average cost and restore to inventory
                 if ($ri['condition'] === 'restockable') {
-                    recordStockMovement($ri['product_id'], 'return_in', $returnId, $ri['qty'], "Sales Return #$returnNo (Invoice #{$sale['invoice_no']})");
+                    if ($ri['cost_price'] > 0) {
+                        updateProductWeightedAverageCost($ri['product_id'], $ri['qty'], $ri['cost_price']);
+                    }
+                    recordStockMovement($ri['product_id'], 'return_in', $returnId, $ri['qty'], "Sales Return #$returnNo (Invoice #{$sale['invoice_no']})", $ri['cost_price']);
                 }
             }
 
@@ -68,9 +77,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['process_sales_return'
             if ($refundMethod === 'credit' && $sale['customer_id'] > 1) {
                 // Credit customer khata
                 recordCustomerLedger($sale['customer_id'], 'return', $returnId, $sale['invoice_no'], 0, $totalReturnAmount, "Sales Return #$returnNo");
-            } elseif ($refundAccountId > 0) {
-                // Cash or bank payout
-                recordCashTransaction('expense', $refundAccountId, $totalReturnAmount, 'Sales Refund', $returnNo, "Sales Return Refund for #{$sale['invoice_no']}");
+            } else {
+                // Cash or bank payout (or Walk-in customer fallback)
+                if ($refundAccountId > 0) {
+                    recordCashTransaction('expense', $refundAccountId, $totalReturnAmount, 'Sales Refund', $returnNo, "Sales Return Refund for #{$sale['invoice_no']}");
+                }
             }
 
             $db->commit();

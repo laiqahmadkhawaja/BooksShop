@@ -26,22 +26,42 @@ if ($reportType === 'pnl') {
     $reportSubtitle = "Reporting Period: " . date('d M, Y', strtotime($startDate)) . " to " . date('d M, Y', strtotime($endDate));
 
     $salesData = dbFetchOne("SELECT COUNT(*) as orders_count, SUM(subtotal) as gross_subtotal, 
-                                    SUM(discount_amount) as total_discount, SUM(grand_total) as net_sales 
+                                    SUM(discount_amount) as total_discount, SUM(grand_total) as invoiced_sales 
                              FROM sales 
                              WHERE DATE(sale_date) BETWEEN ? AND ? AND hold_status = 0", [$startDate, $endDate]);
-    $netSales = (float)($salesData['net_sales'] ?? 0);
+    $grossSubtotal = (float)($salesData['gross_subtotal'] ?? 0);
     $totalDiscount = (float)($salesData['total_discount'] ?? 0);
+    $invoicedSales = (float)($salesData['invoiced_sales'] ?? 0);
 
-    $cogsData = dbFetchOne("SELECT SUM(si.quantity * si.cost_price) as total_cogs
+    $returnsData = dbFetchOne("SELECT COALESCE(SUM(total_amount), 0) as total_returns, COUNT(*) as returns_count 
+                               FROM returns 
+                               WHERE return_type = 'sale_return' AND DATE(return_date) BETWEEN ? AND ?", [$startDate, $endDate]);
+    $totalSalesReturns = (float)($returnsData['total_returns'] ?? 0);
+    $returnsCount = (int)($returnsData['returns_count'] ?? 0);
+
+    $netSales = max(0, $invoicedSales - $totalSalesReturns);
+
+    $cogsData = dbFetchOne("SELECT SUM(si.quantity * si.cost_price) as gross_cogs
                             FROM sale_items si
                             JOIN sales s ON s.id = si.sale_id
                             WHERE DATE(s.sale_date) BETWEEN ? AND ? AND s.hold_status = 0", [$startDate, $endDate]);
-    $totalCogs = (float)($cogsData['total_cogs'] ?? 0);
+    $grossCogs = (float)($cogsData['gross_cogs'] ?? 0);
+
+    $returnCogsData = dbFetchOne("SELECT SUM(ri.quantity * ri.cost_price) as return_cogs
+                                  FROM return_items ri
+                                  JOIN returns r ON r.id = ri.return_id
+                                  WHERE r.return_type = 'sale_return' 
+                                    AND ri.condition_status = 'restockable'
+                                    AND DATE(r.return_date) BETWEEN ? AND ?", [$startDate, $endDate]);
+    $restockedReturnCogs = (float)($returnCogsData['return_cogs'] ?? 0);
+
+    $totalCogs = max(0, $grossCogs - $restockedReturnCogs);
     $grossProfit = $netSales - $totalCogs;
 
     $expensesList = dbFetchAll("SELECT category_name, SUM(amount) as cat_amount 
                                 FROM cash_transactions 
                                 WHERE DATE(transaction_date) BETWEEN ? AND ? AND transaction_type = 'expense'
+                                  AND category_name != 'Sales Refund'
                                 GROUP BY category_name", [$startDate, $endDate]);
     $totalExpenses = 0;
     foreach ($expensesList as $exp) $totalExpenses += (float)$exp['cat_amount'];
@@ -415,14 +435,21 @@ elseif ($reportType === 'supplier_statement') {
             </thead>
             <tbody>
                 <tr class="table-light"><td colspan="2" class="fw-bold text-primary">1. REVENUE FROM TRADING & SALES</td></tr>
-                <tr><td class="ps-4">Gross Sales Invoiced</td><td class="text-end"><?= formatCurrency($salesData['gross_subtotal'] ?? 0) ?></td></tr>
+                <tr><td class="ps-4">Gross Sales Invoiced</td><td class="text-end"><?= formatCurrency($grossSubtotal) ?></td></tr>
                 <?php if ($totalDiscount > 0): ?>
                     <tr><td class="ps-4 text-danger">Less: Customer Discounts Allowed</td><td class="text-end text-danger">- <?= formatCurrency($totalDiscount) ?></td></tr>
                 <?php endif; ?>
+                <?php if ($totalSalesReturns > 0): ?>
+                    <tr><td class="ps-4 text-danger">Less: Sales Returns & Exchanges (<?= $returnsCount ?> returned)</td><td class="text-end text-danger">- <?= formatCurrency($totalSalesReturns) ?></td></tr>
+                <?php endif; ?>
                 <tr class="fw-bold"><td class="ps-4">Net Sales Turnover</td><td class="text-end text-primary"><?= formatCurrency($netSales) ?></td></tr>
 
-                <tr class="table-light"><td colspan="2" class="fw-bold text-danger">2. COST OF GOODS SOLD (COGS)</td></tr>
-                <tr><td class="ps-4">Cost of Goods / Products Sold</td><td class="text-end text-danger">- <?= formatCurrency($totalCogs) ?></td></tr>
+                <tr class="table-light"><td colspan="2" class="fw-bold text-danger">2. COST OF GOODS SOLD (COGS - AVCO)</td></tr>
+                <tr><td class="ps-4">Gross Cost of Sold Goods (AVCO)</td><td class="text-end text-danger">- <?= formatCurrency($grossCogs) ?></td></tr>
+                <?php if ($restockedReturnCogs > 0): ?>
+                    <tr><td class="ps-4 text-success">Less: Restocked Returns Inventory Cost (Restored to stock)</td><td class="text-end text-success">+ <?= formatCurrency($restockedReturnCogs) ?></td></tr>
+                <?php endif; ?>
+                <tr class="fw-bold"><td class="ps-4">Net Cost of Goods Sold</td><td class="text-end text-danger">- <?= formatCurrency($totalCogs) ?></td></tr>
                 <tr class="fw-bold table-light"><td>GROSS TRADING PROFIT</td><td class="text-end text-primary"><?= formatCurrency($grossProfit) ?></td></tr>
 
                 <tr class="table-light"><td colspan="2" class="fw-bold text-danger">3. OPERATING EXPENSES</td></tr>

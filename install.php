@@ -246,6 +246,7 @@ function runInstallation() {
         `product_id` INT NOT NULL,
         `quantity` DECIMAL(12, 2) NOT NULL,
         `unit_price` DECIMAL(12, 2) NOT NULL,
+        cost_price DECIMAL(12, 2) DEFAULT 0.00,
         `total_amount` DECIMAL(12, 2) NOT NULL,
         `condition_status` ENUM('restockable', 'damaged') DEFAULT 'restockable'
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");

@@ -182,6 +182,56 @@ function recordStockMovement($productId, $movementType, $refId, $qtyChange, $not
     return true;
 }
 
+/**
+ * Moving Weighted Average Cost (AVCO) Calculator & Updater
+ * Formula: New WAC = ((Existing Total Stock * Current WAC) + (Incoming Qty * Incoming Unit Cost)) / (Existing Total Stock + Incoming Qty)
+ * Evaluates current inventory across shop and all warehouses before this incoming movement.
+ *
+ * @param int $productId
+ * @param float $incomingQty
+ * @param float $incomingUnitCost
+ * @return float Newly computed moving weighted average cost
+ */
+function updateProductWeightedAverageCost($productId, $incomingQty, $incomingUnitCost) {
+    $productId = (int)$productId;
+    $incomingQty = (float)$incomingQty;
+    $incomingUnitCost = (float)$incomingUnitCost;
+
+    if ($productId <= 0 || $incomingQty <= 0) {
+        return 0.0;
+    }
+
+    $prod = dbFetchOne("SELECT current_stock, purchase_price FROM products WHERE id = ?", [$productId]);
+    if (!$prod) return 0.0;
+
+    $shopStock = (float)$prod['current_stock'];
+    $currentCost = (float)$prod['purchase_price'];
+
+    // Total stock in warehouses
+    $wh = dbFetchOne("SELECT COALESCE(SUM(quantity), 0) as wh_qty FROM warehouse_stock WHERE product_id = ?", [$productId]);
+    $whStock = $wh ? (float)$wh['wh_qty'] : 0.0;
+
+    $existingTotalStock = $shopStock + $whStock;
+
+    if ($existingTotalStock <= 0 || $currentCost <= 0) {
+        // If prior stock is 0 or negative, incoming unit cost becomes the base weighted average cost
+        $newCost = $incomingUnitCost;
+    } else {
+        $currentValuation = $existingTotalStock * $currentCost;
+        $incomingValuation = $incomingQty * $incomingUnitCost;
+        $totalUnits = $existingTotalStock + $incomingQty;
+
+        if ($totalUnits > 0) {
+            $newCost = round(($currentValuation + $incomingValuation) / $totalUnits, 2);
+        } else {
+            $newCost = $incomingUnitCost;
+        }
+    }
+
+    dbQuery("UPDATE products SET purchase_price = ? WHERE id = ?", [$newCost, $productId]);
+    return $newCost;
+}
+
 // Customer Ledger Helper
 function recordCustomerLedger($customerId, $txType, $refId, $invoiceNo, $debit, $credit, $description) {
     if (!$customerId) return;
@@ -517,3 +567,20 @@ function recordWarehouseStockMovement($warehouseId, $productId, $movementType, $
 
     return true;
 }
+
+// Ensure return_items schema supports cost_price for accurate AVCO restoration & P&L accounting
+function ensureReturnSchema() {
+    static $done = false;
+    if ($done) return;
+    $done = true;
+    try {
+        $db = getDB();
+        $cols = $db->query("SHOW COLUMNS FROM `return_items` LIKE 'cost_price'")->fetchAll();
+        if (empty($cols)) {
+            $db->exec("ALTER TABLE `return_items` ADD COLUMN `cost_price` DECIMAL(12,2) DEFAULT 0.00 AFTER `unit_price`");
+        }
+    } catch (Exception $e) {
+        // Silently continue
+    }
+}
+ensureReturnSchema();
