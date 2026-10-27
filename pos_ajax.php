@@ -142,6 +142,17 @@ if ($action === 'checkout') {
     $notes = trim($data['notes'] ?? '');
     $userId = $_SESSION['user']['id'] ?? 1;
 
+    // Strict Validation: Walk-in customer sale CANNOT be saved as credit or with an unpaid balance
+    if ($customerId <= 1) {
+        if ($paymentMethod === 'credit' || $dueAmount > 0.01 || $paidAmount < ($grandTotal - 0.01)) {
+            echo json_encode([
+                'success' => false,
+                'message' => 'Walk-in customer sale cannot be saved as credit or with an unpaid balance. Please receive full payment of Rs. ' . number_format($grandTotal, 2) . ' or select a registered customer for Khata.'
+            ]);
+            exit;
+        }
+    }
+
     // Determine payment status
     if ($dueAmount <= 0.01) {
         $paymentStatus = 'paid';

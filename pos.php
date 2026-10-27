@@ -321,7 +321,7 @@ $schoolClasses = dbFetchAll("SELECT sc.id, sc.class_name, sc.academic_session, s
                             <label class="btn btn-outline-primary" for="pay_wallet"><i class="fa-solid fa-mobile-screen-button me-1"></i> Wallet</label>
 
                             <input type="radio" class="btn-check" name="payMethod" id="pay_credit" value="credit" onchange="onPaymentMethodChange()">
-                            <label class="btn btn-outline-primary" for="pay_credit"><i class="fa-solid fa-hand-holding-dollar me-1"></i> Khata (Credit)</label>
+                            <label class="btn btn-outline-primary" for="pay_credit" id="pay_credit_label"><i class="fa-solid fa-hand-holding-dollar me-1"></i> Khata (Credit)</label>
                         </div>
                     </div>
 
@@ -575,6 +575,7 @@ function playBeep() {
 document.addEventListener('DOMContentLoaded', function() {
     loadCatalog();
     checkHeldBills();
+    updateCreditPaymentAvailability();
 
     const searchInput = document.getElementById('barcodeSearchInput');
 
@@ -1112,6 +1113,34 @@ function recalculateTotals() {
 }
 
 // Customer change handler
+function updateCreditPaymentAvailability() {
+    const sel = document.getElementById('posCustomerSelect');
+    const isWalkin = (!sel || sel.value == 1);
+    const creditRadio = document.getElementById('pay_credit');
+    const creditLabel = document.getElementById('pay_credit_label');
+
+    if (creditRadio) {
+        if (isWalkin) {
+            creditRadio.disabled = true;
+            if (creditRadio.checked) {
+                const cashRadio = document.getElementById('pay_cash');
+                if (cashRadio) cashRadio.checked = true;
+                onPaymentMethodChange();
+            }
+            if (creditLabel) {
+                creditLabel.classList.add('disabled', 'opacity-50');
+                creditLabel.title = 'Walk-in cash customer cannot purchase on credit. Select a registered customer for Khata.';
+            }
+        } else {
+            creditRadio.disabled = false;
+            if (creditLabel) {
+                creditLabel.classList.remove('disabled', 'opacity-50');
+                creditLabel.title = 'Charge bill to customer Khata';
+            }
+        }
+    }
+}
+
 function onCustomerChange() {
     const sel = document.getElementById('posCustomerSelect');
     const opt = sel.options[sel.selectedIndex];
@@ -1131,6 +1160,9 @@ function onCustomerChange() {
     if (custType === 'wholesale') {
         switchRateMode('wholesale');
     }
+
+    updateCreditPaymentAvailability();
+    calculateChange();
 }
 
 // Load complete school package into cart
@@ -1174,6 +1206,7 @@ function openCheckoutModal() {
 
     // Generate and render dynamic closer currency shortcuts for this specific bill
     renderSmartCashShortcuts(grandTotal);
+    updateCreditPaymentAvailability();
     calculateChange();
 
     showCheckoutView();
@@ -1279,9 +1312,11 @@ function calculateChange() {
 
     const tenderedInput = document.getElementById('tenderedAmountInput');
     const tendered = parseFloat(tenderedInput.value) || 0;
-    const method = document.querySelector('input[name="payMethod"]:checked').value;
-    const customerId = document.getElementById('posCustomerSelect').value;
+    const methodEl = document.querySelector('input[name="payMethod"]:checked');
+    const method = methodEl ? methodEl.value : 'cash';
+    const customerId = document.getElementById('posCustomerSelect')?.value || 1;
     const warningBox = document.getElementById('checkoutWarningBox');
+    const confirmBtn = document.getElementById('confirmCheckoutBtn');
 
     let change = 0;
     let due = 0;
@@ -1289,12 +1324,16 @@ function calculateChange() {
     if (method === 'credit') {
         due = grandTotal;
         change = 0;
-        if (warningBox) {
-            if (customerId == 1) {
-                warningBox.innerHTML = '<div class="alert alert-danger py-1 px-2 small mb-0 mt-2"><i class="fa-solid fa-triangle-exclamation me-1"></i> Walk-in cash customer cannot purchase on credit. Select a customer for Khata.</div>';
-            } else {
-                warningBox.innerHTML = '<div class="alert alert-info py-1 px-2 small mb-0 mt-2"><i class="fa-solid fa-circle-info me-1"></i> Full bill of Rs. ' + grandTotal.toFixed(2) + ' will be charged to customer Khata.</div>';
+        if (customerId == 1) {
+            if (warningBox) {
+                warningBox.innerHTML = '<div class="alert alert-danger py-2 px-3 small mb-0 mt-2"><i class="fa-solid fa-ban me-1"></i> <strong>Credit Blocked:</strong> Walk-in customer sale cannot be saved as credit. Select a registered customer or switch to Cash.</div>';
             }
+            if (confirmBtn) confirmBtn.disabled = true;
+        } else {
+            if (warningBox) {
+                warningBox.innerHTML = '<div class="alert alert-info py-2 px-3 small mb-0 mt-2"><i class="fa-solid fa-circle-info me-1"></i> Full bill of <strong>Rs. ' + grandTotal.toFixed(2) + '</strong> will be debited to customer Khata.</div>';
+            }
+            if (confirmBtn) confirmBtn.disabled = false;
         }
     } else {
         if (tendered >= (grandTotal - 0.01)) {
@@ -1302,19 +1341,22 @@ function calculateChange() {
             due = 0;
             tenderedInput.classList.remove('is-invalid');
             if (warningBox) warningBox.innerHTML = '';
+            if (confirmBtn) confirmBtn.disabled = false;
         } else {
             change = 0;
             due = grandTotal - tendered;
             if (customerId == 1) {
                 tenderedInput.classList.add('is-invalid');
                 if (warningBox) {
-                    warningBox.innerHTML = '<div class="alert alert-danger py-1 px-2 small mb-0 mt-2"><i class="fa-solid fa-circle-xmark me-1"></i> <strong>Underpaid:</strong> Received amount (Rs. ' + tendered.toFixed(2) + ') is less than total bill (Rs. ' + grandTotal.toFixed(2) + '). Walk-in customers cannot have an unpaid balance.</div>';
+                    warningBox.innerHTML = '<div class="alert alert-danger py-2 px-3 small mb-0 mt-2"><i class="fa-solid fa-circle-xmark me-1"></i> <strong>Underpaid:</strong> Received (Rs. ' + tendered.toFixed(2) + ') is less than total bill (Rs. ' + grandTotal.toFixed(2) + '). <u>Walk-in customer sale cannot be saved as credit</u>. Full payment required.</div>';
                 }
+                if (confirmBtn) confirmBtn.disabled = true;
             } else {
                 tenderedInput.classList.remove('is-invalid');
                 if (warningBox) {
-                    warningBox.innerHTML = '<div class="alert alert-warning py-1 px-2 small mb-0 mt-2"><i class="fa-solid fa-triangle-exclamation me-1"></i> Remaining balance of <strong>Rs. ' + due.toFixed(2) + '</strong> will be debited to customer Khata.</div>';
+                    warningBox.innerHTML = '<div class="alert alert-warning py-2 px-3 small mb-0 mt-2"><i class="fa-solid fa-triangle-exclamation me-1"></i> Remaining balance of <strong>Rs. ' + due.toFixed(2) + '</strong> will be debited to customer Khata.</div>';
                 }
+                if (confirmBtn) confirmBtn.disabled = false;
             }
         }
     }
@@ -1429,6 +1471,7 @@ function startNewSale() {
     cartItems = [];
     document.getElementById('orderDiscountInput').value = '0.00';
     document.getElementById('posCustomerSelect').value = '1';
+    onCustomerChange();
     renderCart();
     hideReceiptSuccessView();
     loadCatalog(); // Refresh stock counts in background
