@@ -2,6 +2,7 @@
 // print_invoice.php - Dual Mode Invoice Printer (80mm Thermal & Professional A4)
 require_once __DIR__ . '/config/app.php';
 requireAuth();
+requirePagePermission('sales.php');
 
 $saleId = (int)($_GET['id'] ?? 0);
 $type = $_GET['type'] ?? 'thermal'; // 'thermal' or 'a4'

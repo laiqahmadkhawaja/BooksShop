@@ -156,8 +156,226 @@ function requireRole($roles = []) {
     }
     if (!in_array($_SESSION['user']['role'], $roles)) {
         setFlash('danger', 'Access denied. You do not have permission for this section.');
-        header("Location: index.php");
-        exit;
+        $target = getFirstAllowedPage();
+        redirect($target);
+    }
+}
+
+// =========================================================================
+// User Permissions & Customizable Access Control Helpers
+// =========================================================================
+
+function ensureUserSchema() {
+    static $done = false;
+    if ($done) return;
+    $done = true;
+    try {
+        $db = getDB();
+        $cols = $db->query("SHOW COLUMNS FROM `users` LIKE 'permissions'")->fetchAll();
+        if (empty($cols)) {
+            $db->exec("ALTER TABLE `users` ADD COLUMN `permissions` TEXT NULL AFTER `role`");
+        }
+    } catch (Exception $e) {
+        // Silently continue
+    }
+}
+ensureUserSchema();
+
+function getAvailableModules() {
+    return [
+        'dashboard' => [
+            'label' => 'Dashboard Overview',
+            'desc' => 'Executive analytics, KPI counters, sales metrics and charts',
+            'icon' => 'fa-chart-pie',
+            'pages' => ['index.php']
+        ],
+        'pos' => [
+            'label' => 'Point of Sale (POS)',
+            'desc' => 'Fast barcode billing, receipts, cart discounts, customer khata at counter',
+            'icon' => 'fa-cash-register',
+            'pages' => ['pos.php', 'pos_ajax.php']
+        ],
+        'books' => [
+            'label' => 'Products & Catalog',
+            'desc' => 'Manage inventory items, pricing, categories, product types and barcodes',
+            'icon' => 'fa-box-open',
+            'pages' => ['books.php', 'product_form.php', 'categories.php', 'product_types.php', 'print_barcode.php']
+        ],
+        'sales' => [
+            'label' => 'Sales Invoices & Returns',
+            'desc' => 'View invoice history, reprint thermal/A4 bills, customer returns & exchanges',
+            'icon' => 'fa-file-invoice-dollar',
+            'pages' => ['sales.php', 'sale_return.php', 'print_invoice.php']
+        ],
+        'schools' => [
+            'label' => 'Schools & Syllabus Bundles',
+            'desc' => 'School profiles, grade syllabus lists, course curriculum bundles',
+            'icon' => 'fa-boxes-packing',
+            'pages' => ['schools.php', 'school_form.php', 'school_class_form.php', 'school_item_form.php']
+        ],
+        'inventory' => [
+            'label' => 'Inventory & Stock Adjustments',
+            'desc' => 'Shop stock levels, low-stock warnings, physical stock audits & write-offs',
+            'icon' => 'fa-boxes-stacked',
+            'pages' => ['inventory.php', 'stock_adjust.php']
+        ],
+        'warehouses' => [
+            'label' => 'Warehouses & Godowns',
+            'desc' => 'Multi-warehouse godown tracking, inter-warehouse transfers & delivery notes',
+            'icon' => 'fa-warehouse',
+            'pages' => ['warehouses.php', 'warehouse_form.php', 'warehouse_view.php', 'warehouse_transfers.php', 'warehouse_transfer_form.php', 'transfer_form.php', 'print_transfer.php']
+        ],
+        'purchases' => [
+            'label' => 'Purchases & Inward Stock',
+            'desc' => 'Supplier purchase orders, receiving inward stock, Weighted Average Cost',
+            'icon' => 'fa-cart-flatbed',
+            'pages' => ['purchases.php', 'purchase_form.php', 'purchase_view.php', 'print_purchase.php']
+        ],
+        'suppliers' => [
+            'label' => 'Suppliers & Publisher Khata',
+            'desc' => 'Supplier directory, payable balances, transaction ledger & payments',
+            'icon' => 'fa-truck-field',
+            'pages' => ['suppliers.php', 'supplier_form.php', 'supplier_payment.php']
+        ],
+        'customers' => [
+            'label' => 'Customers & Receivables Khata',
+            'desc' => 'Customer khata accounts, credit limits, recovery receipts & ledger statements',
+            'icon' => 'fa-users',
+            'pages' => ['customers.php', 'customer_form.php', 'customer_payment.php']
+        ],
+        'accounting' => [
+            'label' => 'Accounting, Incomes & Expenses',
+            'desc' => 'Bank/cash accounts, daily expense logs, miscellaneous income, fund transfers',
+            'icon' => 'fa-wallet',
+            'pages' => ['accounting.php', 'account_form.php', 'expense_form.php', 'income_form.php', 'expense_categories.php']
+        ],
+        'reports' => [
+            'label' => 'Financial Reports & Analytics',
+            'desc' => 'Profit & Loss (P&L), Trial Balance, Cash Closing, Stock Valuation',
+            'icon' => 'fa-chart-line',
+            'pages' => ['reports.php', 'print_report.php']
+        ],
+        'users' => [
+            'label' => 'User Management & Permissions',
+            'desc' => 'Create staff logins, set passwords, customize page-by-page access rights',
+            'icon' => 'fa-user-shield',
+            'pages' => ['users.php', 'user_form.php']
+        ],
+        'settings' => [
+            'label' => 'Store & System Settings',
+            'desc' => 'Store business details, receipt footer, tax rates, database backups',
+            'icon' => 'fa-sliders',
+            'pages' => ['settings.php']
+        ]
+    ];
+}
+
+function getRoleDefaultPermissions($role) {
+    $role = strtolower(trim($role));
+    $defaults = [
+        'admin' => array_keys(getAvailableModules()),
+        'manager' => ['dashboard', 'pos', 'books', 'sales', 'schools', 'inventory', 'warehouses', 'purchases', 'suppliers', 'customers'],
+        'cashier' => ['pos', 'sales', 'customers'],
+        'accountant' => ['dashboard', 'sales', 'purchases', 'suppliers', 'customers', 'accounting', 'reports']
+    ];
+    return $defaults[$role] ?? ['pos', 'sales'];
+}
+
+function userHasPermission($moduleOrPage, $user = null) {
+    if (!$user) {
+        $user = authUser();
+    }
+    if (!$user) return false;
+
+    // Superadmin / Admin has unconditional full access to everything
+    if (($user['role'] ?? '') === 'admin') {
+        return true;
+    }
+
+    // Fetch fresh permissions and role from DB for active user in request lifecycle
+    $userId = (int)($user['id'] ?? 0);
+    $userPermissions = null;
+    $userRole = $user['role'] ?? 'cashier';
+
+    if ($userId > 0) {
+        static $userCache = [];
+        if (!isset($userCache[$userId])) {
+            $fresh = dbFetchOne("SELECT role, permissions FROM users WHERE id = ?", [$userId]);
+            if ($fresh) {
+                $userCache[$userId] = $fresh;
+            } else {
+                $userCache[$userId] = [
+                    'role' => $userRole,
+                    'permissions' => $user['permissions'] ?? null
+                ];
+            }
+        }
+        $userRole = $userCache[$userId]['role'] ?? $userRole;
+        if ($userRole === 'admin') return true;
+        $userPermissions = $userCache[$userId]['permissions'] ?? null;
+    } else {
+        $userPermissions = $user['permissions'] ?? null;
+    }
+
+    // Resolve target module if a page filename like 'pos.php' was passed
+    $moduleKey = $moduleOrPage;
+    $modules = getAvailableModules();
+
+    if (str_ends_with($moduleOrPage, '.php')) {
+        $cleanPage = basename($moduleOrPage);
+        $found = false;
+        foreach ($modules as $k => $info) {
+            if (in_array($cleanPage, $info['pages'])) {
+                $moduleKey = $k;
+                $found = true;
+                break;
+            }
+        }
+        if (!$found) {
+            return false;
+        }
+    }
+
+    // Check custom permissions first if configured
+    if ($userPermissions !== null && $userPermissions !== '') {
+        $permList = is_array($userPermissions) ? $userPermissions : json_decode($userPermissions, true);
+        if (is_array($permList)) {
+            if (in_array('all', $permList)) return true;
+            return in_array($moduleKey, $permList);
+        }
+    }
+
+    // Otherwise fallback to role-based defaults
+    $defaults = getRoleDefaultPermissions($userRole);
+    return in_array($moduleKey, $defaults);
+}
+
+function getFirstAllowedPage($user = null) {
+    if (!$user) $user = authUser();
+    if (!$user) return 'login.php';
+    if (($user['role'] ?? '') === 'admin') return 'index.php';
+
+    $order = ['dashboard', 'pos', 'books', 'sales', 'inventory', 'warehouses', 'purchases', 'suppliers', 'customers', 'accounting', 'reports', 'users', 'settings'];
+    $modules = getAvailableModules();
+
+    foreach ($order as $m) {
+        if (userHasPermission($m, $user) && !empty($modules[$m]['pages'][0])) {
+            return $modules[$m]['pages'][0];
+        }
+    }
+
+    return 'login.php';
+}
+
+function requirePagePermission($moduleOrPage = null) {
+    requireAuth();
+    if ($moduleOrPage === null) {
+        $moduleOrPage = basename($_SERVER['PHP_SELF']);
+    }
+    if (!userHasPermission($moduleOrPage)) {
+        setFlash('danger', 'Access denied. You do not have permission to access that page.');
+        $target = getFirstAllowedPage();
+        redirect($target);
     }
 }
 

@@ -2,6 +2,7 @@
 // print_transfer.php - Stock Transfer Slip & Goods Delivery Challan
 require_once __DIR__ . '/config/app.php';
 requireAuth();
+requirePagePermission('warehouses.php');
 
 $transferId = (int)($_GET['id'] ?? 0);
 if ($transferId <= 0) {

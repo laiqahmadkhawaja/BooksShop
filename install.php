@@ -27,6 +27,7 @@ function runInstallation() {
         `email` VARCHAR(100),
         `phone` VARCHAR(30),
         `role` ENUM('admin', 'manager', 'cashier', 'accountant') NOT NULL DEFAULT 'cashier',
+        `permissions` TEXT NULL,
         `is_active` TINYINT(1) DEFAULT 1,
         `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");

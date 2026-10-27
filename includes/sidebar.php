@@ -21,92 +21,128 @@ $userRole = $_SESSION['user']['role'] ?? '';
 
     <!-- Navigation links -->
     <div class="py-2">
-        <div class="nav-category"><?= $currentLang === 'ur' ? 'مرکزی' : 'Main Menu' ?></div>
+        <?php if (userHasPermission('dashboard') || userHasPermission('pos')): ?>
+            <div class="nav-category"><?= $currentLang === 'ur' ? 'مرکزی' : 'Main Menu' ?></div>
 
-        <a href="index.php" class="nav-link <?= $currentPage === 'index.php' ? 'active' : '' ?>">
-            <i class="fa-solid fa-chart-pie"></i>
-            <span><?= __t('dashboard') ?></span>
-        </a>
+            <?php if (userHasPermission('dashboard')): ?>
+                <a href="index.php" class="nav-link <?= $currentPage === 'index.php' ? 'active' : '' ?>">
+                    <i class="fa-solid fa-chart-pie"></i>
+                    <span><?= __t('dashboard') ?></span>
+                </a>
+            <?php endif; ?>
 
-        <a href="pos.php" class="nav-link <?= $currentPage === 'pos.php' ? 'active' : '' ?>">
-            <i class="fa-solid fa-cash-register text-warning"></i>
-            <span><?= __t('pos') ?></span>
-            <span class="badge bg-warning text-dark ms-auto">F2</span>
-        </a>
+            <?php if (userHasPermission('pos')): ?>
+                <a href="pos.php" class="nav-link <?= $currentPage === 'pos.php' ? 'active' : '' ?>">
+                    <i class="fa-solid fa-cash-register text-warning"></i>
+                    <span><?= __t('pos') ?></span>
+                    <span class="badge bg-warning text-dark ms-auto">F2</span>
+                </a>
+            <?php endif; ?>
+        <?php endif; ?>
 
-        <div class="nav-category"><?= $currentLang === 'ur' ? 'اشیاء و فروخت' : 'Sales & Catalog' ?></div>
+        <?php if (userHasPermission('books') || userHasPermission('sales') || userHasPermission('schools')): ?>
+            <div class="nav-category"><?= $currentLang === 'ur' ? 'اشیاء و فروخت' : 'Sales & Catalog' ?></div>
 
-        <a href="books.php" class="nav-link <?= $currentPage === 'books.php' ? 'active' : '' ?>">
-            <i class="fa-solid fa-box-open"></i>
-            <span><?= __t('books_catalog') ?></span>
-        </a>
+            <?php if (userHasPermission('books')): ?>
+                <a href="books.php" class="nav-link <?= $currentPage === 'books.php' ? 'active' : '' ?>">
+                    <i class="fa-solid fa-box-open"></i>
+                    <span><?= __t('books_catalog') ?></span>
+                </a>
+            <?php endif; ?>
 
-        <a href="sales.php" class="nav-link <?= $currentPage === 'sales.php' ? 'active' : '' ?>">
-            <i class="fa-solid fa-file-invoice-dollar"></i>
-            <span><?= __t('sales_history') ?></span>
-        </a>
+            <?php if (userHasPermission('sales')): ?>
+                <a href="sales.php" class="nav-link <?= $currentPage === 'sales.php' ? 'active' : '' ?>">
+                    <i class="fa-solid fa-file-invoice-dollar"></i>
+                    <span><?= __t('sales_history') ?></span>
+                </a>
+            <?php endif; ?>
 
-        <a href="schools.php" class="nav-link <?= $currentPage === 'schools.php' ? 'active' : '' ?>">
-            <i class="fa-solid fa-boxes-packing text-info"></i>
-            <span><?= __t('schools') ?></span>
-        </a>
+            <?php if (userHasPermission('schools')): ?>
+                <a href="schools.php" class="nav-link <?= $currentPage === 'schools.php' ? 'active' : '' ?>">
+                    <i class="fa-solid fa-boxes-packing text-info"></i>
+                    <span><?= __t('schools') ?></span>
+                </a>
+            <?php endif; ?>
+        <?php endif; ?>
 
-        <div class="nav-category"><?= $currentLang === 'ur' ? 'اسٹاک و خریداری' : 'Inventory & Purchase' ?></div>
+        <?php if (userHasPermission('inventory') || userHasPermission('warehouses') || userHasPermission('purchases') || userHasPermission('suppliers')): ?>
+            <div class="nav-category"><?= $currentLang === 'ur' ? 'اسٹاک و خریداری' : 'Inventory & Purchase' ?></div>
 
-        <a href="inventory.php" class="nav-link <?= $currentPage === 'inventory.php' ? 'active' : '' ?>">
-            <i class="fa-solid fa-boxes-stacked"></i>
-            <span><?= __t('inventory') ?></span>
-        </a>
+            <?php if (userHasPermission('inventory')): ?>
+                <a href="inventory.php" class="nav-link <?= $currentPage === 'inventory.php' ? 'active' : '' ?>">
+                    <i class="fa-solid fa-boxes-stacked"></i>
+                    <span><?= __t('inventory') ?></span>
+                </a>
+            <?php endif; ?>
 
-        <a href="warehouses.php" class="nav-link <?= in_array($currentPage, ['warehouses.php', 'warehouse_form.php', 'warehouse_view.php']) ? 'active' : '' ?>">
-            <i class="fa-solid fa-warehouse text-warning"></i>
-            <span><?= __t('warehouses') ?></span>
-        </a>
+            <?php if (userHasPermission('warehouses')): ?>
+                <a href="warehouses.php" class="nav-link <?= in_array($currentPage, ['warehouses.php', 'warehouse_form.php', 'warehouse_view.php']) ? 'active' : '' ?>">
+                    <i class="fa-solid fa-warehouse text-warning"></i>
+                    <span><?= __t('warehouses') ?></span>
+                </a>
 
-        <a href="warehouse_transfers.php" class="nav-link <?= in_array($currentPage, ['warehouse_transfers.php', 'warehouse_transfer_form.php']) ? 'active' : '' ?>">
-            <i class="fa-solid fa-truck-ramp-box text-info"></i>
-            <span><?= __t('transfers') ?></span>
-        </a>
+                <a href="warehouse_transfers.php" class="nav-link <?= in_array($currentPage, ['warehouse_transfers.php', 'warehouse_transfer_form.php', 'transfer_form.php']) ? 'active' : '' ?>">
+                    <i class="fa-solid fa-truck-ramp-box text-info"></i>
+                    <span><?= __t('transfers') ?></span>
+                </a>
+            <?php endif; ?>
 
-        <a href="purchases.php" class="nav-link <?= $currentPage === 'purchases.php' ? 'active' : '' ?>">
-            <i class="fa-solid fa-cart-flatbed"></i>
-            <span><?= __t('purchases') ?></span>
-        </a>
+            <?php if (userHasPermission('purchases')): ?>
+                <a href="purchases.php" class="nav-link <?= $currentPage === 'purchases.php' ? 'active' : '' ?>">
+                    <i class="fa-solid fa-cart-flatbed"></i>
+                    <span><?= __t('purchases') ?></span>
+                </a>
+            <?php endif; ?>
 
-        <a href="suppliers.php" class="nav-link <?= $currentPage === 'suppliers.php' ? 'active' : '' ?>">
-            <i class="fa-solid fa-truck-field"></i>
-            <span><?= __t('suppliers') ?></span>
-        </a>
+            <?php if (userHasPermission('suppliers')): ?>
+                <a href="suppliers.php" class="nav-link <?= $currentPage === 'suppliers.php' ? 'active' : '' ?>">
+                    <i class="fa-solid fa-truck-field"></i>
+                    <span><?= __t('suppliers') ?></span>
+                </a>
+            <?php endif; ?>
+        <?php endif; ?>
 
-        <div class="nav-category"><?= $currentLang === 'ur' ? 'کھاتہ و مالیات' : 'Khata & Finance' ?></div>
+        <?php if (userHasPermission('customers') || userHasPermission('accounting') || userHasPermission('reports')): ?>
+            <div class="nav-category"><?= $currentLang === 'ur' ? 'کھاتہ و مالیات' : 'Khata & Finance' ?></div>
 
-        <a href="customers.php" class="nav-link <?= $currentPage === 'customers.php' ? 'active' : '' ?>">
-            <i class="fa-solid fa-users"></i>
-            <span><?= __t('customers') ?></span>
-        </a>
+            <?php if (userHasPermission('customers')): ?>
+                <a href="customers.php" class="nav-link <?= $currentPage === 'customers.php' ? 'active' : '' ?>">
+                    <i class="fa-solid fa-users"></i>
+                    <span><?= __t('customers') ?></span>
+                </a>
+            <?php endif; ?>
 
-        <a href="accounting.php" class="nav-link <?= $currentPage === 'accounting.php' ? 'active' : '' ?>">
-            <i class="fa-solid fa-wallet"></i>
-            <span><?= __t('accounting') ?></span>
-        </a>
+            <?php if (userHasPermission('accounting')): ?>
+                <a href="accounting.php" class="nav-link <?= $currentPage === 'accounting.php' ? 'active' : '' ?>">
+                    <i class="fa-solid fa-wallet"></i>
+                    <span><?= __t('accounting') ?></span>
+                </a>
+            <?php endif; ?>
 
-        <a href="reports.php" class="nav-link <?= $currentPage === 'reports.php' ? 'active' : '' ?>">
-            <i class="fa-solid fa-chart-line"></i>
-            <span><?= __t('reports') ?></span>
-        </a>
+            <?php if (userHasPermission('reports')): ?>
+                <a href="reports.php" class="nav-link <?= $currentPage === 'reports.php' ? 'active' : '' ?>">
+                    <i class="fa-solid fa-chart-line"></i>
+                    <span><?= __t('reports') ?></span>
+                </a>
+            <?php endif; ?>
+        <?php endif; ?>
 
-        <?php if ($userRole === 'admin'): ?>
+        <?php if (userHasPermission('users') || userHasPermission('settings')): ?>
             <div class="nav-category"><?= $currentLang === 'ur' ? 'انتظامیہ' : 'Administration' ?></div>
 
-            <a href="users.php" class="nav-link <?= $currentPage === 'users.php' ? 'active' : '' ?>">
-                <i class="fa-solid fa-user-shield"></i>
-                <span><?= __t('users') ?></span>
-            </a>
+            <?php if (userHasPermission('users')): ?>
+                <a href="users.php" class="nav-link <?= $currentPage === 'users.php' ? 'active' : '' ?>">
+                    <i class="fa-solid fa-user-shield"></i>
+                    <span><?= __t('users') ?></span>
+                </a>
+            <?php endif; ?>
 
-            <a href="settings.php" class="nav-link <?= $currentPage === 'settings.php' ? 'active' : '' ?>">
-                <i class="fa-solid fa-sliders"></i>
-                <span><?= __t('settings') ?></span>
-            </a>
+            <?php if (userHasPermission('settings')): ?>
+                <a href="settings.php" class="nav-link <?= $currentPage === 'settings.php' ? 'active' : '' ?>">
+                    <i class="fa-solid fa-sliders"></i>
+                    <span><?= __t('settings') ?></span>
+                </a>
+            <?php endif; ?>
         <?php endif; ?>
 
         <div class="pt-3 pb-4">

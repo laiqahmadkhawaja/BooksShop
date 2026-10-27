@@ -3,7 +3,8 @@
 require_once __DIR__ . '/config/app.php';
 
 if (isLoggedIn()) {
-    header("Location: index.php");
+    $target = getFirstAllowedPage();
+    header("Location: $target");
     exit;
 }
 
@@ -20,9 +21,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'username' => $user['username'],
                 'full_name' => $user['full_name'],
                 'role' => $user['role'],
-                'email' => $user['email']
+                'email' => $user['email'],
+                'permissions' => $user['permissions'] ?? ''
             ];
-            header("Location: index.php");
+            $target = getFirstAllowedPage($_SESSION['user']);
+            header("Location: $target");
             exit;
         } else {
             $error = 'Invalid username or password.';

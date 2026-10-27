@@ -2,6 +2,7 @@
 // print_report.php - Dedicated Clean A4 Printable View for All Reports
 require_once __DIR__ . '/config/app.php';
 requireAuth();
+requirePagePermission('reports.php');
 
 $reportType = $_GET['report'] ?? 'pnl';
 $startDate = $_GET['start_date'] ?? date('Y-m-01');

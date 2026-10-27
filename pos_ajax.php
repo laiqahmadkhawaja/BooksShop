@@ -8,6 +8,10 @@ if (!isLoggedIn()) {
     echo json_encode(['success' => false, 'message' => 'Unauthorized']);
     exit;
 }
+if (!userHasPermission('pos')) {
+    echo json_encode(['success' => false, 'message' => 'Access denied. You do not have permission for POS.']);
+    exit;
+}
 
 $action = $_REQUEST['action'] ?? '';
 

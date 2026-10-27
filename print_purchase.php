@@ -2,6 +2,7 @@
 // print_purchase.php - Official Purchase Order & Stock Inward Receipt Printer
 require_once __DIR__ . '/config/app.php';
 requireAuth();
+requirePagePermission('purchases.php');
 
 $purchaseId = (int)($_GET['id'] ?? 0);
 $type = $_GET['type'] ?? 'a4'; // 'a4' (default) or 'thermal'

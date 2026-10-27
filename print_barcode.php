@@ -2,6 +2,7 @@
 // print_barcode.php - Barcode Label Sticker Print Page
 require_once __DIR__ . '/config/app.php';
 requireAuth();
+requirePagePermission('books.php');
 
 $productId = (int)($_GET['id'] ?? 0);
 $product = null;

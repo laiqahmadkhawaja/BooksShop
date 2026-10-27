@@ -3,6 +3,10 @@
 require_once __DIR__ . '/../config/app.php';
 requireAuth();
 
+// Enforce granular user page permission
+$currentPage = basename($_SERVER['PHP_SELF']);
+requirePagePermission($currentPage);
+
 if (isset($_GET['set_lang'])) {
     setLanguage($_GET['set_lang']);
     $redirectUrl = strtok($_SERVER["REQUEST_URI"], '?');
