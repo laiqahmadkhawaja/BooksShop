@@ -192,6 +192,9 @@ require_once __DIR__ . '/includes/header.php';
         <a href="account_form.php" class="btn btn-primary btn-sm shadow-sm">
             <i class="fa-solid fa-plus-circle me-1"></i> Add Account
         </a>
+        <a href="expense_categories.php" class="btn btn-outline-secondary btn-sm shadow-sm">
+            <i class="fa-solid fa-tags me-1"></i> Manage Categories
+        </a>
     </div>
 </div>
 

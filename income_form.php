@@ -1,5 +1,5 @@
 <?php
-// income_form.php - Record Non-Sale Income Voucher Full Page
+// income_form.php - Record Non-Sale Income Voucher Full Page (Zero-Modal)
 require_once __DIR__ . '/config/app.php';
 requireAuth();
 
@@ -22,7 +22,10 @@ require_once __DIR__ . '/includes/header.php';
         </nav>
     </div>
     <div class="col-12 col-md-6 text-md-end">
-        <a href="accounting.php" class="btn btn-outline-secondary">
+        <a href="expense_categories.php" class="btn btn-outline-secondary btn-sm me-2">
+            <i class="fa-solid fa-tags me-1"></i> Manage Categories
+        </a>
+        <a href="accounting.php" class="btn btn-outline-secondary btn-sm">
             <i class="fa-solid fa-arrow-left me-1"></i> Back to Accounts
         </a>
     </div>
@@ -52,7 +55,7 @@ require_once __DIR__ . '/includes/header.php';
                     <div class="mb-3">
                         <div class="d-flex justify-content-between align-items-center mb-1">
                             <label class="form-label small fw-bold mb-0">Income Category / Source *</label>
-                            <button type="button" class="btn btn-sm btn-outline-success py-0 px-2 fw-semibold" style="font-size: 0.8rem;" onclick="showAddCategoryModal()">
+                            <button type="button" class="btn btn-sm btn-outline-success py-0 px-2 fw-semibold" style="font-size: 0.8rem;" onclick="toggleInlineCategoryForm()">
                                 <i class="fa-solid fa-plus-circle me-1"></i> + New Category
                             </button>
                         </div>
@@ -64,19 +67,31 @@ require_once __DIR__ . '/includes/header.php';
                             <option value="__new__" class="fw-bold text-success">+ Add New Category...</option>
                         </select>
 
-                        <!-- Inline quick-input if user selects '+ Add New Category...' -->
-                        <div id="inlineNewCatDiv" class="mt-2" style="display: none;">
-                            <div class="input-group">
-                                <span class="input-group-text bg-success-subtle text-success fw-bold"><i class="fa-solid fa-tag"></i></span>
-                                <input type="text" id="inlineNewCatInput" name="new_category_name" class="form-control" placeholder="Enter new income category name...">
-                                <button type="button" class="btn btn-success" onclick="saveCategoryViaAjax('income')">
-                                    <i class="fa-solid fa-check me-1"></i> Save
-                                </button>
-                                <button type="button" class="btn btn-outline-secondary" onclick="cancelInlineCategory()">
-                                    <i class="fa-solid fa-times"></i>
-                                </button>
+                        <!-- In-Page Inline Expandable Category Creator (Zero-Modal) -->
+                        <div id="inlineNewCatCard" class="card mt-2 border-success-subtle bg-light shadow-sm" style="display: none;">
+                            <div class="card-body p-3">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span class="fw-bold small text-success">
+                                        <i class="fa-solid fa-folder-plus me-1"></i> Add New Income Category
+                                    </span>
+                                    <button type="button" class="btn-close btn-sm" onclick="closeInlineCategoryForm()" aria-label="Close"></button>
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label small fw-bold mb-1">Category Name *</label>
+                                    <input type="text" id="inlineCatName" name="new_category_name" class="form-control" placeholder="e.g. Scrap Sale, Consulting, Rental Income">
+                                    <div id="inlineCatError" class="text-danger small mt-1" style="display: none;"></div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label small fw-bold mb-1">Description / Notes (Optional)</label>
+                                    <textarea id="inlineCatDesc" class="form-control form-control-sm" rows="2" placeholder="Brief explanation of this income source"></textarea>
+                                </div>
+                                <div class="d-flex justify-content-end gap-2">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="closeInlineCategoryForm()">Cancel</button>
+                                    <button type="button" class="btn btn-success btn-sm px-3 fw-bold shadow-sm" onclick="saveCategoryInline('income')">
+                                        <i class="fa-solid fa-check me-1"></i> Save & Select
+                                    </button>
+                                </div>
                             </div>
-                            <div class="form-text text-muted small">Enter category name and click Save, or fill the voucher and it will be created automatically.</div>
                         </div>
                     </div>
 
@@ -85,7 +100,7 @@ require_once __DIR__ . '/includes/header.php';
                             <label class="form-label small fw-bold">Income Amount (Rs.) *</label>
                             <div class="input-group">
                                 <span class="input-group-text">Rs.</span>
-                                <input type="number" step="0.01" min="1" name="amount" class="form-control form-control-lg fw-bold text-success" required placeholder="0.00">
+                                <input type="number" step="0.01" min="1" name="amount" id="incomeAmountInput" class="form-control form-control-lg fw-bold text-success" required placeholder="0.00">
                             </div>
                         </div>
                         <div class="col-12 col-sm-6">
@@ -111,90 +126,56 @@ require_once __DIR__ . '/includes/header.php';
     </div>
 </div>
 
-<!-- Modal: Quick Add Income Category -->
-<div class="modal fade" id="quickAddCatModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header bg-success text-white py-2">
-                <h6 class="modal-title fw-bold"><i class="fa-solid fa-plus-circle me-2"></i> Add New Income Category</h6>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body p-4">
-                <div class="mb-3">
-                    <label class="form-label small fw-bold">Category Name *</label>
-                    <input type="text" id="modalCatName" class="form-control form-control-lg" placeholder="e.g. Scrap Sale, Consulting, Rental Income" required>
-                    <div id="modalCatError" class="text-danger small mt-1" style="display: none;"></div>
-                </div>
-                <div class="mb-2">
-                    <label class="form-label small fw-bold">Description / Notes (Optional)</label>
-                    <textarea id="modalCatDesc" class="form-control" rows="2" placeholder="Brief explanation of this income source"></textarea>
-                </div>
-            </div>
-            <div class="modal-footer bg-light py-2">
-                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" id="modalSaveBtn" class="btn btn-success btn-sm px-3 fw-bold" onclick="submitModalCategory('income')">
-                    <i class="fa-solid fa-save me-1"></i> Save & Select
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
 <script>
 function handleCategoryChange(select) {
-    const inlineDiv = document.getElementById('inlineNewCatDiv');
-    const inlineInput = document.getElementById('inlineNewCatInput');
+    const inlineCard = document.getElementById('inlineNewCatCard');
+    const inlineInput = document.getElementById('inlineCatName');
     if (select.value === '__new__') {
-        inlineDiv.style.display = 'block';
+        inlineCard.style.display = 'block';
         inlineInput.focus();
     } else {
-        inlineDiv.style.display = 'none';
+        inlineCard.style.display = 'none';
         inlineInput.value = '';
     }
 }
 
-function showAddCategoryModal() {
-    const modalEl = document.getElementById('quickAddCatModal');
-    const modal = new bootstrap.Modal(modalEl);
-    document.getElementById('modalCatName').value = '';
-    document.getElementById('modalCatDesc').value = '';
-    document.getElementById('modalCatError').style.display = 'none';
-    modal.show();
-    setTimeout(() => document.getElementById('modalCatName').focus(), 400);
+function toggleInlineCategoryForm() {
+    const inlineCard = document.getElementById('inlineNewCatCard');
+    const inlineInput = document.getElementById('inlineCatName');
+    const select = document.getElementById('categorySelect');
+    if (inlineCard.style.display === 'none' || inlineCard.style.display === '') {
+        inlineCard.style.display = 'block';
+        select.value = '__new__';
+        inlineInput.focus();
+    } else {
+        closeInlineCategoryForm();
+    }
 }
 
-function cancelInlineCategory() {
-    const inlineDiv = document.getElementById('inlineNewCatDiv');
-    const inlineInput = document.getElementById('inlineNewCatInput');
+function closeInlineCategoryForm() {
+    const inlineCard = document.getElementById('inlineNewCatCard');
+    const inlineInput = document.getElementById('inlineCatName');
+    const inlineDesc = document.getElementById('inlineCatDesc');
+    const errDiv = document.getElementById('inlineCatError');
     const select = document.getElementById('categorySelect');
-    inlineDiv.style.display = 'none';
+
+    inlineCard.style.display = 'none';
     inlineInput.value = '';
+    if (inlineDesc) inlineDesc.value = '';
+    if (errDiv) errDiv.style.display = 'none';
+
     if (select.value === '__new__') {
         select.value = select.options[1] ? select.options[1].value : '';
     }
 }
 
-function saveCategoryViaAjax(type) {
-    const input = document.getElementById('inlineNewCatInput');
-    const name = input.value.trim();
-    if (!name) {
-        alert('Please enter a category name.');
-        input.focus();
-        return;
-    }
-    executeCategorySave(name, '', type, () => {
-        document.getElementById('inlineNewCatDiv').style.display = 'none';
-        document.getElementById('inlineNewCatInput').value = '';
-    });
-}
-
-function submitModalCategory(type) {
-    const nameInput = document.getElementById('modalCatName');
-    const descInput = document.getElementById('modalCatDesc');
-    const errDiv = document.getElementById('modalCatError');
+function saveCategoryInline(type) {
+    const nameInput = document.getElementById('inlineCatName');
+    const descInput = document.getElementById('inlineCatDesc');
+    const errDiv = document.getElementById('inlineCatError');
     const name = nameInput.value.trim();
-    const desc = descInput.value.trim();
-    
+    const desc = descInput ? descInput.value.trim() : '';
+
     if (!name) {
         errDiv.innerText = 'Category name is required.';
         errDiv.style.display = 'block';
@@ -202,15 +183,7 @@ function submitModalCategory(type) {
         return;
     }
     errDiv.style.display = 'none';
-    
-    executeCategorySave(name, desc, type, () => {
-        const modalEl = document.getElementById('quickAddCatModal');
-        const modal = bootstrap.Modal.getInstance(modalEl);
-        if (modal) modal.hide();
-    });
-}
 
-function executeCategorySave(name, desc, type, callback) {
     const formData = new FormData();
     formData.append('ajax_add_category', '1');
     formData.append('name', name);
@@ -243,14 +216,21 @@ function executeCategorySave(name, desc, type, callback) {
                 }
                 select.value = res.name;
             }
-            if (callback) callback();
+            // Smoothly close inline form and focus amount input
+            document.getElementById('inlineNewCatCard').style.display = 'none';
+            nameInput.value = '';
+            if (descInput) descInput.value = '';
+            const amtInput = document.getElementById('incomeAmountInput');
+            if (amtInput) amtInput.focus();
         } else {
-            alert(res.message || 'Error saving category.');
+            errDiv.innerText = res.message || 'Error saving category.';
+            errDiv.style.display = 'block';
         }
     })
     .catch(err => {
         console.error(err);
-        alert('Network error while saving category.');
+        errDiv.innerText = 'Network error while saving category.';
+        errDiv.style.display = 'block';
     });
 }
 </script>
