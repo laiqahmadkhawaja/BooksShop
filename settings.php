@@ -10,7 +10,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $keys = [
             'shop_name', 'shop_name_urdu', 'shop_tagline', 'shop_address',
             'shop_phone', 'shop_email', 'currency_symbol', 'currency_code',
-            'tax_percent', 'receipt_footer', 'receipt_footer_urdu'
+            'tax_percent', 'receipt_footer', 'receipt_footer_urdu', 'thermal_paper_size'
         ];
         foreach ($keys as $k) {
             if (isset($_POST[$k])) {
@@ -42,6 +42,7 @@ $currCode = getSetting('currency_code', 'PKR');
 $taxRate = getSetting('tax_percent', '0.00');
 $footerNote = getSetting('receipt_footer', 'Thank you for shopping with us! Items once sold cannot be returned without receipt.');
 $footerNoteUrdu = getSetting('receipt_footer_urdu', 'خریداری کا شکریہ! اشیاء 7 دن کے اندر اصل رسید کے ساتھ تبدیل کی جا سکتی ہیں۔');
+$thermalPaperSize = getSetting('thermal_paper_size', '80');
 
 $pageTitle = 'Settings';
 require_once __DIR__ . '/includes/header.php';
@@ -117,6 +118,14 @@ require_once __DIR__ . '/includes/header.php';
                     <hr class="my-4">
 
                     <h6 class="fw-bold text-primary mb-3"><i class="fa-solid fa-receipt me-2"></i> Thermal Receipt & Invoice Customization</h6>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Default Thermal Roll Width</label>
+                        <select name="thermal_paper_size" class="form-select">
+                            <option value="80" <?= $thermalPaperSize === '80' ? 'selected' : '' ?>>80mm (3-inch roll — 72mm printable width) [Standard POS]</option>
+                            <option value="58" <?= $thermalPaperSize === '58' ? 'selected' : '' ?>>58mm (2-inch roll — 48mm printable width) [Compact Mobile/Desktop]</option>
+                        </select>
+                        <div class="form-text small text-muted">Optimized with monoline sans-serif fonts, uniform bold weight (700), and pure #000 black for clean thermal burns.</div>
+                    </div>
                     <div class="mb-3">
                         <label class="form-label small fw-bold">Receipt Footer Note (English)</label>
                         <input type="text" name="receipt_footer" class="form-control" value="<?= htmlspecialchars($footerNote) ?>">

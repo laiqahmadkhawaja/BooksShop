@@ -389,7 +389,7 @@ for ($i = 5; $i >= 0; $i--) {
                                             <?php endif; ?>
                                         </td>
                                         <td class="text-end">
-                                            <a href="print_invoice.php?id=<?= $sale['id'] ?>&type=thermal" target="_blank" class="btn btn-outline-secondary btn-sm py-0 px-2" title="Thermal 80mm Receipt">
+                                            <a href="print_invoice.php?id=<?= $sale['id'] ?>&type=thermal" target="_blank" class="btn btn-outline-secondary btn-sm py-0 px-2" title="Thermal Receipt">
                                                 <i class="fa-solid fa-receipt"></i>
                                             </a>
                                             <a href="print_invoice.php?id=<?= $sale['id'] ?>&type=a4" target="_blank" class="btn btn-outline-primary btn-sm py-0 px-2" title="A4 Invoice">

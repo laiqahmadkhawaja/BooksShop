@@ -6,6 +6,10 @@ requirePagePermission('sales.php');
 
 $saleId = (int)($_GET['id'] ?? 0);
 $type = $_GET['type'] ?? 'thermal'; // 'thermal' or 'a4'
+$thermalSize = $_GET['size'] ?? ($_GET['paper'] ?? getSetting('thermal_paper_size', '80'));
+$thermalSize = ($thermalSize === '58') ? '58' : '80';
+$printableWidth = ($thermalSize === '58') ? '48mm' : '72mm';
+$rollWidth = ($thermalSize === '58') ? '58mm' : '80mm';
 
 if (!$saleId) {
     die("Invoice ID is missing.");
@@ -64,46 +68,163 @@ $receiptFooterUrdu = getSetting('receipt_footer_urdu', 'خریداری کا شک
             display: inline-block;
         }
 
-        /* 80mm Thermal Receipt Styling */
+        /* ========================================================
+           THERMAL PRINT OPTIMIZATION RULES (58mm & 80mm)
+           1. Monoline Sans-Serif Fonts: Arial, "Helvetica Neue", Helvetica, "Segoe UI", Tahoma, sans-serif
+           2. Uniform Bold Weight: font-weight: 700 !important for solid 2-3px burn thickness
+           3. Hierarchy via Font Size Only
+           4. Pure #000000 Black: no dithering/grays/reds
+           5. Disabled Gray Fringe Anti-Aliasing
+           6. Exact Roll Widths: 58mm (48mm printable) & 80mm (72mm printable)
+           ======================================================== */
         <?php if ($type === 'thermal'): ?>
+        @page {
+            size: <?= $rollWidth ?> auto;
+            margin: 0;
+        }
+        html, body {
+            background-color: #ffffff !important;
+            color: #000000 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            font-family: Arial, "Helvetica Neue", Helvetica, "Segoe UI", Tahoma, sans-serif !important;
+            font-weight: 700 !important;
+            -webkit-font-smoothing: antialiased !important;
+            -moz-osx-font-smoothing: grayscale !important;
+            text-rendering: geometricPrecision !important;
+        }
         .thermal-wrapper {
-            width: 80mm;
-            max-width: 100%;
-            margin: 20px auto;
-            background: #fff;
-            padding: 5mm;
+            width: <?= $printableWidth ?> !important;
+            max-width: <?= $printableWidth ?> !important;
+            margin: 10px auto;
+            background: #ffffff !important;
+            padding: <?= ($thermalSize === '58') ? '2mm 1mm' : '4mm 2mm' ?>;
             box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 12px;
-            line-height: 1.35;
+            font-family: Arial, "Helvetica Neue", Helvetica, "Segoe UI", Tahoma, sans-serif !important;
+            font-size: <?= ($thermalSize === '58') ? '10px' : '12px' ?>;
+            line-height: 1.3;
+            color: #000000 !important;
+            font-weight: 700 !important;
+            -webkit-font-smoothing: antialiased !important;
+            -moz-osx-font-smoothing: grayscale !important;
+            text-rendering: geometricPrecision !important;
+        }
+        .thermal-wrapper * {
+            font-family: Arial, "Helvetica Neue", Helvetica, "Segoe UI", Tahoma, sans-serif !important;
+            font-weight: 700 !important;
+            color: #000000 !important;
+            border-color: #000000 !important;
+            background-color: transparent !important;
+            -webkit-font-smoothing: antialiased !important;
+            -moz-osx-font-smoothing: grayscale !important;
+            text-rendering: geometricPrecision !important;
+            box-shadow: none !important;
+            text-shadow: none !important;
+        }
+        .thermal-wrapper .font-urdu {
+            font-family: Arial, "Helvetica Neue", Helvetica, "Segoe UI", Tahoma, 'Noto Nastaliq Urdu', sans-serif !important;
+            font-weight: 700 !important;
+            line-height: 1.6 !important;
+            direction: rtl;
         }
         .receipt-header {
             text-align: center;
-            border-bottom: 1px dashed #333;
-            padding-bottom: 8px;
-            margin-bottom: 8px;
+            border-bottom: 2px solid #000000 !important;
+            padding-bottom: 5px;
+            margin-bottom: 5px;
+        }
+        .receipt-header .shop-title {
+            font-size: <?= ($thermalSize === '58') ? '15px' : '19px' ?>;
+            letter-spacing: 0.5px;
+            margin-bottom: 1px;
+        }
+        .receipt-header .shop-urdu {
+            font-size: <?= ($thermalSize === '58') ? '12px' : '14px' ?>;
+            margin-bottom: 2px;
+        }
+        .receipt-header .shop-meta {
+            font-size: <?= ($thermalSize === '58') ? '9px' : '11px' ?>;
+        }
+        .bill-info {
+            font-size: <?= ($thermalSize === '58') ? '9.5px' : '11.5px' ?>;
+            margin-bottom: 4px;
         }
         .receipt-table {
             width: 100%;
-            margin-bottom: 8px;
+            margin-bottom: 4px;
+            border-collapse: collapse;
+            table-layout: fixed;
         }
         .receipt-table th, .receipt-table td {
+            padding: 2px 0;
+            vertical-align: top;
+            font-size: <?= ($thermalSize === '58') ? '9.5px' : '11.5px' ?>;
+            font-weight: 700 !important;
+            word-break: break-word;
+        }
+        .receipt-table thead tr {
+            border-bottom: 1px dashed #000000 !important;
+            border-top: 1px dashed #000000 !important;
+        }
+        .receipt-table th {
+            font-size: <?= ($thermalSize === '58') ? '10px' : '12px' ?>;
             padding: 3px 0;
         }
-        .border-dashed-y {
-            border-top: 1px dashed #333;
-            border-bottom: 1px dashed #333;
-            padding: 6px 0;
-            margin: 6px 0;
+        .totals-section {
+            border-top: 1px dashed #000000 !important;
+            border-bottom: 1px dashed #000000 !important;
+            padding: 4px 0;
+            margin: 4px 0;
+            font-size: <?= ($thermalSize === '58') ? '10.5px' : '12.5px' ?>;
+        }
+        .grand-total-row {
+            font-size: <?= ($thermalSize === '58') ? '14px' : '18px' ?> !important;
+            border-top: 2px solid #000000 !important;
+            border-bottom: 2px solid #000000 !important;
+            padding: 3px 0;
+            margin-top: 3px;
+        }
+        .payment-section {
+            font-size: <?= ($thermalSize === '58') ? '9.5px' : '11.5px' ?>;
+            margin-top: 4px;
+            padding-bottom: 4px;
+            border-bottom: 1px dashed #000000 !important;
+        }
+        .receipt-footer {
+            text-align: center;
+            margin-top: 5px;
+            padding-top: 2px;
+        }
+        .receipt-footer .footer-note {
+            font-size: <?= ($thermalSize === '58') ? '8.5px' : '10.5px' ?>;
+            margin-top: 3px;
+            line-height: 1.25;
+        }
+        .receipt-footer .footer-urdu {
+            font-size: <?= ($thermalSize === '58') ? '9px' : '11px' ?>;
+            margin-top: 3px;
+        }
+        .receipt-footer .footer-system {
+            font-size: <?= ($thermalSize === '58') ? '7.5px' : '9px' ?>;
+            margin-top: 4px;
+            letter-spacing: 0.5px;
         }
         @media print {
-            body { background: #fff; margin: 0; padding: 0; }
-            .no-print { display: none !important; }
+            body { 
+                background: #ffffff !important; 
+                margin: 0 !important; 
+                padding: 0 !important; 
+            }
+            .no-print { 
+                display: none !important; 
+            }
             .thermal-wrapper {
-                width: 80mm !important;
-                margin: 0 !important;
-                padding: 3mm !important;
+                width: <?= $printableWidth ?> !important;
+                max-width: <?= $printableWidth ?> !important;
+                margin: 0 auto !important;
+                padding: <?= ($thermalSize === '58') ? '1mm 0' : '2mm 0' ?> !important;
                 box-shadow: none !important;
+                border: none !important;
             }
         }
         <?php else: ?>
@@ -151,10 +272,13 @@ $receiptFooterUrdu = getSetting('receipt_footer_urdu', 'خریداری کا شک
             Mode: <?= strtoupper($type) ?>
         </div>
         <div class="btn-group btn-group-sm">
-            <a href="print_invoice.php?id=<?= $saleId ?>&type=thermal" class="btn btn-<?= $type === 'thermal' ? 'primary' : 'outline-light' ?>">
-                <i class="fa-solid fa-receipt me-1"></i> Thermal 80mm
+            <a href="print_invoice.php?id=<?= $saleId ?>&type=thermal&size=80" class="btn btn-<?= ($type === 'thermal' && $thermalSize === '80') ? 'primary fw-bold' : 'outline-light' ?>" title="80mm Roll (Printable width: 72mm)">
+                <i class="fa-solid fa-receipt me-1"></i> Thermal 80mm (72mm)
             </a>
-            <a href="print_invoice.php?id=<?= $saleId ?>&type=a4" class="btn btn-<?= $type === 'a4' ? 'primary' : 'outline-light' ?>">
+            <a href="print_invoice.php?id=<?= $saleId ?>&type=thermal&size=58" class="btn btn-<?= ($type === 'thermal' && $thermalSize === '58') ? 'primary fw-bold' : 'outline-light' ?>" title="58mm Roll (Printable width: 48mm)">
+                <i class="fa-solid fa-receipt me-1"></i> Thermal 58mm (48mm)
+            </a>
+            <a href="print_invoice.php?id=<?= $saleId ?>&type=a4" class="btn btn-<?= $type === 'a4' ? 'primary fw-bold' : 'outline-light' ?>">
                 <i class="fa-solid fa-file-invoice me-1"></i> A4 Invoice
             </a>
             <button type="button" onclick="triggerShareDialog()" class="btn btn-success fw-bold"><i class="fa-solid fa-print me-1"></i> Print / Share</button><button type="button" onclick="triggerShareDialog()" class="btn btn-outline-light fw-semibold ms-1"><i class="fa-solid fa-share-nodes me-1"></i> Share</button>
@@ -166,103 +290,107 @@ $receiptFooterUrdu = getSetting('receipt_footer_urdu', 'خریداری کا شک
 </div>
 
 <?php if ($type === 'thermal'): ?>
-<!-- ================= 80mm THERMAL RECEIPT ================= -->
+<!-- ================= THERMAL RECEIPT (<?= $thermalSize ?>mm / Printable: <?= $printableWidth ?>) ================= -->
 <div class="thermal-wrapper">
     <div class="receipt-header">
-        <h5 class="fw-bold mb-0"><?= htmlspecialchars($shopName) ?></h5>
-        <div class="font-urdu small"><?= htmlspecialchars($shopNameUrdu) ?></div>
-        <div class="small text-muted"><?= htmlspecialchars($shopTagline) ?></div>
-        <div class="small"><?= htmlspecialchars($shopAddress) ?></div>
-        <div class="small fw-bold">Tel: <?= htmlspecialchars($shopPhone) ?></div>
+        <div class="shop-title"><?= htmlspecialchars($shopName) ?></div>
+        <?php if (!empty($shopNameUrdu)): ?>
+            <div class="font-urdu shop-urdu"><?= htmlspecialchars($shopNameUrdu) ?></div>
+        <?php endif; ?>
+        <?php if (!empty($shopTagline)): ?>
+            <div class="shop-meta"><?= htmlspecialchars($shopTagline) ?></div>
+        <?php endif; ?>
+        <div class="shop-meta"><?= htmlspecialchars($shopAddress) ?></div>
+        <div class="shop-meta">TEL: <?= htmlspecialchars($shopPhone) ?></div>
     </div>
 
     <!-- Bill Metadata -->
-    <div class="d-flex justify-content-between small">
-        <span>Invoice #: <strong><?= htmlspecialchars($sale['invoice_no']) ?></strong></span>
-        <span><?= date('d-m-Y h:i A', strtotime($sale['sale_date'])) ?></span>
-    </div>
-    <div class="d-flex justify-content-between small mb-2">
-        <span>Customer: <strong><?= htmlspecialchars($sale['customer_name'] ?: 'Walk-in') ?></strong></span>
-        <span>Cashier: <?= htmlspecialchars($sale['cashier_name'] ?: 'Counter') ?></span>
+    <div class="bill-info">
+        <div class="d-flex justify-content-between">
+            <span>INV: <?= htmlspecialchars($sale['invoice_no']) ?></span>
+            <span><?= date('d/m/Y h:i A', strtotime($sale['sale_date'])) ?></span>
+        </div>
+        <div class="d-flex justify-content-between">
+            <span>CUST: <?= htmlspecialchars($sale['customer_name'] ?: 'Walk-in') ?></span>
+            <span>OP: <?= htmlspecialchars($sale['cashier_name'] ?: 'Counter') ?></span>
+        </div>
     </div>
 
     <!-- Items Table -->
     <table class="receipt-table">
         <thead>
-            <tr style="border-bottom: 1px dashed #333;">
-                <th style="width: 50%;">Item</th>
-                <th style="width: 15%; text-align: center;">Qty</th>
-                <th style="width: 15%; text-align: right;">Rate</th>
-                <th style="width: 20%; text-align: right;">Total</th>
+            <tr>
+                <th style="width: 48%; text-align: left;">ITEM</th>
+                <th style="width: 14%; text-align: center;">QTY</th>
+                <th style="width: 18%; text-align: right;">RATE</th>
+                <th style="width: 20%; text-align: right;">TOTAL</th>
             </tr>
         </thead>
         <tbody>
             <?php foreach ($items as $item): ?>
                 <tr>
                     <td>
-                        <div class="fw-bold"><?= htmlspecialchars($item['title']) ?></div>
+                        <div><?= htmlspecialchars($item['title']) ?></div>
                         <?php if ($item['class_grade']): ?>
-                            <small>(<?= htmlspecialchars($item['class_grade']) ?>)</small>
+                            <div style="font-size: 0.85em;">(<?= htmlspecialchars($item['class_grade']) ?>)</div>
                         <?php endif; ?>
                     </td>
                     <td style="text-align: center;"><?= (float)$item['quantity'] ?></td>
                     <td style="text-align: right;"><?= number_format($item['unit_price'], 2) ?></td>
-                    <td style="text-align: right; font-weight: bold;"><?= number_format($item['subtotal'], 2) ?></td>
+                    <td style="text-align: right;"><?= number_format($item['subtotal'], 2) ?></td>
                 </tr>
             <?php endforeach; ?>
         </tbody>
     </table>
 
     <!-- Totals Section -->
-    <div class="border-dashed-y">
+    <div class="totals-section">
         <div class="d-flex justify-content-between">
-            <span>Subtotal:</span>
+            <span>SUBTOTAL:</span>
             <span>Rs. <?= number_format($sale['subtotal'], 2) ?></span>
         </div>
         <?php if ($sale['discount_amount'] > 0): ?>
-            <div class="d-flex justify-content-between text-danger">
-                <span>Discount:</span>
+            <div class="d-flex justify-content-between">
+                <span>DISCOUNT:</span>
                 <span>- Rs. <?= number_format($sale['discount_amount'], 2) ?></span>
             </div>
         <?php endif; ?>
         <?php if ($sale['tax_amount'] > 0): ?>
             <div class="d-flex justify-content-between">
-                <span>Tax:</span>
+                <span>TAX:</span>
                 <span>Rs. <?= number_format($sale['tax_amount'], 2) ?></span>
             </div>
         <?php endif; ?>
-        <div class="d-flex justify-content-between fs-6 fw-bold mt-1 pt-1" style="border-top: 1px dashed #444;">
-            <span>GRAND TOTAL:</span>
+        <div class="d-flex justify-content-between grand-total-row">
+            <span>NET TOTAL:</span>
             <span>Rs. <?= number_format($sale['grand_total'], 2) ?></span>
         </div>
     </div>
 
     <!-- Payment Breakdown -->
-    <div class="small">
+    <div class="payment-section">
         <div class="d-flex justify-content-between">
-            <span>Payment Method:</span>
-            <span class="text-uppercase fw-bold"><?= htmlspecialchars($sale['payment_method']) ?></span>
-        </div>
-        <div class="d-flex justify-content-between">
-            <span>Paid Amount:</span>
+            <span>PAYMENT (<?= strtoupper($sale['payment_method']) ?>):</span>
             <span>Rs. <?= number_format($sale['paid_amount'], 2) ?></span>
         </div>
         <?php if ($sale['due_amount'] > 0): ?>
-            <div class="d-flex justify-content-between fw-bold text-danger">
-                <span>Due / Khata Balance:</span>
+            <div class="d-flex justify-content-between">
+                <span>DUE / KHATA:</span>
                 <span>Rs. <?= number_format($sale['due_amount'], 2) ?></span>
             </div>
         <?php endif; ?>
     </div>
 
     <!-- Barcode & Footer -->
-    <div class="text-center mt-3 pt-2" style="border-top: 1px dashed #333;">
-        <div class="d-flex justify-content-center my-2" style="overflow: hidden;">
+    <div class="receipt-footer">
+        <div class="d-flex justify-content-center my-1" style="overflow: hidden;">
             <svg id="receiptBarcodeSvg"></svg>
         </div>
-        <div class="small mt-1 text-muted" style="font-size: 11px;"><?= htmlspecialchars($receiptFooter) ?></div>
-        <div class="font-urdu mt-2 text-center" style="font-size: 11px; line-height: 2.3 !important; direction: rtl;"><?= htmlspecialchars($receiptFooterUrdu) ?></div>
-        <div class="small text-muted mt-2" style="font-size: 9px; opacity: 0.7;">Software by Retail & Wholesale POS System</div>
+        <div class="footer-note"><?= htmlspecialchars($receiptFooter) ?></div>
+        <?php if (!empty($receiptFooterUrdu)): ?>
+            <div class="font-urdu footer-urdu"><?= htmlspecialchars($receiptFooterUrdu) ?></div>
+        <?php endif; ?>
+        <div class="footer-system">*** THANK YOU FOR YOUR BUSINESS ***</div>
     </div>
 </div>
 
@@ -408,9 +536,10 @@ $receiptFooterUrdu = getSetting('receipt_footer_urdu', 'خریداری کا شک
 document.addEventListener('DOMContentLoaded', function() {
     JsBarcode("#receiptBarcodeSvg", "<?= htmlspecialchars($sale['invoice_no']) ?>", {
         format: "CODE128",
-        width: <?= $type === 'thermal' ? '1.15' : '1.5' ?>,
-        height: <?= $type === 'thermal' ? '30' : '40' ?>,
-        fontSize: <?= $type === 'thermal' ? '11' : '13' ?>,
+        width: <?= ($type === 'thermal' && $thermalSize === '58') ? '1.0' : ($type === 'thermal' ? '1.25' : '1.5') ?>,
+        height: <?= ($type === 'thermal' && $thermalSize === '58') ? '24' : ($type === 'thermal' ? '32' : '40') ?>,
+        fontSize: <?= ($type === 'thermal' && $thermalSize === '58') ? '9' : ($type === 'thermal' ? '11' : '13') ?>,
+        lineColor: "#000000",
         margin: 0,
         displayValue: true
     });

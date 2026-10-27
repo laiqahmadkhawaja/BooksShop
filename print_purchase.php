@@ -6,6 +6,10 @@ requirePagePermission('purchases.php');
 
 $purchaseId = (int)($_GET['id'] ?? 0);
 $type = $_GET['type'] ?? 'a4'; // 'a4' (default) or 'thermal'
+$thermalSize = $_GET['size'] ?? ($_GET['paper'] ?? getSetting('thermal_paper_size', '80'));
+$thermalSize = ($thermalSize === '58') ? '58' : '80';
+$printableWidth = ($thermalSize === '58') ? '48mm' : '72mm';
+$rollWidth = ($thermalSize === '58') ? '58mm' : '80mm';
 
 if (!$purchaseId) {
     die("Purchase Order ID is missing.");
@@ -75,46 +79,161 @@ $shopPhone = getSetting('shop_phone', '+92 300 1234567 / 042-37210000');
             box-shadow: 0 2px 4px rgba(0,0,0,0.04);
         }
 
+        /* ========================================================
+           THERMAL PRINT OPTIMIZATION RULES (58mm & 80mm)
+           1. Monoline Sans-Serif Fonts: Arial, "Helvetica Neue", Helvetica, "Segoe UI", Tahoma, sans-serif
+           2. Uniform Bold Weight: font-weight: 700 !important for solid 2-3px burn thickness
+           3. Hierarchy via Font Size Only
+           4. Pure #000000 Black: no dithering/grays/reds
+           5. Disabled Gray Fringe Anti-Aliasing
+           6. Exact Roll Widths: 58mm (48mm printable) & 80mm (72mm printable)
+           ======================================================== */
         <?php if ($type === 'thermal'): ?>
-        /* 80mm Thermal Receipt Styling */
+        @page {
+            size: <?= $rollWidth ?> auto;
+            margin: 0;
+        }
+        html, body {
+            background-color: #ffffff !important;
+            color: #000000 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            font-family: Arial, "Helvetica Neue", Helvetica, "Segoe UI", Tahoma, sans-serif !important;
+            font-weight: 700 !important;
+            -webkit-font-smoothing: antialiased !important;
+            -moz-osx-font-smoothing: grayscale !important;
+            text-rendering: geometricPrecision !important;
+        }
         .thermal-wrapper {
-            width: 80mm;
-            max-width: 100%;
-            margin: 20px auto;
-            background: #fff;
-            padding: 5mm;
+            width: <?= $printableWidth ?> !important;
+            max-width: <?= $printableWidth ?> !important;
+            margin: 10px auto;
+            background: #ffffff !important;
+            padding: <?= ($thermalSize === '58') ? '2mm 1mm' : '4mm 2mm' ?>;
             box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 12px;
-            line-height: 1.35;
+            font-family: Arial, "Helvetica Neue", Helvetica, "Segoe UI", Tahoma, sans-serif !important;
+            font-size: <?= ($thermalSize === '58') ? '10px' : '12px' ?>;
+            line-height: 1.3;
+            color: #000000 !important;
+            font-weight: 700 !important;
+            -webkit-font-smoothing: antialiased !important;
+            -moz-osx-font-smoothing: grayscale !important;
+            text-rendering: geometricPrecision !important;
+        }
+        .thermal-wrapper * {
+            font-family: Arial, "Helvetica Neue", Helvetica, "Segoe UI", Tahoma, sans-serif !important;
+            font-weight: 700 !important;
+            color: #000000 !important;
+            border-color: #000000 !important;
+            background-color: transparent !important;
+            -webkit-font-smoothing: antialiased !important;
+            -moz-osx-font-smoothing: grayscale !important;
+            text-rendering: geometricPrecision !important;
+            box-shadow: none !important;
+            text-shadow: none !important;
+        }
+        .thermal-wrapper .font-urdu {
+            font-family: Arial, "Helvetica Neue", Helvetica, "Segoe UI", Tahoma, 'Noto Nastaliq Urdu', sans-serif !important;
+            font-weight: 700 !important;
+            line-height: 1.6 !important;
+            direction: rtl;
         }
         .receipt-header {
             text-align: center;
-            border-bottom: 1px dashed #333;
-            padding-bottom: 8px;
-            margin-bottom: 8px;
+            border-bottom: 2px solid #000000 !important;
+            padding-bottom: 5px;
+            margin-bottom: 5px;
+        }
+        .receipt-header .shop-title {
+            font-size: <?= ($thermalSize === '58') ? '15px' : '19px' ?>;
+            letter-spacing: 0.5px;
+            margin-bottom: 1px;
+        }
+        .receipt-header .shop-urdu {
+            font-size: <?= ($thermalSize === '58') ? '12px' : '14px' ?>;
+            margin-bottom: 2px;
+        }
+        .receipt-header .shop-meta {
+            font-size: <?= ($thermalSize === '58') ? '9px' : '11px' ?>;
+        }
+        .receipt-header .voucher-title {
+            font-size: <?= ($thermalSize === '58') ? '10px' : '12px' ?>;
+            border-top: 1px dashed #000000 !important;
+            border-bottom: 1px dashed #000000 !important;
+            padding: 2px 0;
+            margin-top: 4px;
+        }
+        .bill-info {
+            font-size: <?= ($thermalSize === '58') ? '9.5px' : '11.5px' ?>;
+            margin-bottom: 4px;
         }
         .receipt-table {
             width: 100%;
-            margin-bottom: 8px;
+            margin-bottom: 4px;
+            border-collapse: collapse;
+            table-layout: fixed;
         }
         .receipt-table th, .receipt-table td {
+            padding: 2px 0;
+            vertical-align: top;
+            font-size: <?= ($thermalSize === '58') ? '9.5px' : '11.5px' ?>;
+            font-weight: 700 !important;
+            word-break: break-word;
+        }
+        .receipt-table thead tr {
+            border-bottom: 1px dashed #000000 !important;
+            border-top: 1px dashed #000000 !important;
+        }
+        .receipt-table th {
+            font-size: <?= ($thermalSize === '58') ? '10px' : '12px' ?>;
             padding: 3px 0;
         }
-        .border-dashed-y {
-            border-top: 1px dashed #333;
-            border-bottom: 1px dashed #333;
-            padding: 6px 0;
-            margin: 6px 0;
+        .totals-section {
+            border-top: 1px dashed #000000 !important;
+            border-bottom: 1px dashed #000000 !important;
+            padding: 4px 0;
+            margin: 4px 0;
+            font-size: <?= ($thermalSize === '58') ? '10.5px' : '12.5px' ?>;
+        }
+        .grand-total-row {
+            font-size: <?= ($thermalSize === '58') ? '14px' : '18px' ?> !important;
+            border-top: 2px solid #000000 !important;
+            border-bottom: 2px solid #000000 !important;
+            padding: 3px 0;
+            margin-top: 3px;
+        }
+        .payment-section {
+            font-size: <?= ($thermalSize === '58') ? '9.5px' : '11.5px' ?>;
+            margin-top: 4px;
+            padding-bottom: 4px;
+            border-bottom: 1px dashed #000000 !important;
+        }
+        .receipt-footer {
+            text-align: center;
+            margin-top: 5px;
+            padding-top: 2px;
+        }
+        .receipt-footer .footer-note {
+            font-size: <?= ($thermalSize === '58') ? '8.5px' : '10.5px' ?>;
+            margin-top: 3px;
+            line-height: 1.25;
         }
         @media print {
-            body { background: #fff; margin: 0; padding: 0; }
-            .no-print { display: none !important; }
+            body { 
+                background: #ffffff !important; 
+                margin: 0 !important; 
+                padding: 0 !important; 
+            }
+            .no-print { 
+                display: none !important; 
+            }
             .thermal-wrapper {
-                width: 80mm !important;
-                margin: 0 !important;
-                padding: 3mm !important;
+                width: <?= $printableWidth ?> !important;
+                max-width: <?= $printableWidth ?> !important;
+                margin: 0 auto !important;
+                padding: <?= ($thermalSize === '58') ? '1mm 0' : '2mm 0' ?> !important;
                 box-shadow: none !important;
+                border: none !important;
             }
         }
         <?php else: ?>
@@ -162,11 +281,14 @@ $shopPhone = getSetting('shop_phone', '+92 300 1234567 / 042-37210000');
                 <i class="fa-solid fa-arrow-left me-1"></i> Back to Purchases
             </a>
             <div class="btn-group btn-group-sm">
-                <a href="print_purchase.php?id=<?= $purchaseId ?>&type=a4" class="btn <?= $type === 'a4' ? 'btn-primary' : 'btn-outline-primary' ?>">
-                    <i class="fa-solid fa-file-lines me-1"></i> A4 Voucher
+                <a href="print_purchase.php?id=<?= $purchaseId ?>&type=thermal&size=80" class="btn <?= ($type === 'thermal' && $thermalSize === '80') ? 'btn-primary fw-bold' : 'btn-outline-primary' ?>" title="80mm Roll (Printable width: 72mm)">
+                    <i class="fa-solid fa-receipt me-1"></i> 80mm Slip (72mm)
                 </a>
-                <a href="print_purchase.php?id=<?= $purchaseId ?>&type=thermal" class="btn <?= $type === 'thermal' ? 'btn-primary' : 'btn-outline-primary' ?>">
-                    <i class="fa-solid fa-receipt me-1"></i> 80mm Slip
+                <a href="print_purchase.php?id=<?= $purchaseId ?>&type=thermal&size=58" class="btn <?= ($type === 'thermal' && $thermalSize === '58') ? 'btn-primary fw-bold' : 'btn-outline-primary' ?>" title="58mm Roll (Printable width: 48mm)">
+                    <i class="fa-solid fa-receipt me-1"></i> 58mm Slip (48mm)
+                </a>
+                <a href="print_purchase.php?id=<?= $purchaseId ?>&type=a4" class="btn <?= $type === 'a4' ? 'btn-primary fw-bold' : 'btn-outline-primary' ?>">
+                    <i class="fa-solid fa-file-lines me-1"></i> A4 Voucher
                 </a>
             </div>
         </div>
@@ -185,95 +307,108 @@ $shopPhone = getSetting('shop_phone', '+92 300 1234567 / 042-37210000');
 </div>
 
 <?php if ($type === 'thermal'): ?>
-<!-- ================= 80mm THERMAL RECEIPT ================= -->
+<!-- ================= THERMAL RECEIPT (<?= $thermalSize ?>mm / Printable: <?= $printableWidth ?>) ================= -->
 <div class="thermal-wrapper">
     <div class="receipt-header">
-        <h5 class="fw-bold mb-0"><?= htmlspecialchars($shopName) ?></h5>
-        <div class="font-urdu small"><?= htmlspecialchars($shopNameUrdu) ?></div>
-        <div class="small text-muted"><?= htmlspecialchars($shopTagline) ?></div>
-        <div class="small"><?= htmlspecialchars($shopAddress) ?></div>
-        <div class="small fw-bold">Tel: <?= htmlspecialchars($shopPhone) ?></div>
-        <div class="fw-bold mt-2" style="font-size: 13px;">*** PURCHASE ORDER / GOODS INWARD ***</div>
+        <div class="shop-title"><?= htmlspecialchars($shopName) ?></div>
+        <?php if (!empty($shopNameUrdu)): ?>
+            <div class="font-urdu shop-urdu"><?= htmlspecialchars($shopNameUrdu) ?></div>
+        <?php endif; ?>
+        <?php if (!empty($shopTagline)): ?>
+            <div class="shop-meta"><?= htmlspecialchars($shopTagline) ?></div>
+        <?php endif; ?>
+        <div class="shop-meta"><?= htmlspecialchars($shopAddress) ?></div>
+        <div class="shop-meta">TEL: <?= htmlspecialchars($shopPhone) ?></div>
+        <div class="voucher-title">*** PURCHASE INVOICE / STOCK INWARD ***</div>
     </div>
 
     <!-- Voucher Metadata -->
-    <div class="d-flex justify-content-between small">
-        <span>Order #: <strong><?= htmlspecialchars($purchase['purchase_no']) ?></strong></span>
-        <span><?= date('d-m-Y', strtotime($purchase['purchase_date'])) ?></span>
+    <div class="bill-info">
+        <div class="d-flex justify-content-between">
+            <span>ORDER #: <?= htmlspecialchars($purchase['purchase_no']) ?></span>
+            <span><?= date('d/m/Y', strtotime($purchase['purchase_date'])) ?></span>
+        </div>
+        <div class="d-flex justify-content-between">
+            <span>SUPPLIER: <?= htmlspecialchars($purchase['supplier_name']) ?></span>
+            <span>STATUS: <?= strtoupper($purchase['payment_status']) ?></span>
+        </div>
+        <?php if (!empty($purchase['invoice_no']) && $purchase['invoice_no'] !== $purchase['purchase_no']): ?>
+            <div class="d-flex justify-content-between">
+                <span>BILL/BILTY #: <?= htmlspecialchars($purchase['invoice_no']) ?></span>
+                <span><?= htmlspecialchars($purchase['warehouse_name'] ?: 'Shop Floor') ?></span>
+            </div>
+        <?php endif; ?>
     </div>
-    <div class="d-flex justify-content-between small">
-        <span>Supplier: <strong><?= htmlspecialchars($purchase['supplier_name']) ?></strong></span>
-        <span>Status: <strong><?= strtoupper($purchase['payment_status']) ?></strong></span>
-    </div>
-    <?php if (!empty($purchase['invoice_no']) && $purchase['invoice_no'] !== $purchase['purchase_no']): ?>
-        <div class="small text-muted">Bill/Bilty #: <?= htmlspecialchars($purchase['invoice_no']) ?></div>
-    <?php endif; ?>
 
     <!-- Items Table -->
-    <table class="receipt-table mt-2">
+    <table class="receipt-table">
         <thead>
-            <tr style="border-bottom: 1px dashed #333;">
-                <th style="width: 50%;">Item</th>
-                <th style="width: 15%; text-align: center;">Qty</th>
-                <th style="width: 15%; text-align: right;">Cost</th>
-                <th style="width: 20%; text-align: right;">Total</th>
+            <tr>
+                <th style="width: 48%; text-align: left;">ITEM</th>
+                <th style="width: 14%; text-align: center;">QTY</th>
+                <th style="width: 18%; text-align: right;">COST</th>
+                <th style="width: 20%; text-align: right;">TOTAL</th>
             </tr>
         </thead>
         <tbody>
             <?php foreach ($items as $item): ?>
                 <tr>
                     <td>
-                        <?= htmlspecialchars($item['title']) ?><br>
-                        <small class="text-muted"><?= htmlspecialchars($item['product_code']) ?></small>
+                        <div><?= htmlspecialchars($item['title']) ?></div>
+                        <div style="font-size: 0.85em;"><?= htmlspecialchars($item['product_code']) ?></div>
                     </td>
                     <td style="text-align: center;"><?= (float)$item['quantity'] ?></td>
-                    <td style="text-align: right;"><?= formatCurrency($item['unit_cost']) ?></td>
-                    <td style="text-align: right;"><?= formatCurrency($item['total_cost']) ?></td>
+                    <td style="text-align: right;"><?= number_format($item['unit_cost'], 2) ?></td>
+                    <td style="text-align: right;"><?= number_format($item['total_cost'], 2) ?></td>
                 </tr>
             <?php endforeach; ?>
         </tbody>
     </table>
 
     <!-- Totals -->
-    <div class="border-dashed-y">
+    <div class="totals-section">
         <div class="d-flex justify-content-between">
-            <span>Items Subtotal:</span>
-            <span><?= formatCurrency($purchase['subtotal']) ?></span>
+            <span>ITEMS SUBTOTAL:</span>
+            <span>Rs. <?= number_format($purchase['subtotal'], 2) ?></span>
         </div>
         <?php if ($purchase['discount_amount'] > 0): ?>
             <div class="d-flex justify-content-between">
-                <span>Discount:</span>
-                <span>- <?= formatCurrency($purchase['discount_amount']) ?></span>
+                <span>LESS DISCOUNT:</span>
+                <span>- Rs. <?= number_format($purchase['discount_amount'], 2) ?></span>
             </div>
         <?php endif; ?>
         <?php if ($purchase['shipping_cost'] > 0): ?>
             <div class="d-flex justify-content-between">
-                <span>Shipping / Freight:</span>
-                <span>+ <?= formatCurrency($purchase['shipping_cost']) ?></span>
+                <span>SHIPPING / FREIGHT:</span>
+                <span>+ Rs. <?= number_format($purchase['shipping_cost'], 2) ?></span>
             </div>
         <?php endif; ?>
-        <div class="d-flex justify-content-between fw-bold" style="font-size: 14px;">
+        <div class="d-flex justify-content-between grand-total-row">
             <span>GRAND TOTAL:</span>
-            <span><?= formatCurrency($purchase['grand_total']) ?></span>
+            <span>Rs. <?= number_format($purchase['grand_total'], 2) ?></span>
         </div>
+    </div>
+
+    <!-- Payment Breakdown -->
+    <div class="payment-section">
         <div class="d-flex justify-content-between">
-            <span>Amount Paid:</span>
-            <span><?= formatCurrency($purchase['paid_amount']) ?></span>
+            <span>PAID AMOUNT:</span>
+            <span>Rs. <?= number_format($purchase['paid_amount'], 2) ?></span>
         </div>
         <?php if ($purchase['due_amount'] > 0): ?>
-            <div class="d-flex justify-content-between fw-bold">
-                <span>Balance Due:</span>
-                <span><?= formatCurrency($purchase['due_amount']) ?></span>
+            <div class="d-flex justify-content-between">
+                <span>BALANCE DUE:</span>
+                <span>Rs. <?= number_format($purchase['due_amount'], 2) ?></span>
             </div>
         <?php endif; ?>
     </div>
 
-    <div class="text-center mt-3">
-        <svg id="purchaseBarcodeSvg"></svg>
-    </div>
-    <div class="text-center small mt-2">
-        Stock Inward Verified by Staff<br>
-        Recorded: <?= date('d M, Y - h:i A', strtotime($purchase['created_at'])) ?>
+    <!-- Barcode & Verification -->
+    <div class="receipt-footer">
+        <div class="d-flex justify-content-center my-1" style="overflow: hidden;">
+            <svg id="purchaseBarcodeSvg"></svg>
+        </div>
+        <div class="footer-note">Stock Inward Verified by Staff &bull; Recorded: <?= date('d M, Y', strtotime($purchase['created_at'])) ?></div>
     </div>
 </div>
 
@@ -458,9 +593,10 @@ $shopPhone = getSetting('shop_phone', '+92 300 1234567 / 042-37210000');
 document.addEventListener('DOMContentLoaded', function() {
     JsBarcode("#purchaseBarcodeSvg", "<?= htmlspecialchars($purchase['purchase_no']) ?>", {
         format: "CODE128",
-        width: <?= $type === 'thermal' ? '1.15' : '1.5' ?>,
-        height: <?= $type === 'thermal' ? '30' : '40' ?>,
-        fontSize: <?= $type === 'thermal' ? '11' : '13' ?>,
+        width: <?= ($type === 'thermal' && $thermalSize === '58') ? '1.0' : ($type === 'thermal' ? '1.25' : '1.5') ?>,
+        height: <?= ($type === 'thermal' && $thermalSize === '58') ? '24' : ($type === 'thermal' ? '32' : '40') ?>,
+        fontSize: <?= ($type === 'thermal' && $thermalSize === '58') ? '9' : ($type === 'thermal' ? '11' : '13') ?>,
+        lineColor: "#000000",
         margin: 0,
         displayValue: true
     });

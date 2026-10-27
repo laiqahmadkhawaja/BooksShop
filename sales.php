@@ -279,7 +279,7 @@ require_once __DIR__ . '/includes/header.php';
                                 </td>
                                 <td class="text-end">
                                     <div class="btn-group btn-group-sm">
-                                        <a href="print_invoice.php?id=<?= $s['id'] ?>&type=thermal" target="_blank" class="btn btn-outline-secondary" title="Thermal 80mm Receipt">
+                                        <a href="print_invoice.php?id=<?= $s['id'] ?>&type=thermal" target="_blank" class="btn btn-outline-secondary" title="Thermal Receipt">
                                             <i class="fa-solid fa-receipt"></i>
                                         </a>
                                         <a href="print_invoice.php?id=<?= $s['id'] ?>&type=a4" target="_blank" class="btn btn-outline-primary" title="A4 Invoice">

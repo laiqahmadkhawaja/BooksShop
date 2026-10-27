@@ -447,6 +447,7 @@ function runInstallation() {
         'currency_code' => 'PKR',
         'receipt_footer' => 'Thank you for shopping with us! Books once sold cannot be returned without original receipt. Exchange within 7 days.',
         'receipt_footer_urdu' => 'خریداری کا شکریہ! خریدی گئی کتب 7 دن کے اندر اصل رسید کے ہمراہ تبدیل کی جا سکتی ہیں۔',
+        'thermal_paper_size' => '80',
         'tax_percent' => '0.00',
         'enable_barcode_audio' => '1',
     ];

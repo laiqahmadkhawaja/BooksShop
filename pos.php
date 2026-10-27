@@ -413,7 +413,7 @@ $schoolClasses = dbFetchAll("SELECT sc.id, sc.class_name, sc.academic_session, s
 
                     <div class="d-grid gap-2 mb-3">
                         <a href="#" id="thermalPrintLink" target="_blank" class="btn btn-dark btn-lg">
-                            <i class="fa-solid fa-receipt me-2"></i> Print 80mm Thermal Receipt (F9)
+                            <i class="fa-solid fa-receipt me-2"></i> Print Thermal Receipt (F9)
                         </a>
                         <a href="#" id="a4PrintLink" target="_blank" class="btn btn-outline-primary">
                             <i class="fa-solid fa-file-invoice me-2"></i> Print Standard A4 Invoice
