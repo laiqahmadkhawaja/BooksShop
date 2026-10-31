@@ -128,7 +128,7 @@ require_once __DIR__ . '/includes/header.php';
                             <label class="form-label fw-bold">Refund From Account (If Cash/Bank)</label>
                             <select name="refund_account_id" class="form-select form-select-lg">
                                 <?php foreach ($accounts as $acc): ?>
-                                    <option value="<?= $acc['id'] ?>"><?= htmlspecialchars($acc['account_name']) ?> (<?= formatCurrency($acc['current_balance']) ?>)</option>
+                                    <option value="<?= $acc['id'] ?>"><?= htmlspecialchars($acc['account_name']) ?> (<?= formatCurrency($acc['balance']) ?>)</option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
