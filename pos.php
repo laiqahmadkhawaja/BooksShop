@@ -3,6 +3,8 @@
 $pageTitle = 'POS Billing Terminal';
 require_once __DIR__ . '/includes/header.php';
 
+$posShift = function_exists('getCurrentShift') ? (getCurrentShift(authUser()['id'] ?? null) ?: getCurrentShift()) : null;
+
 $customers = dbFetchAll("SELECT id, name, phone, current_balance, credit_limit, customer_type FROM customers WHERE status = 1 ORDER BY id ASC");
 $accounts = dbFetchAll("SELECT id, account_name, account_type, balance FROM accounts WHERE status = 1 ORDER BY id ASC");
 $categories = dbFetchAll("SELECT id, name, type FROM categories ORDER BY name ASC");
@@ -76,7 +78,7 @@ $schoolClasses = dbFetchAll("SELECT sc.id, sc.class_name, sc.academic_session, s
                     <button type="button" class="btn btn-outline-danger btn-sm" onclick="clearCart()">
                         <i class="fa-solid fa-trash-can me-1"></i> Clear Cart
                     </button>
-                    <?php $posShift = function_exists('getCurrentShift') ? (getCurrentShift(authUser()['id'] ?? null) ?: getCurrentShift()) : null; ?>
+                    
                     <?php if ($posShift): ?>
                         <a href="shift.php" class="btn btn-outline-success btn-sm fw-semibold" title="Active Shift #<?= $posShift['id'] ?> - Click to Close Shift">
                             <i class="fa-solid fa-clock-rotate-left me-1"></i> Shift #<?= $posShift['id'] ?> (Close)
