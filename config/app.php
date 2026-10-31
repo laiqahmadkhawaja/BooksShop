@@ -480,6 +480,58 @@ function recordSupplierLedger($supplierId, $txType, $refId, $invoiceNo, $debit, 
              [$supplierId, $txType, $refId, $invoiceNo, $debit, $credit, $newBal, $description]);
 }
 
+// Settle Customer Open Sales Invoices (FIFO)
+function applyCustomerPaymentToSales($customerId, $amount) {
+    if (!$customerId || $amount <= 0) return;
+    $remaining = (float)$amount;
+
+    $unpaidSales = dbFetchAll("SELECT id, grand_total, paid_amount, due_amount 
+                               FROM sales 
+                               WHERE customer_id = ? AND due_amount > 0 
+                               ORDER BY id ASC", [$customerId]);
+
+    foreach ($unpaidSales as $sale) {
+        if ($remaining <= 0) break;
+        $due = (float)$sale['due_amount'];
+        $apply = min($due, $remaining);
+
+        $newPaid = (float)$sale['paid_amount'] + $apply;
+        $newDue = max(0, $due - $apply);
+        $newStatus = ($newDue <= 0.009) ? 'paid' : 'partial';
+
+        dbQuery("UPDATE sales SET paid_amount = ?, due_amount = ?, payment_status = ? WHERE id = ?",
+                [$newPaid, $newDue, $newStatus, $sale['id']]);
+
+        $remaining -= $apply;
+    }
+}
+
+// Settle Supplier Open Purchase Orders (FIFO)
+function applySupplierPaymentToPurchases($supplierId, $amount) {
+    if (!$supplierId || $amount <= 0) return;
+    $remaining = (float)$amount;
+
+    $unpaidPurchases = dbFetchAll("SELECT id, grand_total, paid_amount, due_amount 
+                                   FROM purchases 
+                                   WHERE supplier_id = ? AND due_amount > 0 
+                                   ORDER BY id ASC", [$supplierId]);
+
+    foreach ($unpaidPurchases as $purchase) {
+        if ($remaining <= 0) break;
+        $due = (float)$purchase['due_amount'];
+        $apply = min($due, $remaining);
+
+        $newPaid = (float)$purchase['paid_amount'] + $apply;
+        $newDue = max(0, $due - $apply);
+        $newStatus = ($newDue <= 0.009) ? 'paid' : 'partial';
+
+        dbQuery("UPDATE purchases SET paid_amount = ?, due_amount = ?, payment_status = ? WHERE id = ?",
+                [$newPaid, $newDue, $newStatus, $purchase['id']]);
+
+        $remaining -= $apply;
+    }
+}
+
 // Account Balance & Cash Transaction Helper
 function recordCashTransaction($type, $accountId, $amount, $category, $refNo, $desc, $toAccountId = null) {
     $userId = $_SESSION['user']['id'] ?? 1;

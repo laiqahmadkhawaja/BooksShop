@@ -55,6 +55,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             recordCustomerLedger($customerId, 'payment', null, $refNo, 0, $amount, $notes);
             // 2. Inflow into cash/bank account
             recordCashTransaction('customer_payment', $accountId, $amount, 'Customer Payment', $refNo, "Payment from {$cust['name']} - $notes");
+            // 3. Settle open customer sales invoices (FIFO)
+            applyCustomerPaymentToSales($customerId, $amount);
             setFlash('success', "Payment of " . formatCurrency($amount) . " received successfully from {$cust['name']}!");
         }
         redirect("customers.php?customer_id=$customerId");

@@ -53,6 +53,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             recordSupplierLedger($supplierId, 'payment', null, $refNo, $amount, 0, $notes);
             // 2. Cash Outflow from account
             recordCashTransaction('supplier_payment', $accountId, $amount, 'Supplier Payment', $refNo, "Payment to {$supp['name']} - $notes");
+            // 3. Settle open supplier purchases (FIFO)
+            applySupplierPaymentToPurchases($supplierId, $amount);
             setFlash('success', "Payment voucher of " . formatCurrency($amount) . " to {$supp['name']} saved successfully!");
         }
         redirect("suppliers.php?supplier_id=$supplierId");
