@@ -112,7 +112,7 @@ $shopNameUrdu = getSetting('shop_name_urdu', 'ریٹیل اینڈ ہول سیل 
             <div class="mt-4 pt-3 border-top text-center">
                 <span class="small text-muted d-block mb-2">One-Click Demo Fill:</span>
                 <div class="btn-group btn-group-sm w-100" role="group">
-                    <button type="button" class="btn btn-outline-primary" onclick="fillCreds('admin', 'admin123')">Admin</button>
+                    <button type="button" class="btn btn-outline-primary" onclick="fillCreds('admin', '123456')">Admin</button>
                     <button type="button" class="btn btn-outline-success" onclick="fillCreds('cashier', 'cashier123')">Cashier</button>
                     <button type="button" class="btn btn-outline-info" onclick="fillCreds('accountant', 'acc123')">Accountant</button>
                 </div>
