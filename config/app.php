@@ -193,7 +193,7 @@ function getAvailableModules() {
             'label' => 'Point of Sale (POS)',
             'desc' => 'Fast barcode billing, receipts, cart discounts, customer khata at counter',
             'icon' => 'fa-cash-register',
-            'pages' => ['pos.php', 'pos_ajax.php']
+            'pages' => ['pos.php', 'pos_ajax.php', 'shift.php', 'print_shift.php']
         ],
         'books' => [
             'label' => 'Products & Catalog',
@@ -854,3 +854,117 @@ function ensureReturnSchema() {
     }
 }
 ensureReturnSchema();
+
+// ========================================================
+// REGISTER SHIFT MANAGEMENT SYSTEM
+// ========================================================
+function ensureShiftSchema() {
+    static $done = false;
+    if ($done) return;
+    $done = true;
+    try {
+        $db = getDB();
+        $db->exec("CREATE TABLE IF NOT EXISTS `register_shifts` (
+            `id` INT AUTO_INCREMENT PRIMARY KEY,
+            `user_id` INT NOT NULL,
+            `start_time` DATETIME NOT NULL,
+            `end_time` DATETIME NULL,
+            `opening_cash` DECIMAL(12,2) DEFAULT 0.00,
+            `cash_sales` DECIMAL(12,2) DEFAULT 0.00,
+            `customer_receipts_cash` DECIMAL(12,2) DEFAULT 0.00,
+            `other_cash_inflow` DECIMAL(12,2) DEFAULT 0.00,
+            `cash_outflow` DECIMAL(12,2) DEFAULT 0.00,
+            `system_expected_cash` DECIMAL(12,2) DEFAULT 0.00,
+            `physical_counted_cash` DECIMAL(12,2) DEFAULT 0.00,
+            `variance` DECIMAL(12,2) DEFAULT 0.00,
+            `denominations` TEXT NULL,
+            `notes` TEXT NULL,
+            `status` ENUM('open', 'closed') DEFAULT 'open',
+            `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX (`user_id`),
+            INDEX (`status`),
+            INDEX (`start_time`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    } catch (Exception $e) {
+        error_log('Shift schema error: ' . $e->getMessage());
+    }
+}
+ensureShiftSchema();
+
+function getCurrentShift($userId = null) {
+    ensureShiftSchema();
+    if ($userId) {
+        return dbFetchOne("SELECT rs.*, u.full_name as cashier_name, u.username 
+                          FROM register_shifts rs 
+                          JOIN users u ON u.id = rs.user_id 
+                          WHERE rs.user_id = ? AND rs.status = 'open' 
+                          ORDER BY rs.id DESC LIMIT 1", [$userId]);
+    } else {
+        return dbFetchOne("SELECT rs.*, u.full_name as cashier_name, u.username 
+                          FROM register_shifts rs 
+                          JOIN users u ON u.id = rs.user_id 
+                          WHERE rs.status = 'open' 
+                          ORDER BY rs.id DESC LIMIT 1");
+    }
+}
+
+function getShiftCashSummary($shift) {
+    if (!$shift) return null;
+    $startTime = $shift['start_time'];
+    $endTime = $shift['end_time'] ?: date('Y-m-d H:i:s');
+    
+    // Inflows into Drawer (account_id = 1)
+    $salesCash = (float)(dbFetchOne("SELECT SUM(amount) as tot FROM cash_transactions 
+                                     WHERE account_id = 1 AND transaction_type = 'sale' 
+                                     AND transaction_date >= ? AND transaction_date <= ?", [$startTime, $endTime])['tot'] ?? 0);
+                                     
+    $custReceiptsCash = (float)(dbFetchOne("SELECT SUM(amount) as tot FROM cash_transactions 
+                                           WHERE account_id = 1 AND transaction_type = 'customer_payment' 
+                                           AND transaction_date >= ? AND transaction_date <= ?", [$startTime, $endTime])['tot'] ?? 0);
+                                           
+    $incomeCash = (float)(dbFetchOne("SELECT SUM(amount) as tot FROM cash_transactions 
+                                     WHERE account_id = 1 AND transaction_type = 'income' 
+                                     AND transaction_date >= ? AND transaction_date <= ?", [$startTime, $endTime])['tot'] ?? 0);
+                                     
+    $transferInCash = (float)(dbFetchOne("SELECT SUM(amount) as tot FROM cash_transactions 
+                                         WHERE to_account_id = 1 AND transaction_type = 'transfer' 
+                                         AND transaction_date >= ? AND transaction_date <= ?", [$startTime, $endTime])['tot'] ?? 0);
+                                         
+    $totalInflows = $salesCash + $custReceiptsCash + $incomeCash + $transferInCash;
+    
+    // Outflows from Drawer (account_id = 1)
+    $purchasesCash = (float)(dbFetchOne("SELECT SUM(amount) as tot FROM cash_transactions 
+                                         WHERE account_id = 1 AND transaction_type = 'purchase' 
+                                         AND transaction_date >= ? AND transaction_date <= ?", [$startTime, $endTime])['tot'] ?? 0);
+                                         
+    $suppPaymentsCash = (float)(dbFetchOne("SELECT SUM(amount) as tot FROM cash_transactions 
+                                           WHERE account_id = 1 AND transaction_type = 'supplier_payment' 
+                                           AND transaction_date >= ? AND transaction_date <= ?", [$startTime, $endTime])['tot'] ?? 0);
+                                           
+    $expensesCash = (float)(dbFetchOne("SELECT SUM(amount) as tot FROM cash_transactions 
+                                       WHERE account_id = 1 AND transaction_type = 'expense' 
+                                       AND transaction_date >= ? AND transaction_date <= ?", [$startTime, $endTime])['tot'] ?? 0);
+                                       
+    $transfersOutCash = (float)(dbFetchOne("SELECT SUM(amount) as tot FROM cash_transactions 
+                                           WHERE account_id = 1 AND transaction_type = 'transfer' 
+                                           AND transaction_date >= ? AND transaction_date <= ?", [$startTime, $endTime])['tot'] ?? 0);
+                                           
+    $totalOutflows = $purchasesCash + $suppPaymentsCash + $expensesCash + $transfersOutCash;
+    
+    $opening = (float)$shift['opening_cash'];
+    $systemExpected = $opening + $totalInflows - $totalOutflows;
+    
+    return [
+        'opening_cash' => $opening,
+        'cash_sales' => $salesCash,
+        'customer_receipts' => $custReceiptsCash,
+        'other_inflows' => $incomeCash + $transferInCash,
+        'total_inflows' => $totalInflows,
+        'cash_purchases' => $purchasesCash,
+        'supplier_payments' => $suppPaymentsCash,
+        'cash_expenses' => $expensesCash,
+        'transfers_out' => $transfersOutCash,
+        'total_outflows' => $totalOutflows,
+        'system_expected' => $systemExpected
+    ];
+}

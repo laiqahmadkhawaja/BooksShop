@@ -65,6 +65,22 @@ $lowStockCount = dbFetchOne("SELECT COUNT(*) as cnt FROM products WHERE current_
             <a href="pos.php" class="btn btn-sm btn-pos shadow-sm px-2 px-sm-3">
                 <i class="fa-solid fa-cash-register me-1"></i> <strong class="d-none d-sm-inline"><?= __t('pos') ?></strong> <span class="d-none d-md-inline">(F2)</span>
             </a>
+            <!-- Register Shift Indicator Button -->
+            <?php 
+                $navActiveShift = function_exists('getCurrentShift') ? getCurrentShift($user['id'] ?? null) : null;
+            ?>
+            <?php if ($navActiveShift): ?>
+                <a href="shift.php" class="btn btn-sm btn-outline-success border-success px-2 px-sm-3 d-flex align-items-center gap-1 shadow-xs" title="Shift #<?= $navActiveShift['id'] ?> is Open - Click to Close Shift">
+                    <span class="spinner-grow spinner-grow-sm text-success" style="width: 0.5rem; height: 0.5rem;"></span>
+                    <span class="d-none d-md-inline fw-semibold">Shift #<?= $navActiveShift['id'] ?></span>
+                    <span class="badge bg-success-subtle text-success p-1 d-none d-sm-inline">Open</span>
+                </a>
+            <?php else: ?>
+                <a href="shift.php" class="btn btn-sm btn-outline-warning text-dark px-2 px-sm-3 d-flex align-items-center gap-1 shadow-xs" title="Start Register Shift">
+                    <i class="fa-solid fa-clock-rotate-left text-warning"></i>
+                    <span class="d-none d-md-inline fw-semibold">Start Shift</span>
+                </a>
+            <?php endif; ?>
 
             <!-- Low Stock Bell Alert -->
             <a href="inventory.php?filter=low_stock" class="btn btn-sm btn-outline-danger position-relative px-2 px-sm-3" title="Low Stock Items">

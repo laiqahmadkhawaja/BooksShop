@@ -65,6 +65,16 @@ $schoolClasses = dbFetchAll("SELECT sc.id, sc.class_name, sc.academic_session, s
                     <button type="button" class="btn btn-outline-danger btn-sm" onclick="clearCart()">
                         <i class="fa-solid fa-trash-can me-1"></i> Clear Cart
                     </button>
+                    <?php $posShift = function_exists('getCurrentShift') ? getCurrentShift(authUser()['id'] ?? null) : null; ?>
+                    <?php if ($posShift): ?>
+                        <a href="shift.php" class="btn btn-outline-success btn-sm fw-semibold" title="Active Shift #<?= $posShift['id'] ?> - Click to Close Shift">
+                            <i class="fa-solid fa-clock-rotate-left me-1"></i> Shift #<?= $posShift['id'] ?> (Close)
+                        </a>
+                    <?php else: ?>
+                        <a href="shift.php" class="btn btn-warning btn-sm text-dark fw-bold" title="No active shift running - click to start shift">
+                            <i class="fa-solid fa-play me-1"></i> Start Shift
+                        </a>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>

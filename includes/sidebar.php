@@ -37,6 +37,10 @@ $userRole = $_SESSION['user']['role'] ?? '';
                     <span><?= __t('pos') ?></span>
                     <span class="badge bg-warning text-dark ms-auto">F2</span>
                 </a>
+                <a href="shift.php" class="nav-link <?= $currentPage === 'shift.php' ? 'active' : '' ?>">
+                    <i class="fa-solid fa-clock-rotate-left text-info"></i>
+                    <span><?= $currentLang === 'ur' ? 'رجسٹر شفٹ' : 'Register Shifts' ?></span>
+                </a>
             <?php endif; ?>
         <?php endif; ?>
 
