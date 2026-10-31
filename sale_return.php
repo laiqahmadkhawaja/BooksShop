@@ -87,6 +87,13 @@ require_once __DIR__ . '/includes/header.php';
         <?php endif; ?>
 
         <form method="POST" action="sales.php">
+<?php if (function_exists('hasActiveShift') && !hasActiveShift()): ?>
+<div class="alert alert-warning border-warning shadow-sm d-flex align-items-center justify-content-between mb-3 py-2 px-3 rounded">
+    <div><i class="fa-solid fa-triangle-exclamation text-warning me-1"></i> <strong>Notice:</strong> No active shift is open. Cash/bank refunds cannot be paid without an active shift.</div>
+    <a href="shift.php" class="btn btn-warning btn-sm fw-bold">Start Shift</a>
+</div>
+<?php endif; ?>
+
             <input type="hidden" name="process_sales_return" value="1">
             <input type="hidden" name="sale_id" value="<?= $sale['id'] ?>">
 

@@ -118,6 +118,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_purchase'])) {
             
             // If payment made, record Supplier Ledger debit and Cash Outflow
             if ($paidAmount > 0) {
+                if (function_exists('hasActiveShift') && !hasActiveShift()) {
+                    throw new Exception("Purchase payment blocked: No active register shift is currently open! Please start a shift before making payments.");
+                }
                 recordSupplierLedger($supplierId, 'payment', $purchaseId, $purchaseNo, $paidAmount, 0, "Payment for Purchase #$purchaseNo");
                 if ($paymentAccountId > 0) {
                     recordCashTransaction('purchase', $paymentAccountId, $paidAmount, 'Supplier Purchase', $purchaseNo, "Payment to supplier for $purchaseNo");

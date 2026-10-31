@@ -163,6 +163,11 @@ if ($action === 'checkout') {
     }
 
     try {
+        // Enforce Active Shift requirement
+        if (function_exists('requireActiveShift')) {
+            requireActiveShift($userId);
+        }
+
         // Enforce Negative Stock Selling Policy
         $allowNegativeStock = getSetting('allow_negative_stock', '0') === '1';
         if (!$allowNegativeStock) {

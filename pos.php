@@ -13,6 +13,17 @@ $schoolClasses = dbFetchAll("SELECT sc.id, sc.class_name, sc.academic_session, s
 ?>
 
 <div id="posViewRegister">
+<?php if (!$posShift): ?>
+<div class="alert alert-warning border-warning shadow-sm d-flex align-items-center justify-content-between py-2 px-3 mb-2 rounded">
+    <div class="d-flex align-items-center gap-2">
+        <i class="fa-solid fa-triangle-exclamation text-warning fs-5"></i>
+        <span><strong>No Active Shift:</strong> A register shift must be opened before performing sales or financial transactions.</span>
+    </div>
+    <a href="shift.php" class="btn btn-warning btn-sm fw-bold">
+        <i class="fa-solid fa-play me-1"></i> Start Shift Now
+    </a>
+</div>
+<?php endif; ?>
 <div class="row g-2 mb-2">
     <!-- Top POS Controls Bar -->
     <div class="col-12">
@@ -65,7 +76,7 @@ $schoolClasses = dbFetchAll("SELECT sc.id, sc.class_name, sc.academic_session, s
                     <button type="button" class="btn btn-outline-danger btn-sm" onclick="clearCart()">
                         <i class="fa-solid fa-trash-can me-1"></i> Clear Cart
                     </button>
-                    <?php $posShift = function_exists('getCurrentShift') ? getCurrentShift(authUser()['id'] ?? null) : null; ?>
+                    <?php $posShift = function_exists('getCurrentShift') ? (getCurrentShift(authUser()['id'] ?? null) ?: getCurrentShift()) : null; ?>
                     <?php if ($posShift): ?>
                         <a href="shift.php" class="btn btn-outline-success btn-sm fw-semibold" title="Active Shift #<?= $posShift['id'] ?> - Click to Close Shift">
                             <i class="fa-solid fa-clock-rotate-left me-1"></i> Shift #<?= $posShift['id'] ?> (Close)
@@ -503,6 +514,7 @@ function hideHeldBillsView() {
 
 // POS State & Selling Rules
 const allowNegativeStock = <?= getSetting('allow_negative_stock', '0') === '1' ? 'true' : 'false' ?>;
+const hasActiveShift = <?= $posShift ? 'true' : 'false' ?>;
 let cartItems = [];
 let allCatalogProducts = [];
 let productsMap = {};
@@ -1235,6 +1247,11 @@ function loadSchoolPackage(classId) {
 
 // Checkout Modal
 function openCheckoutModal() {
+    if (!hasActiveShift) {
+        alert("Cannot checkout: No active register shift is open!\nPlease start a shift first.");
+        window.location.href = 'shift.php';
+        return;
+    }
     if (cartItems.length === 0) {
         alert('Please add at least one book or product to the cart before checkout.');
         return;
@@ -1411,6 +1428,11 @@ function calculateChange() {
 
 // Process Sale Checkout with strict validation
 function processCheckout() {
+    if (!hasActiveShift) {
+        alert("Cannot process checkout: No active register shift is open!\nPlease start a shift first.");
+        window.location.href = 'shift.php';
+        return;
+    }
     const btn = document.getElementById('confirmCheckoutBtn');
 
     let subtotal = 0;

@@ -41,6 +41,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // 2. Pay Supplier Voucher
     if (isset($_POST['pay_supplier'])) {
+        $supplierId = (int)($_POST['supplier_id'] ?? 0);
+        if (function_exists('hasActiveShift') && !hasActiveShift()) {
+            setFlash('danger', 'Transaction blocked: No active register shift is currently open! Please start a shift before making supplier payments.');
+            redirect("suppliers.php?supplier_id=" . ($supplierId ?: $selectedSupplierId));
+        }
         $supplierId = (int)$_POST['supplier_id'];
         $accountId = (int)$_POST['account_id'];
         $amount = (float)$_POST['amount'];

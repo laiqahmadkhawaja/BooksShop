@@ -536,6 +536,11 @@ function applySupplierPaymentToPurchases($supplierId, $amount) {
 function recordCashTransaction($type, $accountId, $amount, $category, $refNo, $desc, $toAccountId = null) {
     $userId = $_SESSION['user']['id'] ?? 1;
     $amount = abs((float)$amount);
+    if ($amount <= 0) return;
+
+    if (function_exists('requireActiveShift')) {
+        requireActiveShift($userId);
+    }
     
     // Inflow types: income, customer_payment, sale
     // Outflow types: expense, supplier_payment, purchase
@@ -905,6 +910,24 @@ function getCurrentShift($userId = null) {
                           JOIN users u ON u.id = rs.user_id 
                           WHERE rs.status = 'open' 
                           ORDER BY rs.id DESC LIMIT 1");
+    }
+}
+
+function hasActiveShift($userId = null) {
+    ensureShiftSchema();
+    if (!$userId && isset($_SESSION['user']['id'])) {
+        $userId = $_SESSION['user']['id'];
+    }
+    if ($userId) {
+        $userShift = getCurrentShift($userId);
+        if ($userShift) return true;
+    }
+    return (bool)getCurrentShift();
+}
+
+function requireActiveShift($userId = null) {
+    if (!hasActiveShift($userId)) {
+        throw new Exception("Financial transaction blocked: No active register shift is currently open! Please start a shift first.");
     }
 }
 

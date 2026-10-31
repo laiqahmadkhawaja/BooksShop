@@ -43,6 +43,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // 2. Receive Customer Payment Voucher
     if (isset($_POST['receive_payment'])) {
+        $customerId = (int)($_POST['customer_id'] ?? 0);
+        if (function_exists('hasActiveShift') && !hasActiveShift()) {
+            setFlash('danger', 'Transaction blocked: No active register shift is currently open! Please start a shift before receiving customer payments.');
+            redirect("customers.php?customer_id=" . ($customerId ?: $selectedCustomerId));
+        }
         $customerId = (int)$_POST['customer_id'];
         $accountId = (int)$_POST['account_id'];
         $amount = (float)$_POST['amount'];

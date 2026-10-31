@@ -33,6 +33,12 @@ require_once __DIR__ . '/includes/header.php';
 
 <div class="row justify-content-center">
     <div class="col-12 col-md-8 col-lg-6">
+        <?php if (function_exists('hasActiveShift') && !hasActiveShift()): ?>
+        <div class="alert alert-warning border-warning shadow-sm d-flex align-items-center justify-content-between mb-3 py-2 px-3 rounded">
+            <div><i class="fa-solid fa-triangle-exclamation text-warning me-1"></i> <strong>No Active Shift:</strong> A register shift is required before performing financial transactions.</div>
+            <a href="shift.php" class="btn btn-warning btn-sm fw-bold">Start Shift</a>
+        </div>
+        <?php endif; ?>
         <div class="card border-0 shadow-sm">
             <div class="card-header bg-danger text-white py-3">
                 <h6 class="fw-bold mb-0"><i class="fa-solid fa-receipt me-2"></i> Cash / Bank Outflow Voucher</h6>

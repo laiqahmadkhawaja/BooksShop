@@ -85,6 +85,10 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
 
     // 3. Add Expense Voucher
     if (isset($_POST['save_expense'])) {
+        if (function_exists('hasActiveShift') && !hasActiveShift()) {
+            setFlash('danger', 'Transaction blocked: No active register shift is currently open! Please start a shift first.');
+            redirect("accounting.php" . ($selectedDate ? "?date=$selectedDate" : ""));
+        }
         $accountId = (int)$_POST['account_id'];
         $newCat = trim($_POST['new_category_name'] ?? '');
         $selectedCat = trim($_POST['category_name'] ?? '');
@@ -109,6 +113,10 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
 
     // 4. Add Income / Capital Voucher
     if (isset($_POST['save_income'])) {
+        if (function_exists('hasActiveShift') && !hasActiveShift()) {
+            setFlash('danger', 'Transaction blocked: No active register shift is currently open! Please start a shift first.');
+            redirect("accounting.php" . ($selectedDate ? "?date=$selectedDate" : ""));
+        }
         $accountId = (int)$_POST['account_id'];
         $newCat = trim($_POST['new_category_name'] ?? '');
         $selectedCat = trim($_POST['category_name'] ?? '');
@@ -133,6 +141,10 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
 
     // 5. Internal Account Transfer
     if (isset($_POST['save_transfer'])) {
+        if (function_exists('hasActiveShift') && !hasActiveShift()) {
+            setFlash('danger', 'Transaction blocked: No active register shift is currently open! Please start a shift first.');
+            redirect("accounting.php");
+        }
         $fromId = (int)$_POST['from_account_id'];
         $toId = (int)$_POST['to_account_id'];
         $amount = (float)$_POST['amount'];

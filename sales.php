@@ -79,6 +79,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['process_sales_return'
                 recordCustomerLedger($sale['customer_id'], 'return', $returnId, $sale['invoice_no'], 0, $totalReturnAmount, "Sales Return #$returnNo");
             } else {
                 // Cash or bank payout (or Walk-in customer fallback)
+                if ($totalReturnAmount > 0 && function_exists('hasActiveShift') && !hasActiveShift()) {
+                    throw new Exception("Sales refund blocked: No active register shift is currently open! Please start a shift before refunding cash.");
+                }
                 if ($refundAccountId > 0) {
                     recordCashTransaction('expense', $refundAccountId, $totalReturnAmount, 'Sales Refund', $returnNo, "Sales Return Refund for #{$sale['invoice_no']}");
                 }
