@@ -714,6 +714,24 @@ elseif ($reportType === 'supplier_statement') {
             </tbody>
         </table>
 
+        <?php
+            $denoms = [5000, 1000, 500, 100, 50, 20, 10];
+            $hasPhysical = isset($_GET['counted']) || isset($_GET['d_1000']) || isset($_GET['d_5000']);
+            $counts = [];
+            $totalPhysical = 0;
+            foreach ($denoms as $dn) {
+                $c = isset($_GET['d_' . $dn]) ? (int)$_GET['d_' . $dn] : null;
+                $counts[$dn] = $c;
+                if ($c !== null) {
+                    $totalPhysical += ($dn * $c);
+                }
+            }
+            $coinsCount = isset($_GET['d_coins']) ? (float)$_GET['d_coins'] : ($hasPhysical ? 0 : null);
+            if ($coinsCount !== null) {
+                $totalPhysical += $coinsCount;
+            }
+            $variance = $hasPhysical ? ($totalPhysical - (float)$systemClosingCash) : null;
+        ?>
         <!-- Denomination table for physical count -->
         <h6 class="fw-bold text-dark mb-2">Physical Currency Denominations Verification:</h6>
         <table class="table-print mb-4" style="font-size: 11px;">
@@ -725,25 +743,50 @@ elseif ($reportType === 'supplier_statement') {
                 </tr>
             </thead>
             <tbody>
-                <?php foreach ([5000, 1000, 500, 100, 50, 20, 10] as $dn): ?>
+                <?php foreach ($denoms as $dn): 
+                    $cnt = $counts[$dn];
+                    $sub = ($cnt !== null) ? ($dn * $cnt) : null;
+                ?>
                     <tr>
-                        <td class="fw-bold">Rs. <?= $dn ?> Note</td>
-                        <td class="text-center" style="border-bottom: 1px dotted #94a3b8;">&nbsp;</td>
-                        <td class="text-end" style="border-bottom: 1px dotted #94a3b8;">&nbsp;</td>
+                        <td class="fw-bold">Rs. <?= number_format($dn) ?> Note</td>
+                        <td class="text-center font-monospace" style="border-bottom: 1px dotted #94a3b8;">
+                            <?= ($cnt !== null) ? (int)$cnt : '&nbsp;' ?>
+                        </td>
+                        <td class="text-end font-monospace" style="border-bottom: 1px dotted #94a3b8;">
+                            <?= ($sub !== null) ? formatCurrency($sub) : '&nbsp;' ?>
+                        </td>
                     </tr>
                 <?php endforeach; ?>
                 <tr>
                     <td class="fw-bold">Coins & Loose Cash</td>
-                    <td class="text-center" style="border-bottom: 1px dotted #94a3b8;">&nbsp;</td>
-                    <td class="text-end" style="border-bottom: 1px dotted #94a3b8;">&nbsp;</td>
+                    <td class="text-center font-monospace" style="border-bottom: 1px dotted #94a3b8;">
+                        <?= ($coinsCount !== null) ? '-' : '&nbsp;' ?>
+                    </td>
+                    <td class="text-end font-monospace" style="border-bottom: 1px dotted #94a3b8;">
+                        <?= ($coinsCount !== null) ? formatCurrency($coinsCount) : '&nbsp;' ?>
+                    </td>
                 </tr>
                 <tr class="fw-bold table-light">
                     <td colspan="2">TOTAL PHYSICAL COUNTED CASH:</td>
-                    <td class="text-end">&nbsp;</td>
+                    <td class="text-end font-monospace text-primary">
+                        <?= $hasPhysical ? formatCurrency($totalPhysical) : '&nbsp;' ?>
+                    </td>
                 </tr>
                 <tr class="fw-bold">
                     <td colspan="2">VARIANCE (SHORTAGE / EXCESS):</td>
-                    <td class="text-end">&nbsp;</td>
+                    <td class="text-end font-monospace">
+                        <?php if ($hasPhysical): ?>
+                            <?php if (abs($variance) < 0.01): ?>
+                                <span class="text-success fw-bold">Rs. 0.00 (Balanced)</span>
+                            <?php elseif ($variance > 0): ?>
+                                <span class="text-primary fw-bold">+ <?= formatCurrency($variance) ?> (Excess)</span>
+                            <?php else: ?>
+                                <span class="text-danger fw-bold">- <?= formatCurrency(abs($variance)) ?> (Shortage)</span>
+                            <?php endif; ?>
+                        <?php else: ?>
+                            &nbsp;
+                        <?php endif; ?>
+                    </td>
                 </tr>
             </tbody>
         </table>

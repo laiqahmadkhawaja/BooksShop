@@ -1006,7 +1006,7 @@ if ($reportType === 'cash_closing') {
                 </div>
 
                 <div class="mt-3">
-                    <a href="print_report.php?report=cash_closing&date=<?= urlencode($selectedDate) ?>" target="_blank" class="btn btn-outline-dark btn-sm w-100">
+                    <a href="print_report.php?report=cash_closing&date=<?= urlencode($selectedDate) ?>" id="printClosingBtn" target="_blank" class="btn btn-outline-dark btn-sm w-100" onclick="updatePrintClosingUrl()">
                         <i class="fa-solid fa-print me-1"></i> Print Daily Closing Slip (New Page)
                     </a>
                 </div>
@@ -1047,7 +1047,31 @@ function calculatePhysicalCash() {
         diffEl.textContent = '- Rs. ' + Math.abs(diff).toLocaleString(undefined, {minimumFractionDigits: 2}) + ' (Shortage)';
         diffEl.className = 'fw-bold mb-0 font-monospace text-danger';
     }
+    updatePrintClosingUrl();
 }
+
+function updatePrintClosingUrl() {
+    const btn = document.getElementById('printClosingBtn');
+    if (!btn) return;
+    const params = new URLSearchParams();
+    params.set('report', 'cash_closing');
+    params.set('date', '<?= urlencode($selectedDate) ?>');
+    
+    document.querySelectorAll('.denom-input').forEach(input => {
+        const noteVal = input.dataset.value;
+        const count = parseInt(input.value) || 0;
+        params.set('d_' + noteVal, count);
+    });
+    const coins = parseFloat(document.getElementById('coinsInput')?.value) || 0;
+    params.set('d_coins', coins);
+    params.set('counted', '1');
+    
+    btn.href = 'print_report.php?' + params.toString();
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    updatePrintClosingUrl();
+});
 </script>
 
 <?php elseif ($reportType === 'product_sales'): ?>
