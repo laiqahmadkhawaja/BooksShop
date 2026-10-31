@@ -106,7 +106,9 @@ if ($customerFilter > 0) {
     $where[] = "s.customer_id = ?";
     $params[] = $customerFilter;
 }
-if ($statusFilter) {
+if ($statusFilter === 'returned') {
+    $where[] = "EXISTS (SELECT 1 FROM returns r WHERE r.return_type = 'sale_return' AND r.reference_id = s.id)";
+} elseif ($statusFilter) {
     $where[] = "s.payment_status = ?";
     $params[] = $statusFilter;
 }
@@ -128,7 +130,8 @@ $totals = dbFetchOne("SELECT SUM(s.grand_total) as grand_total, SUM(s.paid_amoun
                       WHERE $whereSql", $params);
 
 // Sales list
-$sales = dbFetchAll("SELECT s.*, c.name as customer_name, c.phone as customer_phone, u.full_name as cashier_name
+$sales = dbFetchAll("SELECT s.*, c.name as customer_name, c.phone as customer_phone, u.full_name as cashier_name,
+                            COALESCE((SELECT SUM(r.total_amount) FROM returns r WHERE r.return_type = 'sale_return' AND r.reference_id = s.id), 0) as returned_amount
                      FROM sales s
                      LEFT JOIN customers c ON c.id = s.customer_id
                      LEFT JOIN users u ON u.id = s.created_by
@@ -200,6 +203,7 @@ require_once __DIR__ . '/includes/header.php';
                     <option value="paid" <?= $statusFilter === 'paid' ? 'selected' : '' ?>>Paid</option>
                     <option value="partial" <?= $statusFilter === 'partial' ? 'selected' : '' ?>>Partial</option>
                     <option value="due" <?= $statusFilter === 'due' ? 'selected' : '' ?>>Due (Credit)</option>
+                    <option value="returned" <?= $statusFilter === 'returned' ? 'selected' : '' ?>>Returned / Refunded</option>
                 </select>
             </div>
             <div class="col-md-2">
@@ -269,7 +273,12 @@ require_once __DIR__ . '/includes/header.php';
                                     </span>
                                 </td>
                                 <td>
-                                    <?php if ($s['payment_status'] === 'paid'): ?>
+                                    <?php if ($s['returned_amount'] >= $s['grand_total'] && $s['grand_total'] > 0): ?>
+                                        <span class="badge bg-danger"><i class="fa-solid fa-rotate-left me-1"></i> RETURNED</span>
+                                    <?php elseif ($s['returned_amount'] > 0): ?>
+                                        <span class="badge bg-warning text-dark"><i class="fa-solid fa-rotate-left me-1"></i> PARTIAL RETURN</span>
+                                        <div class="small text-muted" style="font-size: 0.72rem;"><?= formatCurrency($s['returned_amount']) ?> refunded</div>
+                                    <?php elseif ($s['payment_status'] === 'paid'): ?>
                                         <span class="badge bg-success">PAID</span>
                                     <?php elseif ($s['payment_status'] === 'partial'): ?>
                                         <span class="badge bg-warning text-dark">PARTIAL</span>
@@ -285,9 +294,15 @@ require_once __DIR__ . '/includes/header.php';
                                         <a href="print_invoice.php?id=<?= $s['id'] ?>&type=a4" target="_blank" class="btn btn-outline-primary" title="A4 Invoice">
                                             <i class="fa-solid fa-file-invoice"></i>
                                         </a>
-                                        <a href="sale_return.php?sale_id=<?= $s['id'] ?>" class="btn btn-outline-danger" title="Process Sales Return / Exchange">
-                                            <i class="fa-solid fa-rotate-left"></i>
-                                        </a>
+                                        <?php if ($s['returned_amount'] >= $s['grand_total'] && $s['grand_total'] > 0): ?>
+                                            <button type="button" class="btn btn-outline-secondary disabled" title="Invoice Fully Returned" disabled>
+                                                <i class="fa-solid fa-rotate-left"></i>
+                                            </button>
+                                        <?php else: ?>
+                                            <a href="sale_return.php?sale_id=<?= $s['id'] ?>" class="btn btn-outline-danger" title="<?= $s['returned_amount'] > 0 ? 'Process Further Return' : 'Process Sales Return / Exchange' ?>">
+                                                <i class="fa-solid fa-rotate-left"></i>
+                                            </a>
+                                        <?php endif; ?>
                                     </div>
                                 </td>
                             </tr>

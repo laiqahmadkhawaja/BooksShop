@@ -26,6 +26,27 @@ $saleItems = dbFetchAll("SELECT si.*, p.title, p.product_code
 
 $accounts = dbFetchAll("SELECT * FROM accounts WHERE status = 1 ORDER BY account_name ASC");
 
+// Track previously returned items for this invoice
+$alreadyReturned = dbFetchAll("SELECT ri.product_id, SUM(ri.quantity) as ret_qty 
+                               FROM return_items ri 
+                               JOIN returns r ON r.id = ri.return_id 
+                               WHERE r.return_type = 'sale_return' AND r.reference_id = ? 
+                               GROUP BY ri.product_id", [$saleId]);
+$returnedMap = [];
+foreach ($alreadyReturned as $ar) {
+    $returnedMap[$ar['product_id']] = (float)$ar['ret_qty'];
+}
+
+$previousReturns = dbFetchAll("SELECT * FROM returns WHERE return_type = 'sale_return' AND reference_id = ? ORDER BY id DESC", [$saleId]);
+
+$totalReturnableQty = 0;
+foreach ($saleItems as $it) {
+    $alreadyRet = $returnedMap[$it['product_id']] ?? 0;
+    $availRet = max(0, (float)$it['quantity'] - $alreadyRet);
+    $totalReturnableQty += $availRet;
+}
+$isFullyReturned = !empty($saleItems) && ($totalReturnableQty <= 0);
+
 $pageTitle = 'Process Sales Return - ' . htmlspecialchars($sale['invoice_no']);
 require_once __DIR__ . '/includes/header.php';
 ?>
@@ -48,6 +69,23 @@ require_once __DIR__ . '/includes/header.php';
             </div>
         </div>
 
+        <?php if (!empty($previousReturns)): ?>
+            <div class="alert <?= $isFullyReturned ? 'alert-danger' : 'alert-warning' ?> border d-flex align-items-start gap-3 mb-4">
+                <i class="fa-solid <?= $isFullyReturned ? 'fa-circle-check text-danger' : 'fa-rotate-left text-warning' ?> fs-3 mt-1"></i>
+                <div class="flex-grow-1">
+                    <h6 class="fw-bold mb-1"><?= $isFullyReturned ? 'Invoice Already Fully Returned' : 'Invoice Partially Returned' ?></h6>
+                    <div class="small mb-2">
+                        <?= $isFullyReturned 
+                            ? 'All items from this invoice have already been returned and refunded. No additional items remain eligible for return.' 
+                            : 'Some items on this invoice were previously returned. You can only return the remaining eligible quantities below.' ?>
+                    </div>
+                    <?php foreach ($previousReturns as $pr): ?>
+                        <div class="small text-muted">&bull; Return <strong>#<?= htmlspecialchars($pr['return_no']) ?></strong> on <?= date('d M Y, h:i A', strtotime($pr['return_date'])) ?> &bull; Refunded: <strong><?= formatCurrency($pr['total_amount']) ?></strong> via <strong><?= strtoupper($pr['refund_method']) ?></strong></div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+        <?php endif; ?>
+
         <form method="POST" action="sales.php">
             <input type="hidden" name="process_sales_return" value="1">
             <input type="hidden" name="sale_id" value="<?= $sale['id'] ?>">
@@ -64,10 +102,11 @@ require_once __DIR__ . '/includes/header.php';
                             <thead class="table-light small text-uppercase">
                                 <tr>
                                     <th>Product Title</th>
-                                    <th class="text-center" style="width: 12%;">Sold Qty</th>
-                                    <th class="text-end" style="width: 15%;">Unit Price</th>
-                                    <th class="text-center" style="width: 18%;">Return Qty</th>
-                                    <th style="width: 25%;">Item Condition</th>
+                                    <th class="text-center" style="width: 10%;">Sold Qty</th>
+                                    <th class="text-center" style="width: 13%;">Prev. Returned</th>
+                                    <th class="text-end" style="width: 13%;">Unit Price</th>
+                                    <th class="text-center" style="width: 15%;">Return Qty</th>
+                                    <th style="width: 24%;">Item Condition</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -76,25 +115,41 @@ require_once __DIR__ . '/includes/header.php';
                                         <td colspan="5" class="text-center py-4 text-muted">No items found for this invoice.</td>
                                     </tr>
                                 <?php else: ?>
-                                    <?php foreach ($saleItems as $it): ?>
+                                    <?php foreach ($saleItems as $it): 
+                                        $alreadyRet = $returnedMap[$it['product_id']] ?? 0;
+                                        $availRet = max(0, (float)$it['quantity'] - $alreadyRet);
+                                    ?>
                                         <tr>
                                             <td>
                                                 <div class="fw-bold text-dark"><?= htmlspecialchars($it['title']) ?></div>
                                                 <div class="small text-muted"><?= htmlspecialchars($it['product_code']) ?></div>
                                             </td>
-                                            <td class="text-center fw-bold">
+                                            <td class="text-center fw-bold text-secondary">
                                                 <?= (float)$it['quantity'] ?>
+                                            </td>
+                                            <td class="text-center">
+                                                <?php if ($alreadyRet > 0): ?>
+                                                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle"><?= (float)$alreadyRet ?> returned</span>
+                                                <?php else: ?>
+                                                    <span class="text-muted">-</span>
+                                                <?php endif; ?>
                                             </td>
                                             <td class="text-end fw-bold text-primary">
                                                 <?= formatCurrency($it['unit_price']) ?>
                                             </td>
                                             <td>
-                                                <input type="number" step="1" name="return_qty[<?= $it['product_id'] ?>]" 
-                                                       class="form-control text-center fw-bold" value="0" min="0" max="<?= (float)$it['quantity'] ?>">
+                                                <?php if ($availRet > 0): ?>
+                                                    <input type="number" step="1" name="return_qty[<?= $it['product_id'] ?>]" 
+                                                           class="form-control text-center fw-bold" value="0" min="0" max="<?= $availRet ?>">
+                                                    <div class="text-center small text-muted" style="font-size: 0.7rem;">Max: <?= $availRet ?></div>
+                                                <?php else: ?>
+                                                    <input type="text" class="form-control text-center text-muted" value="0" disabled>
+                                                    <div class="text-center small text-danger fw-semibold" style="font-size: 0.7rem;">Fully Returned</div>
+                                                <?php endif; ?>
                                             </td>
                                             <td>
-                                                <select name="condition[<?= $it['product_id'] ?>]" class="form-select form-select-sm">
-                                                    <option value="restockable">Good / Restockable (Restore stock & recalculate Weighted Average Cost)</option>
+                                                <select name="condition[<?= $it['product_id'] ?>]" class="form-select form-select-sm" <?= $availRet <= 0 ? 'disabled' : '' ?>>
+                                                    <option value="restockable">Good / Restockable (Restore stock & recalculate WAC)</option>
                                                     <option value="damaged">Damaged / Defective (Do not restock)</option>
                                                 </select>
                                             </td>
@@ -141,9 +196,15 @@ require_once __DIR__ . '/includes/header.php';
                 </div>
                 <div class="card-footer bg-light p-3 d-flex justify-content-end gap-2">
                     <a href="sales.php" class="btn btn-light px-4">Cancel</a>
-                    <button type="submit" class="btn btn-danger px-4 fw-bold">
-                        <i class="fa-solid fa-check me-1"></i> Confirm & Process Return
-                    </button>
+                    <?php if ($isFullyReturned): ?>
+                        <button type="button" class="btn btn-secondary px-4 fw-bold" disabled>
+                            <i class="fa-solid fa-ban me-1"></i> Already Fully Returned
+                        </button>
+                    <?php else: ?>
+                        <button type="submit" class="btn btn-danger px-4 fw-bold">
+                            <i class="fa-solid fa-check me-1"></i> Confirm & Process Return
+                        </button>
+                    <?php endif; ?>
                 </div>
             </div>
         </form>
