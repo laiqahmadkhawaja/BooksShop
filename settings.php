@@ -17,6 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 setSetting($k, trim($_POST[$k]));
             }
         }
+        setSetting('allow_negative_stock', isset($_POST['allow_negative_stock']) ? '1' : '0');
         setFlash('success', 'System settings saved successfully.');
         redirect("settings.php");
     }
@@ -43,6 +44,7 @@ $taxRate = getSetting('tax_percent', '0.00');
 $footerNote = getSetting('receipt_footer', 'Thank you for shopping with us! Items once sold cannot be returned without receipt.');
 $footerNoteUrdu = getSetting('receipt_footer_urdu', 'خریداری کا شکریہ! اشیاء 7 دن کے اندر اصل رسید کے ساتھ تبدیل کی جا سکتی ہیں۔');
 $thermalPaperSize = getSetting('thermal_paper_size', '80');
+$allowNegativeStock = getSetting('allow_negative_stock', '0');
 
 $pageTitle = 'Settings';
 require_once __DIR__ . '/includes/header.php';
@@ -133,6 +135,21 @@ require_once __DIR__ . '/includes/header.php';
                     <div class="mb-4">
                         <label class="form-label small fw-bold">Receipt Footer Note (اردو واپسی پالیسی)</label>
                         <input type="text" name="receipt_footer_urdu" class="form-control" value="<?= htmlspecialchars($footerNoteUrdu) ?>">
+                    </div>
+
+                    <hr class="my-4">
+
+                    <h6 class="fw-bold text-primary mb-3"><i class="fa-solid fa-boxes-stacked me-2"></i> Inventory & POS Selling Rules</h6>
+                    <div class="mb-4 p-3 bg-light rounded border">
+                        <div class="form-check form-switch mb-2">
+                            <input class="form-check-input" type="checkbox" name="allow_negative_stock" id="allowNegativeStock" value="1" <?= $allowNegativeStock === '1' ? 'checked' : '' ?>>
+                            <label class="form-check-label fw-bold text-dark" for="allowNegativeStock">
+                                Allow Negative Stock Selling
+                            </label>
+                        </div>
+                        <div class="small text-muted">
+                            When <strong>disabled (default & recommended)</strong>, the POS terminal strictly blocks cashiers from selling out-of-stock items (0 remaining) or exceeding the available inventory quantity. When <strong>enabled</strong>, products can be sold into negative stock.
+                        </div>
                     </div>
 
                     <button type="submit" class="btn btn-primary px-4 fw-bold">

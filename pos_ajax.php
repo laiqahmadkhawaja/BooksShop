@@ -163,6 +163,23 @@ if ($action === 'checkout') {
     }
 
     try {
+        // Enforce Negative Stock Selling Policy
+        $allowNegativeStock = getSetting('allow_negative_stock', '0') === '1';
+        if (!$allowNegativeStock) {
+            foreach ($items as $it) {
+                $checkProdId = (int)$it['product_id'];
+                $checkQty = (float)$it['qty'];
+                $chk = dbFetchOne("SELECT title, current_stock FROM products WHERE id = ?", [$checkProdId]);
+                if (!$chk) {
+                    throw new Exception("Product #$checkProdId not found in catalog.");
+                }
+                $avail = (float)$chk['current_stock'];
+                if ($avail < $checkQty) {
+                    throw new Exception("Negative stock selling is disabled! '{$chk['title']}' only has {$avail} in stock, but {$checkQty} was requested.");
+                }
+            }
+        }
+
         $db = getDB();
         $db->beginTransaction();
 

@@ -501,7 +501,8 @@ function hideHeldBillsView() {
     showPosView('posViewRegister');
 }
 
-// POS State
+// POS State & Selling Rules
+const allowNegativeStock = <?= getSetting('allow_negative_stock', '0') === '1' ? 'true' : 'false' ?>;
 let cartItems = [];
 let allCatalogProducts = [];
 let productsMap = {};
@@ -913,13 +914,28 @@ function addProductToCart(product, qty = 1) {
     playBeep();
     hideLiveSearchDropdown();
 
+    const currentStock = parseFloat(product.current_stock) || 0;
+    const existingIndex = cartItems.findIndex(item => item.product_id == product.id);
+    const newQty = (existingIndex > -1) ? (cartItems[existingIndex].qty + qty) : qty;
+
+    if (!allowNegativeStock) {
+        if (currentStock <= 0) {
+            alert(`Cannot sell "${product.title}": Out of Stock (0 remaining in inventory).\nNegative stock selling is disabled in system settings.`);
+            return;
+        }
+        if (newQty > currentStock) {
+            alert(`Cannot add more "${product.title}": Only ${currentStock} available in stock (Cart already has ${existingIndex > -1 ? cartItems[existingIndex].qty : 0}).\nNegative stock selling is disabled in system settings.`);
+            return;
+        }
+    }
+
     const rt = parseFloat(product.retail_price) || 0;
     const ws = parseFloat(product.wholesale_price) || 0;
     const price = (posRateMode === 'wholesale' && ws > 0) ? ws : rt;
 
-    const existingIndex = cartItems.findIndex(item => item.product_id == product.id);
     if (existingIndex > -1) {
         cartItems[existingIndex].qty += qty;
+        cartItems[existingIndex].current_stock = currentStock;
         cartItems[existingIndex].line_total = (cartItems[existingIndex].qty * cartItems[existingIndex].price) - cartItems[existingIndex].discount;
     } else {
         cartItems.push({
@@ -929,6 +945,7 @@ function addProductToCart(product, qty = 1) {
             title: product.title,
             urdu_title: product.urdu_title,
             unit: product.unit || 'Piece',
+            current_stock: currentStock,
             retail_price: rt,
             wholesale_price: ws,
             price: price,
@@ -1070,6 +1087,13 @@ function changeQty(index, delta) {
     if (cartItems[index]) {
         const newQty = cartItems[index].qty + delta;
         if (newQty > 0) {
+            if (!allowNegativeStock && delta > 0) {
+                const stock = parseFloat(cartItems[index].current_stock) || 0;
+                if (newQty > stock) {
+                    alert(`Cannot increase quantity for "${cartItems[index].title}": Only ${stock} available in stock.\nNegative stock selling is disabled.`);
+                    return;
+                }
+            }
             cartItems[index].qty = newQty;
             cartItems[index].line_total = (cartItems[index].qty * cartItems[index].price) - cartItems[index].discount;
             renderCart();
@@ -1082,6 +1106,16 @@ function changeQty(index, delta) {
 function updateItemQty(index, val) {
     const q = parseFloat(val) || 1;
     if (cartItems[index]) {
+        if (!allowNegativeStock) {
+            const stock = parseFloat(cartItems[index].current_stock) || 0;
+            if (q > stock) {
+                alert(`Cannot set quantity to ${q} for "${cartItems[index].title}": Only ${stock} available in stock.\nNegative stock selling is disabled.`);
+                cartItems[index].qty = Math.max(1, Math.min(stock, q));
+                cartItems[index].line_total = (cartItems[index].qty * cartItems[index].price) - cartItems[index].discount;
+                renderCart();
+                return;
+            }
+        }
         cartItems[index].qty = Math.max(1, q);
         cartItems[index].line_total = (cartItems[index].qty * cartItems[index].price) - cartItems[index].discount;
         renderCart();
