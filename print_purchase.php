@@ -409,6 +409,12 @@ $shopPhone = getSetting('shop_phone', '+92 300 1234567 / 042-37210000');
             <svg id="purchaseBarcodeSvg"></svg>
         </div>
         <div class="footer-note">Stock Inward Verified by Staff &bull; Recorded: <?= date('d M, Y', strtotime($purchase['created_at'])) ?></div>
+        <!-- Company Promotion -->
+        <div class="software-promo text-center" style="font-size: <?= ($thermalSize === '58') ? '7.5px' : '9px' ?>; margin-top: 5px; padding-top: 4px; border-top: 1px dotted #000; line-height: 1.25; font-weight: normal;">
+            <div style="font-weight: 700; letter-spacing: 0.5px;">*** Software By: KH Soft ***</div>
+            <div>0315-0709606 | 0305-6114800</div>
+            <div>laiqahmadkhawaja1604@gmail.com</div>
+        </div>
     </div>
 </div>
 
@@ -585,6 +591,12 @@ $shopPhone = getSetting('shop_phone', '+92 300 1234567 / 042-37210000');
         <div class="col-4">
             <div class="border-top pt-2 small text-muted">Authorized Signature & Stamp</div>
         </div>
+    </div>
+    <!-- Company Promotion -->
+    <div class="software-promo text-center mt-4 pt-3 border-top" style="font-size: 10px; line-height: 1.35; color: #64748b;">
+        <div class="fw-bold text-dark" style="letter-spacing: 0.5px;">*** Software By: KH Soft ***</div>
+        <div>0315-0709606 | 0305-6114800</div>
+        <div>laiqahmadkhawaja1604@gmail.com</div>
     </div>
 </div>
 <?php endif; ?>

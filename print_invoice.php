@@ -391,6 +391,12 @@ $receiptFooterUrdu = getSetting('receipt_footer_urdu', 'خریداری کا شک
             <div class="font-urdu footer-urdu"><?= htmlspecialchars($receiptFooterUrdu) ?></div>
         <?php endif; ?>
         <div class="footer-system">*** THANK YOU FOR YOUR BUSINESS ***</div>
+        <!-- Company Promotion -->
+        <div class="software-promo text-center" style="font-size: <?= ($thermalSize === '58') ? '7.5px' : '9px' ?>; margin-top: 5px; padding-top: 4px; border-top: 1px dotted #000; line-height: 1.25; font-weight: normal;">
+            <div style="font-weight: 700; letter-spacing: 0.5px;">*** Software By: KH Soft ***</div>
+            <div>0315-0709606 | 0305-6114800</div>
+            <div>laiqahmadkhawaja1604@gmail.com</div>
+        </div>
     </div>
 </div>
 
@@ -528,6 +534,12 @@ $receiptFooterUrdu = getSetting('receipt_footer_urdu', 'خریداری کا شک
         <div class="col-4">
             <div class="border-top pt-2 small text-muted">Authorized Signature & Stamp</div>
         </div>
+    </div>
+    <!-- Company Promotion -->
+    <div class="software-promo text-center mt-4 pt-3 border-top" style="font-size: 10px; line-height: 1.35; color: #64748b;">
+        <div class="fw-bold text-dark" style="letter-spacing: 0.5px;">*** Software By: KH Soft ***</div>
+        <div>0315-0709606 | 0305-6114800</div>
+        <div>laiqahmadkhawaja1604@gmail.com</div>
     </div>
 </div>
 <?php endif; ?>

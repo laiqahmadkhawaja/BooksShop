@@ -231,6 +231,13 @@ foreach ($items as $it) {
             </div>
         </div>
     </div>
+
+    <!-- Company Promotion -->
+    <div class="software-promo text-center mt-4 pt-3 border-top" style="font-size: 10px; line-height: 1.35; color: #64748b;">
+        <div class="fw-bold text-dark" style="letter-spacing: 0.5px;">*** Software By: KH Soft ***</div>
+        <div>0315-0709606 | 0305-6114800</div>
+        <div>laiqahmadkhawaja1604@gmail.com</div>
+    </div>
 </div>
 
 </body>
